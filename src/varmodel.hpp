@@ -2,10 +2,12 @@
 #define __varmodel_hpp__
 
 #include "parameters.hpp"
+#include "Host.hpp"
+#include "Population.hpp"
 
 namespace varmodel {
 
-void run() {}
+void run();
 
 }; // namespace varmodel
 

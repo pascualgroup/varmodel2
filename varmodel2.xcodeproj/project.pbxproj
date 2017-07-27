@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		696C01F01F198D61009403B6 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 696C01EE1F198D61009403B6 /* main.cpp */; };
+		69D181AA1F2A68D1007D5C32 /* Population.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181A91F2A68D1007D5C32 /* Population.cpp */; };
+		69D181AC1F2A69B4007D5C32 /* varmodel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181AB1F2A69B4007D5C32 /* varmodel.cpp */; };
+		69D181AF1F2AABED007D5C32 /* Host.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181AD1F2AABED007D5C32 /* Host.cpp */; };
+		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +32,13 @@
 		696C01EF1F198D61009403B6 /* varmodel.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = varmodel.hpp; sourceTree = "<group>"; };
 		696C01F11F19922D009403B6 /* parameters.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; path = parameters.hpp.template; sourceTree = "<group>"; };
 		699ABDE31F2A613500FBC9BF /* parameters.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = parameters.hpp; path = build/src/parameters.hpp; sourceTree = SOURCE_ROOT; };
+		69D181A81F2A68C2007D5C32 /* Population.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Population.hpp; sourceTree = "<group>"; };
+		69D181A91F2A68D1007D5C32 /* Population.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Population.cpp; sourceTree = "<group>"; };
+		69D181AB1F2A69B4007D5C32 /* varmodel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = varmodel.cpp; sourceTree = "<group>"; };
+		69D181AD1F2AABED007D5C32 /* Host.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Host.cpp; sourceTree = "<group>"; };
+		69D181AE1F2AABED007D5C32 /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Host.hpp; sourceTree = "<group>"; };
+		69D181B01F2AABFC007D5C32 /* VectorHashMap.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = VectorHashMap.hpp; sourceTree = "<group>"; };
+		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -35,6 +46,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,6 +58,7 @@
 			children = (
 				696C01ED1F198D4B009403B6 /* src */,
 				696C01E11F198B7F009403B6 /* Products */,
+				69D181B11F2AAC83007D5C32 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -62,10 +75,32 @@
 			children = (
 				696C01EE1F198D61009403B6 /* main.cpp */,
 				696C01EF1F198D61009403B6 /* varmodel.hpp */,
+				69D181AB1F2A69B4007D5C32 /* varmodel.cpp */,
 				699ABDE31F2A613500FBC9BF /* parameters.hpp */,
+				69D181B01F2AABFC007D5C32 /* VectorHashMap.hpp */,
 				696C01F11F19922D009403B6 /* parameters.hpp.template */,
+				69D181A71F2A68A9007D5C32 /* datamodels */,
 			);
 			path = src;
+			sourceTree = "<group>";
+		};
+		69D181A71F2A68A9007D5C32 /* datamodels */ = {
+			isa = PBXGroup;
+			children = (
+				69D181AE1F2AABED007D5C32 /* Host.hpp */,
+				69D181AD1F2AABED007D5C32 /* Host.cpp */,
+				69D181A81F2A68C2007D5C32 /* Population.hpp */,
+				69D181A91F2A68D1007D5C32 /* Population.cpp */,
+			);
+			path = datamodels;
+			sourceTree = "<group>";
+		};
+		69D181B11F2AAC83007D5C32 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -125,7 +160,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69D181AA1F2A68D1007D5C32 /* Population.cpp in Sources */,
 				696C01F01F198D61009403B6 /* main.cpp in Sources */,
+				69D181AC1F2A69B4007D5C32 /* varmodel.cpp in Sources */,
+				69D181AF1F2AABED007D5C32 /* Host.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

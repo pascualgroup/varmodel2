@@ -151,7 +151,8 @@ def process_template(params, dirpath, build_dirpath, filename):
                         varname = pieces2[0]
                         
                         if not hasattr(params, pieces2[0]):
-                            value = None
+                            print('Error: parameter {} not present'.format(varname))
+                            sys.exit(1)
                         else:
                             value = getattr(params, pieces2[0])
                         line_subs = '{}{} = {}{}'.format(
@@ -173,15 +174,9 @@ def format_value(varname, value):
     this is good enough for us.
     '''
     if isinstance(value, list):
-        print(value)
         values = [format_value(varname, val) for val in value]
-        print(values)
-        print(', '.join(values))
         values_formatted = '{{{}}}'.format(', '.join(values))
-        print(values_formatted)
         return values_formatted
-    elif value is None:
-        return 'NULL'
     elif value is False:
         return 'false'
     elif value is True:
@@ -192,7 +187,7 @@ def format_value(varname, value):
         return json.dumps(value) # It's possible this will break in weird situations
     elif isinstance(value, basestring):
         return '"{}"'.format(value)
-    print('Invalid type {} for value {} for parameter {}'.format(type(value), value, varname))
+    print('Error: invalid type {} for value {} for parameter {}'.format(type(value), value, varname))
     sys.exit(1)
 
 if __name__ == '__main__':
