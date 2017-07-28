@@ -1,4 +1,4 @@
-#include "Population.hpp"
+#include "state.hpp"
 
 namespace varmodel {
 
@@ -10,8 +10,6 @@ Population::Population(int64_t id, int64_t transmission_count) : id(id) {
 
 
 /*** PopulationManager clas implementation ***/
-
-PopulationManager * population_manager;
 
 PopulationManager::PopulationManager() : PopulationManager(1) { }
 

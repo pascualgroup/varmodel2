@@ -2,7 +2,7 @@
 #define __Host_hpp__
 
 #include <sqlite3.h>
-#include "VectorHashMap.hpp"
+#include "IndexedMap.hpp"
 
 namespace varmodel {
 
@@ -14,7 +14,7 @@ struct Host {
 
 struct HostManager {
     int64_t next_id;
-    VectorHashMap<Host> hosts;
+    IndexedMap<Host> hosts;
     
     HostManager();
     HostManager(int64_t next_id);
@@ -29,8 +29,6 @@ struct HostManager {
     void write_to_db(sqlite3 * db);
     void write_host_table(sqlite3 * db);
 };
-
-extern HostManager * host_manager;
 
 } // namespace varmodel
 

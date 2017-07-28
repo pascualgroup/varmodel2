@@ -10,8 +10,6 @@ Host::Host(int64_t id) : id(id) {
 
 /*** HostManager class implementation ***/
 
-HostManager * host_manager;
-
 HostManager::HostManager() : HostManager(1) { }
 
 HostManager::HostManager(int64_t next_id) {

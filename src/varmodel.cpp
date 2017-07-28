@@ -1,14 +1,15 @@
 #include "varmodel.hpp"
-
-#include <iostream>
+#include "state.hpp"
 
 namespace varmodel {
 
-void run() {
+void initialize() {
     host_manager = new HostManager();
     population_manager = new PopulationManager();
-    
-    std::cerr << CHECKPOINT_LOAD_FILENAME << std::endl;
+    event_manager = new EventManager();
+}
+
+void run() {
 }
 
 } // namespace varmodel

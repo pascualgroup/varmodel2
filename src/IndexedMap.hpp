@@ -1,5 +1,5 @@
-#ifndef __VectorHashMap_hpp__
-#define __VectorHashMap_hpp__
+#ifndef __IndexedMap_hpp__
+#define __IndexedMap_hpp__
 
 #include <vector>
 #include <unordered_map>
@@ -8,7 +8,7 @@
 namespace varmodel {
 
 template<typename T>
-struct VectorHashMap {
+struct IndexedMap {
     std::vector<T *> vec;
     std::unordered_map<int64_t, size_t> id_index_map; 
     
@@ -43,4 +43,4 @@ struct VectorHashMap {
 
 }; // namespace varmodel
 
-#endif // #ifndef __VectorHashMap_hpp__
+#endif // #ifndef __IndexedMap_hpp__
