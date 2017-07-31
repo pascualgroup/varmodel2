@@ -6,8 +6,13 @@ using namespace std;
 #include <iostream>
 #include <cassert>
 #include "util.hpp"
+#include "state.hpp"
 
 namespace varmodel {
+
+double draw_exponential(double lambda) {
+    return std::exponential_distribution<>(lambda)(*rng); 
+}
 
 size_t sampleDiscreteLinearSearch(rng_t & rng, std::vector<double> const & weights)
 {

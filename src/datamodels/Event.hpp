@@ -12,7 +12,7 @@ namespace varmodel {
 
 enum EventType {
     CHECKPOINT_EVENT,
-    RATE_UPDATE_EVENT,
+    BITING_RATE_UPDATE_EVENT,
     BITING_EVENT,
     IMMIGRATION_EVENT,
     DEATH_EVENT,
@@ -27,36 +27,25 @@ enum EventType {
 struct Event {
     const int64_t id;
     const EventType event_type;
+    double time;
     
-    Event(int64_t id, EventType event_type);
-    virtual double get_next_time() = 0;
-    virtual void iterate() = 0;
-};
-
-struct PeriodicEvent : Event {
-    double initial_time;
-    double period;
-    int64_t count;
-    
-    PeriodicEvent(int64_t id, EventType event_type, double initial_time, double period, int64_t count);
-    virtual double get_next_time();
-    virtual void iterate();
-};
-
-struct RateEvent : Event {
-    double rate;
-    double next_time;
-    
-    RateEvent(int64_t id, EventType event_type, double rate, double initial_time);
+    Event(int64_t id, EventType event_type, double time);
+    virtual void do_event() = 0;
 };
 
 
 /*** Concrete event types ***/
 
-struct CheckpointEvent : PeriodicEvent {
+struct CheckpointEvent : Event {
+    CheckpointEvent(int64_t id, double time);
+    virtual void do_event();
 };
 
-struct RateUpdateEvent : Event { };
+struct BitingRateUpdateEvent : Event {
+    BitingRateUpdateEvent(int64_t id, double time);
+    virtual void do_event();
+};
+
 struct BitingEvent : Event { };
 struct ImmigrationEvent : Event { };
 struct DeathEvent : Event { };
@@ -65,13 +54,16 @@ struct ClearanceEvent : Event { };
 struct ImmunityLossEvent : Event { };
 
 
-/*** CompareEvent functor: compares by get_next_time() ***/ 
+/*** CompareEvent functor: compares by get_next_time() and then by event type ***/ 
 
 struct CompareEvents
 {
-	bool operator()(Event * ep1, Event * ep2)
+	bool operator()(Event * e1, Event * e2)
 	{
-		return ep1->get_next_time() < ep2->get_next_time();
+        if(e1->time == e2->time) {
+            return e1->event_type < e2->event_type;
+        }
+		return e1->time < e2->time;
 	}
 };
 
@@ -87,13 +79,17 @@ struct EventManager {
     
     // Object management
     CheckpointEvent * create_checkpoint_event();
-    RateUpdateEvent * create_rate_update_event();
+    BitingRateUpdateEvent * create_biting_rate_update_event();
+    
     BitingEvent * create_biting_event();
     ImmigrationEvent * create_immigration_event();
     DeathEvent * create_death_event();
     TransitionEvent * create_transition_event();
     ClearanceEvent * create_clearance_event();
     ImmunityLossEvent * create_immunity_loss_event();
+    
+    void update_event(Event * event);
+    void delete_event(Event * event);
     
     // Database management
     void load_from_db(sqlite3 * db);

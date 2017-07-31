@@ -88,6 +88,7 @@ const std::vector<int64_t> {{N_INITIAL_INFECTIONS}};
 // BITING_RATE_RELATIVE_AMPLITUDE: amplitude as a fraction of the mean.
 // BITING_RATE_PHASE: phase offset, relative to a standard sine function, as a fraction (between 0 and 1) of the year.
 // The period of the sinusoid is T_YEAR.
+const double {{BITING_RATE_UPDATE_PERIOD}};
 const double {{BITING_RATE_MEAN}};
 const double {{BITING_RATE_RELATIVE_AMPLITUDE}};
 const double {{BITING_RATE_PHASE}};

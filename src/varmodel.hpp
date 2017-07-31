@@ -4,7 +4,13 @@
 namespace varmodel {
 
 void initialize();
+
+void load_checkpoint();
+void save_checkpoint();
+
 void run();
+
+void update_biting_rate();
 
 }; // namespace varmodel
 
