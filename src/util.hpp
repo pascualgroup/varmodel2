@@ -1,5 +1,5 @@
-#ifndef __util_hpp__
-#define __util_hpp__
+#ifndef util_hpp
+#define util_hpp
 
 #include <vector>
 #include <unordered_set>
@@ -15,4 +15,4 @@ std::vector<double> addCumulative(std::vector<double> const & vec);
 
 } // namespace varmodel
 
-#endif
+#endif // #ifndef util_hpp

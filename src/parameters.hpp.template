@@ -1,5 +1,5 @@
-#ifndef __parameters_hpp__
-#define __parameters_hpp__
+#ifndef parameters_hpp
+#define parameters_hpp
 
 #include <string>
 #include <vector>
@@ -75,13 +75,13 @@ const double {{T_LIVER_STAGE}};
 const std::vector<double> {{HOST_LIFETIME_PDF}};
 
 // Number of populations
-const int64_t {{N_POPULATIONS}};
+const uint64_t {{N_POPULATIONS}};
 
 // Number of hosts, by population.
-const std::vector<int64_t> {{N_HOSTS}};
+const std::vector<uint64_t> {{N_HOSTS}};
 
 // Number of initial infections, by population.
-const std::vector<int64_t> {{N_INITIAL_INFECTIONS}};
+const std::vector<uint64_t> {{N_INITIAL_INFECTIONS}};
 
 // Parameters governing the biting rate sinusoid
 // BITING_RATE_MEAN: mean value.
@@ -115,11 +115,6 @@ const double {{MAX_EXPRESSION_TIME}};
 // If not specified, will be set to t_i for each strain i.
 const double {{MAX_TRANSMISSIBILITY}};
 
-// Antigenic profile for vars.
-// Each row (inner array) represents the presence or absence of (abstract) epitopes on the var, which affects cross-immunity between vars.
-// If not specified, or if set to [[1]], a square matrix is implied, where each var has a different single epitope.
-const std::vector<std::vector<int64_t>> {{ANTIGENIC_PROFILE}};
-
 // Transmissibility of genes `t_i`.
 // If only one entry present, used for all genes.
 const std::vector<double> {{TRANSMISSIBILITY}};
@@ -150,4 +145,4 @@ const std::vector<std::vector<double>> {{MUTATION_WEIGHTS}};
 
 } // namespace varmodel
 
-#endif // #ifndef __parameters_hpp__
+#endif // #ifndef parameters_hpp

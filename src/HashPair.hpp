@@ -1,5 +1,5 @@
-#ifndef __HashPair_hpp__
-#define __HashPair_hpp__
+#ifndef HashPair_hpp
+#define HashPair_hpp
 
 namespace varmodel {
 
@@ -18,4 +18,4 @@ private:
 
 } // namespace varmodel
 
-#endif // #ifndef __HashPair_hpp__
+#endif // #ifndef HashPair_hpp

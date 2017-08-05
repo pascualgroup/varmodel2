@@ -1,27 +1,31 @@
-#ifndef __Host_hpp__
-#define __Host_hpp__
+#ifndef Host_hpp
+#define Host_hpp
 
 #include <sqlite3.h>
+#include "Infection.hpp"
 #include "IndexedMap.hpp"
 
 namespace varmodel {
 
-struct Host { 
-    const int64_t id;
+struct Host {
+    uint64_t const id;
     
-    Host(int64_t id);
+    // One-to-many relationships
+    IndexedMap<Infection> infections;
+    
+    Host(uint64_t id);
 };
 
 struct HostManager {
-    int64_t next_id;
+    uint64_t next_id;
     IndexedMap<Host> hosts;
     
     HostManager();
-    HostManager(int64_t next_id);
+    HostManager(uint64_t next_id);
     
     Host * create();
-    Host * create(int64_t id);
-    Host * host_for_id(int64_t id);
+    Host * create(uint64_t id);
+    Host * host_for_id(uint64_t id);
     
     void load_from_db(sqlite3 * db);
     void resolve_relationships_from_db(sqlite3 * db);
@@ -32,4 +36,4 @@ struct HostManager {
 
 } // namespace varmodel
 
-#endif // #ifndef __Host_hpp__
+#endif // #ifndef Host_hpp

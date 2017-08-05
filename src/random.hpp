@@ -1,5 +1,5 @@
-#ifndef __random_hpp__
-#define __random_hpp__
+#ifndef random_hpp
+#define random_hpp
 
 #include <vector>
 #include <unordered_set>
@@ -230,4 +230,4 @@ size_t sampleDiscreteLinearSearch(rng_t & rng, std::vector<double> const & weigh
 
 } // namespace varmodel
 
-#endif
+#endif // #ifndef random_hpp

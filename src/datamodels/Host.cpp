@@ -4,7 +4,7 @@ namespace varmodel {
 
 /*** Host class implementation ***/
 
-Host::Host(int64_t id) : id(id) {
+Host::Host(uint64_t id) : id(id) {
 }
 
 
@@ -12,7 +12,7 @@ Host::Host(int64_t id) : id(id) {
 
 HostManager::HostManager() : HostManager(1) { }
 
-HostManager::HostManager(int64_t next_id) {
+HostManager::HostManager(uint64_t next_id) {
     this->next_id = next_id;
 }
 
@@ -20,13 +20,13 @@ Host * HostManager::create() {
     return create(next_id++);
 }
 
-Host * HostManager::create(int64_t id) {
+Host * HostManager::create(uint64_t id) {
     Host * host = new Host(id);
     hosts.add(host);
     return host;
 }
 
-Host * HostManager::host_for_id(int64_t id) {
+Host * HostManager::host_for_id(uint64_t id) {
     return hosts.object_for_id(id);
 }
 
@@ -37,7 +37,7 @@ void HostManager::load_from_db(sqlite3 * db) {
         if(sqlite3_step(stmt) != SQLITE_ROW) {
             break;
         }
-        int64_t id = sqlite3_column_int64(stmt, 0);
+        uint64_t id = sqlite3_column_int64(stmt, 0);
         create(id);
     }
     sqlite3_finalize(stmt);

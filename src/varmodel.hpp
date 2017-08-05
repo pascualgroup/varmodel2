@@ -1,5 +1,7 @@
-#ifndef __varmodel_hpp__
-#define __varmodel_hpp__
+#ifndef varmodel_hpp
+#define varmodel_hpp
+
+#include "Population.hpp"
 
 namespace varmodel {
 
@@ -10,8 +12,13 @@ void save_checkpoint();
 
 void run();
 
-void update_biting_rate();
+void do_update_biting_rate_event();
+void do_biting_event(Population * population);
+void do_immigration_event(Population * population);
+void do_death_event(Host * host);
+void do_transition_event(Infection * infection);
+void do_clearance_event(Infection * infection);
 
 }; // namespace varmodel
 
-#endif /* __varmodel_hpp__ */
+#endif // #ifndef varmodel_hpp

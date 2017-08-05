@@ -1,5 +1,5 @@
-#ifndef __IndexedMap_hpp__
-#define __IndexedMap_hpp__
+#ifndef IndexedMap_hpp
+#define IndexedMap_hpp
 
 #include <vector>
 #include <unordered_map>
@@ -43,4 +43,4 @@ struct IndexedMap {
 
 }; // namespace varmodel
 
-#endif // #ifndef __IndexedMap_hpp__
+#endif // #ifndef IndexedMap_hpp

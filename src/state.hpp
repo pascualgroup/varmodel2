@@ -1,5 +1,5 @@
-#ifndef __state_hpp__
-#define __state_hpp__
+#ifndef state_hpp
+#define state_hpp
 
 #include "parameters.hpp"
 #include "random.hpp"
@@ -16,8 +16,7 @@ extern HostManager * host_manager;
 extern EventManager * event_manager;
 
 extern CheckpointEvent * checkpoint_event;
-extern BitingRateUpdateEvent * biting_rate_update_event;
 
 }; // namespace varmodel
 
-#endif // #ifndef __state_hpp__
+#endif // #ifndef state_hpp

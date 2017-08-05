@@ -1,5 +1,5 @@
-#ifndef __IndexedPriorityQueue_hpp__
-#define __IndexedPriorityQueue_hpp__
+#ifndef IndexedPriorityQueue_hpp
+#define IndexedPriorityQueue_hpp
 
 #include <vector>
 #include <unordered_map>
@@ -292,4 +292,4 @@ private:
 
 } // namespace varmodel
 
-#endif // #ifndef __IndexedPriorityQueue_hpp__
+#endif // #ifndef IndexedPriorityQueue_hpp

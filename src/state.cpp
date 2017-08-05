@@ -10,6 +10,5 @@ HostManager * host_manager;
 EventManager * event_manager;
 
 CheckpointEvent * checkpoint_event;
-BitingRateUpdateEvent * biting_rate_update_event;
 
 } // namespace varmodel

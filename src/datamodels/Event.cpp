@@ -6,16 +6,15 @@
 
 namespace varmodel {
 
-Event::Event(
-    int64_t id, EventType event_type, double time
-) : id(id), event_type(event_type) {
-    this->time = time;
+Event::Event(uint64_t id, EventType event_type, double time)
+    : id(id), event_type(event_type), time(time) {
 }
 
 
 /*** CheckpointEvent ***/
 
-CheckpointEvent::CheckpointEvent(int64_t id, double time) : Event(id, CHECKPOINT_EVENT, time) {
+CheckpointEvent::CheckpointEvent(uint64_t id, double time)
+    : Event(id, CHECKPOINT_EVENT, time) {
 }
 
 void CheckpointEvent::do_event() {
@@ -25,20 +24,79 @@ void CheckpointEvent::do_event() {
 
 /*** BitingRateUpdateEvent ***/
 
-BitingRateUpdateEvent::BitingRateUpdateEvent(int64_t id, double time) : Event(id, BITING_RATE_UPDATE_EVENT, time) {
-    update_biting_rate();
+BitingRateUpdateEvent::BitingRateUpdateEvent(uint64_t id, double time)
+    : Event(id, BITING_RATE_UPDATE_EVENT, time) {
 }
 
 void BitingRateUpdateEvent::do_event() {
-    update_biting_rate();
+    do_update_biting_rate_event();
 }
+
+
+/*** BitingEvent ***/
+
+BitingEvent::BitingEvent(uint64_t id, Population * population, double time)
+    : Event(id, BITING_EVENT, time), population(population) {
+}
+
+void BitingEvent::do_event() {
+    do_biting_event(population);
+}
+
+
+/*** ImmigrationEvent ***/
+
+ImmigrationEvent::ImmigrationEvent(uint64_t id, Population * population, double time)
+    : Event(id, IMMIGRATION_EVENT, time), population(population) {
+}
+
+void ImmigrationEvent::do_event() {
+    do_immigration_event(population);
+}
+
+
+
+/*** DeathEvent ***/
+
+DeathEvent::DeathEvent(uint64_t id, Host * host, double time)
+    : Event(id, DEATH_EVENT, time), host(host) {
+}
+
+void DeathEvent::do_event() {
+    do_death_event(host);
+}
+
+
+
+/*** TransitionEvent ***/
+
+TransitionEvent::TransitionEvent(uint64_t id, Infection * infection, double time)
+    : Event(id, TRANSITION_EVENT, time), infection(infection) {
+}
+
+void TransitionEvent::do_event() {
+    do_transition_event(infection);
+}
+
+
+
+/*** ClearanceEvent ***/
+
+ClearanceEvent::ClearanceEvent(uint64_t id, Infection * infection, double time)
+    : Event(id, TRANSITION_EVENT, time), infection(infection) {
+}
+
+void ClearanceEvent::do_event() {
+    do_clearance_event(infection);
+}
+
 
 /*** EventManager implementation ***/
 
 EventManager::EventManager() : EventManager(1) {
 }
 
-EventManager::EventManager(int64_t next_id) {
+EventManager::EventManager(uint64_t next_id) {
     this->next_id = next_id;
 }
 
