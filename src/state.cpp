@@ -2,8 +2,8 @@
 
 namespace varmodel {
 
-double current_time;
 rng_t * rng;
+double current_time;
 
 PopulationManager * population_manager;
 HostManager * host_manager;

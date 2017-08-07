@@ -10,6 +10,7 @@
 namespace varmodel {
 
 extern rng_t * rng;
+extern double current_time;
 
 extern PopulationManager * population_manager;
 extern HostManager * host_manager;

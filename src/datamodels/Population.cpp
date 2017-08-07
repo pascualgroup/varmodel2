@@ -4,8 +4,7 @@ namespace varmodel {
 
 /*** Population class implementation ***/
 
-Population::Population(uint64_t id, double biting_rate, uint64_t transmission_count)
-    : id(id), biting_rate(biting_rate), transmission_count(transmission_count) {
+Population::Population(uint64_t id) : id(id) {
 }
 
 
@@ -16,12 +15,12 @@ PopulationManager::PopulationManager() : PopulationManager(1) { }
 PopulationManager::PopulationManager(uint64_t next_id) : next_id(next_id) {
 }
 
-Population * PopulationManager::create(double biting_rate, uint64_t transmission_count) {
-    return create(next_id++, biting_rate, transmission_count);
+Population * PopulationManager::create() {
+    return create(next_id++);
 }
 
-Population * PopulationManager::create(uint64_t id, double biting_rate, uint64_t transmission_count) {
-    Population * pop = new Population(id, biting_rate, transmission_count);
+Population * PopulationManager::create(uint64_t id) {
+    Population * pop = new Population(id);
     populations.add(pop);
     return pop;
 }
@@ -38,8 +37,9 @@ void PopulationManager::load_from_db(sqlite3 * db) {
             break;
         }
         uint64_t id = sqlite3_column_int64(stmt, 0);
-        uint64_t transmission_count = sqlite3_column_int64(stmt, 1);
-        create(id, transmission_count);
+        Population * pop = create(id);
+        pop->index = sqlite3_column_int64(stmt, 1);
+        pop->transmission_count = sqlite3_column_double(stmt, 2);
     }
     sqlite3_finalize(stmt);
 }
@@ -74,7 +74,7 @@ void PopulationManager::write_to_db(sqlite3 * db) {
 
 void PopulationManager::write_population_table(sqlite3 * db) {
     sqlite3_exec(db,
-        "CREATE TABLE population (id INTEGER, transmission_count INTEGER);",
+        "CREATE TABLE population (id INTEGER, index INTEGER, transmission_count INTEGER);",
         NULL, NULL, NULL
     );
     
@@ -82,7 +82,7 @@ void PopulationManager::write_population_table(sqlite3 * db) {
     sqlite3_prepare_v2(db, "INSERT INTO population VALUES (?,?,?);", -1, &stmt, NULL);
     for(Population * pop : populations.as_vector()) {
         sqlite3_bind_int64(stmt, 1, pop->id);
-        sqlite3_bind_double(stmt, 2, pop->biting_rate);
+        sqlite3_bind_int64(stmt, 2, pop->index);
         sqlite3_bind_int64(stmt, 3, pop->transmission_count);
         sqlite3_step(stmt);
         sqlite3_reset(stmt); 

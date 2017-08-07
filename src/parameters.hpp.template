@@ -83,18 +83,17 @@ const std::vector<uint64_t> {{N_HOSTS}};
 // Number of initial infections, by population.
 const std::vector<uint64_t> {{N_INITIAL_INFECTIONS}};
 
-// Parameters governing the biting rate sinusoid
+// Parameters governing the biting rate sinusoid for each population
 // BITING_RATE_MEAN: mean value.
 // BITING_RATE_RELATIVE_AMPLITUDE: amplitude as a fraction of the mean.
-// BITING_RATE_PHASE: phase offset, relative to a standard sine function, as a fraction (between 0 and 1) of the year.
+// BITING_RATE_PEAK_PHASE: fraction of the year (between 0 and 1) at which the sinusoid should reach its peak. 
 // The period of the sinusoid is T_YEAR.
-const double {{BITING_RATE_UPDATE_PERIOD}};
-const double {{BITING_RATE_MEAN}};
-const double {{BITING_RATE_RELATIVE_AMPLITUDE}};
-const double {{BITING_RATE_PHASE}};
+const std::vector<double> {{BITING_RATE_MEAN}};
+const std::vector<double> {{BITING_RATE_RELATIVE_AMPLITUDE}};
+const std::vector<double> {{BITING_RATE_PEAK_PHASE}};
 
 // Immigration rate, in number of random infection events per unit time (per population, not per capita).
-const double {{IMMIGRATION_RATE}};
+const std::vector<double> {{IMMIGRATION_RATE}};
 
 // Parameters controlling the relationship between # active infections and clearance rate.
 // If inactive, clearanceRate = 0.

@@ -8,19 +8,34 @@
 
 namespace varmodel {
 
+/*** Forward type definitions ***/
+
+struct BitingEvent;
+struct ImmigrationEvent;
+
+/*** Population type declaration ***/
+
 struct Population {
     uint64_t const id;
     
     // Scalar fields
-    double const biting_rate;
+    uint64_t index;
+    
     uint64_t transmission_count;
+    
+    // One-to-one relationships
+    BitingEvent * biting_event;
+    ImmigrationEvent * immigration_event;
     
     // One-to-many relationships
     IndexedMap<Host> hosts;
     
     // Constructor
-    Population(uint64_t id, double biting_rate, uint64_t transmission_count);
+    Population(uint64_t id);
 };
+
+
+/*** PopulationManager type declaration ***/
 
 struct PopulationManager {
     uint64_t next_id;
@@ -31,8 +46,8 @@ struct PopulationManager {
     PopulationManager(uint64_t next_id);
     
     // Object management
-    Population * create(double biting_rate, uint64_t transmission_count);
-    Population * create(uint64_t id, double biting_rate, uint64_t transmission_count);
+    Population * create();
+    Population * create(uint64_t id);
     Population * population_for_id(uint64_t id);
     
     // Database management

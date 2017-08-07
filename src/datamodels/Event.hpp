@@ -3,18 +3,20 @@
 
 #include <sqlite3.h>
 #include <vector>
-#include "Population.hpp"
-#include "Host.hpp"
-#include "Infection.hpp"
 #include "IndexedPriorityQueue.hpp"
 
 namespace varmodel {
+
+/*** Forward type definitions ***/
+
+struct Population;
+struct Host;
+struct Infection;
 
 /*** EventType enum used for introspection ***/
 
 enum EventType {
     CHECKPOINT_EVENT,
-    BITING_RATE_UPDATE_EVENT,
     BITING_EVENT,
     IMMIGRATION_EVENT,
     DEATH_EVENT,
@@ -24,7 +26,7 @@ enum EventType {
 };
 
 
-/*** Abstract event types ***/
+/*** Abstract event superclass ***/
 
 struct Event {
     const uint64_t id;
@@ -40,11 +42,6 @@ struct Event {
 
 struct CheckpointEvent : Event {
     CheckpointEvent(uint64_t id, double time);
-    virtual void do_event();
-};
-
-struct BitingRateUpdateEvent : Event {
-    BitingRateUpdateEvent(uint64_t id, double time);
     virtual void do_event();
 };
 
@@ -112,10 +109,14 @@ struct EventManager {
     
     // Object management
     CheckpointEvent * create_checkpoint_event();
-    BitingRateUpdateEvent * create_biting_rate_update_event();
-    
-    BitingEvent * create_biting_event();
-    ImmigrationEvent * create_immigration_event();
+    BitingEvent * create_biting_event(
+        Population * population,
+        double time
+    );
+    ImmigrationEvent * create_immigration_event(
+        Population * population,
+        double time
+    );
     DeathEvent * create_death_event();
     TransitionEvent * create_transition_event();
     ClearanceEvent * create_clearance_event();

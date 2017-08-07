@@ -4,6 +4,11 @@
 #include "varmodel.hpp"
 #include "state.hpp"
 
+#include "Population.hpp"
+#include "Host.hpp"
+#include "Infection.hpp"
+#include "Immunity.hpp"
+
 namespace varmodel {
 
 Event::Event(uint64_t id, EventType event_type, double time)
@@ -19,17 +24,6 @@ CheckpointEvent::CheckpointEvent(uint64_t id, double time)
 
 void CheckpointEvent::do_event() {
     save_checkpoint();
-}
-
-
-/*** BitingRateUpdateEvent ***/
-
-BitingRateUpdateEvent::BitingRateUpdateEvent(uint64_t id, double time)
-    : Event(id, BITING_RATE_UPDATE_EVENT, time) {
-}
-
-void BitingRateUpdateEvent::do_event() {
-    do_update_biting_rate_event();
 }
 
 
@@ -104,9 +98,20 @@ CheckpointEvent * EventManager::create_checkpoint_event() {
     return nullptr;
 }
 
-BitingRateUpdateEvent * EventManager::create_biting_rate_update_event() {
-    return nullptr;
+BitingEvent * EventManager::create_biting_event(
+    Population * population, double time
+) {
+    BitingEvent * event = new BitingEvent(next_id++, population, time);
+    events.add(event);
+    return event;
 }
 
+ImmigrationEvent * EventManager::create_immigration_event(
+    Population * population, double time
+) {
+    ImmigrationEvent * event = new ImmigrationEvent(next_id++, population, time);
+    events.add(event);
+    return event;
+} 
 
 } // namespace varmodel
