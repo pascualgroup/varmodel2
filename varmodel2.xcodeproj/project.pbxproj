@@ -57,6 +57,7 @@
 		69D181BE1F2BBF22007D5C32 /* util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = util.cpp; sourceTree = "<group>"; };
 		69D181BF1F2BBF22007D5C32 /* util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = util.hpp; sourceTree = "<group>"; };
 		69D181C11F2BBF29007D5C32 /* HashPair.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HashPair.hpp; sourceTree = "<group>"; };
+		69EB5C441F3A838E007B36F5 /* dbtypes.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = dbtypes.hpp; sourceTree = "<group>"; };
 		69F28E7F1F35377B00177DDB /* Infection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Infection.cpp; sourceTree = "<group>"; };
 		69F28E801F35377B00177DDB /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Infection.hpp; sourceTree = "<group>"; };
 		69F28E821F353F0E00177DDB /* Immunity.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Immunity.cpp; sourceTree = "<group>"; };
@@ -107,6 +108,7 @@
 				699ABDE31F2A613500FBC9BF /* parameters.hpp */,
 				69D181B81F2B8FFD007D5C32 /* random.hpp */,
 				69D181B71F2B8FFD007D5C32 /* random.cpp */,
+				69EB5C441F3A838E007B36F5 /* dbtypes.hpp */,
 				69D181B01F2AABFC007D5C32 /* IndexedMap.hpp */,
 				69D181BD1F2B9F49007D5C32 /* IndexedPriorityQueue.hpp */,
 				69D181BF1F2BBF22007D5C32 /* util.hpp */,

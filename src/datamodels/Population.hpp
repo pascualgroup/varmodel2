@@ -5,6 +5,7 @@
 #include <vector>
 #include "Host.hpp"
 #include "IndexedMap.hpp"
+#include "dbtypes.hpp"
 
 namespace varmodel {
 
@@ -15,20 +16,19 @@ struct ImmigrationEvent;
 
 /*** Population type declaration ***/
 
-struct Population {
+DB_TYPE struct Population {
     uint64_t const id;
     
     // Scalar fields
-    uint64_t index;
+    DB_FIELD uint64_t index;
+    DB_FIELD uint64_t transmission_count;
     
-    uint64_t transmission_count;
+    // References to objects
+    DB_REF BitingEvent * biting_event;
+    DB_REF ImmigrationEvent * immigration_event;
     
-    // One-to-one relationships
-    BitingEvent * biting_event;
-    ImmigrationEvent * immigration_event;
-    
-    // One-to-many relationships
-    IndexedMap<Host> hosts;
+    // Collections of objects
+    DB_REFLIST IndexedMap<Host> hosts;
     
     // Constructor
     Population(uint64_t id);
