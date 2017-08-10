@@ -7,6 +7,18 @@
 namespace varmodel {
 
 #pragma mark \
+*** Simulation state ***
+
+rng_t * rng;
+double current_time;
+
+PopulationManager * population_manager;
+HostManager * host_manager;
+EventManager * event_manager;
+
+CheckpointEvent * checkpoint_event;
+
+#pragma mark \
 *** Helper function declarations ***
 
 void initialize_populations();

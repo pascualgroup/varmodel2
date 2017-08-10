@@ -8,18 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		696C01F01F198D61009403B6 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 696C01EE1F198D61009403B6 /* main.cpp */; };
-		69D181AA1F2A68D1007D5C32 /* Population.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181A91F2A68D1007D5C32 /* Population.cpp */; };
 		69D181AC1F2A69B4007D5C32 /* varmodel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181AB1F2A69B4007D5C32 /* varmodel.cpp */; };
-		69D181AF1F2AABED007D5C32 /* Host.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181AD1F2AABED007D5C32 /* Host.cpp */; };
 		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
 		69D181B61F2AFF49007D5C32 /* Event.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181B41F2AFF49007D5C32 /* Event.cpp */; };
 		69D181B91F2B8FFD007D5C32 /* random.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181B71F2B8FFD007D5C32 /* random.cpp */; };
-		69D181BC1F2B911D007D5C32 /* state.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181BA1F2B911D007D5C32 /* state.cpp */; };
 		69D181C01F2BBF22007D5C32 /* util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181BE1F2BBF22007D5C32 /* util.cpp */; };
-		69F28E811F35377B00177DDB /* Infection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F28E7F1F35377B00177DDB /* Infection.cpp */; };
-		69F28E841F353F0E00177DDB /* Immunity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F28E821F353F0E00177DDB /* Immunity.cpp */; };
-		69F28E871F353F5B00177DDB /* Strain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F28E851F353F5B00177DDB /* Strain.cpp */; };
-		69F28E8A1F353F6A00177DDB /* Gene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F28E881F353F6A00177DDB /* Gene.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -41,9 +34,7 @@
 		696C01F11F19922D009403B6 /* parameters.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; path = parameters.hpp.template; sourceTree = "<group>"; };
 		699ABDE31F2A613500FBC9BF /* parameters.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = parameters.hpp; path = build/src/parameters.hpp; sourceTree = SOURCE_ROOT; };
 		69D181A81F2A68C2007D5C32 /* Population.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Population.hpp; sourceTree = "<group>"; };
-		69D181A91F2A68D1007D5C32 /* Population.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Population.cpp; sourceTree = "<group>"; };
 		69D181AB1F2A69B4007D5C32 /* varmodel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = varmodel.cpp; sourceTree = "<group>"; };
-		69D181AD1F2AABED007D5C32 /* Host.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Host.cpp; sourceTree = "<group>"; };
 		69D181AE1F2AABED007D5C32 /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Host.hpp; sourceTree = "<group>"; };
 		69D181B01F2AABFC007D5C32 /* IndexedMap.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IndexedMap.hpp; sourceTree = "<group>"; };
 		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
@@ -51,20 +42,14 @@
 		69D181B51F2AFF49007D5C32 /* Event.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Event.hpp; sourceTree = "<group>"; };
 		69D181B71F2B8FFD007D5C32 /* random.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = random.cpp; sourceTree = "<group>"; };
 		69D181B81F2B8FFD007D5C32 /* random.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = random.hpp; sourceTree = "<group>"; };
-		69D181BA1F2B911D007D5C32 /* state.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = state.cpp; sourceTree = "<group>"; };
-		69D181BB1F2B911D007D5C32 /* state.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = state.hpp; sourceTree = "<group>"; };
 		69D181BD1F2B9F49007D5C32 /* IndexedPriorityQueue.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IndexedPriorityQueue.hpp; sourceTree = "<group>"; };
 		69D181BE1F2BBF22007D5C32 /* util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = util.cpp; sourceTree = "<group>"; };
 		69D181BF1F2BBF22007D5C32 /* util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = util.hpp; sourceTree = "<group>"; };
 		69D181C11F2BBF29007D5C32 /* HashPair.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HashPair.hpp; sourceTree = "<group>"; };
 		69EB5C441F3A838E007B36F5 /* dbtypes.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = dbtypes.hpp; sourceTree = "<group>"; };
-		69F28E7F1F35377B00177DDB /* Infection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Infection.cpp; sourceTree = "<group>"; };
 		69F28E801F35377B00177DDB /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Infection.hpp; sourceTree = "<group>"; };
-		69F28E821F353F0E00177DDB /* Immunity.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Immunity.cpp; sourceTree = "<group>"; };
 		69F28E831F353F0E00177DDB /* Immunity.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Immunity.hpp; sourceTree = "<group>"; };
-		69F28E851F353F5B00177DDB /* Strain.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Strain.cpp; sourceTree = "<group>"; };
 		69F28E861F353F5B00177DDB /* Strain.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Strain.hpp; sourceTree = "<group>"; };
-		69F28E881F353F6A00177DDB /* Gene.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Gene.cpp; sourceTree = "<group>"; };
 		69F28E891F353F6A00177DDB /* Gene.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gene.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -101,8 +86,6 @@
 			isa = PBXGroup;
 			children = (
 				696C01EE1F198D61009403B6 /* main.cpp */,
-				69D181BB1F2B911D007D5C32 /* state.hpp */,
-				69D181BA1F2B911D007D5C32 /* state.cpp */,
 				696C01EF1F198D61009403B6 /* varmodel.hpp */,
 				69D181AB1F2A69B4007D5C32 /* varmodel.cpp */,
 				699ABDE31F2A613500FBC9BF /* parameters.hpp */,
@@ -124,17 +107,11 @@
 			isa = PBXGroup;
 			children = (
 				69F28E861F353F5B00177DDB /* Strain.hpp */,
-				69F28E851F353F5B00177DDB /* Strain.cpp */,
 				69F28E891F353F6A00177DDB /* Gene.hpp */,
-				69F28E881F353F6A00177DDB /* Gene.cpp */,
 				69D181A81F2A68C2007D5C32 /* Population.hpp */,
-				69D181A91F2A68D1007D5C32 /* Population.cpp */,
 				69D181AE1F2AABED007D5C32 /* Host.hpp */,
-				69D181AD1F2AABED007D5C32 /* Host.cpp */,
 				69F28E801F35377B00177DDB /* Infection.hpp */,
-				69F28E7F1F35377B00177DDB /* Infection.cpp */,
 				69F28E831F353F0E00177DDB /* Immunity.hpp */,
-				69F28E821F353F0E00177DDB /* Immunity.cpp */,
 				69D181B51F2AFF49007D5C32 /* Event.hpp */,
 				69D181B41F2AFF49007D5C32 /* Event.cpp */,
 			);
@@ -206,17 +183,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				69F28E8A1F353F6A00177DDB /* Gene.cpp in Sources */,
-				69F28E871F353F5B00177DDB /* Strain.cpp in Sources */,
-				69D181AA1F2A68D1007D5C32 /* Population.cpp in Sources */,
-				69D181BC1F2B911D007D5C32 /* state.cpp in Sources */,
 				696C01F01F198D61009403B6 /* main.cpp in Sources */,
 				69D181B91F2B8FFD007D5C32 /* random.cpp in Sources */,
 				69D181B61F2AFF49007D5C32 /* Event.cpp in Sources */,
-				69F28E841F353F0E00177DDB /* Immunity.cpp in Sources */,
 				69D181AC1F2A69B4007D5C32 /* varmodel.cpp in Sources */,
-				69D181AF1F2AABED007D5C32 /* Host.cpp in Sources */,
-				69F28E811F35377B00177DDB /* Infection.cpp in Sources */,
 				69D181C01F2BBF22007D5C32 /* util.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

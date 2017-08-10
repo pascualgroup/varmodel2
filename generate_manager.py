@@ -76,29 +76,23 @@ def parse_type(input_file):
         if len(tokens) == 0:
             continue
         if state == 'START':
-            if tokens[0] == 'DB_TYPE':
-                if len(tokens) != 4 or not tokens[1] == 'struct' or not tokens[3] == '{':
-                    print('Cannot parse DB_TYPE line:\n{}'.format(line))
-                name = tokens[2]
+            if tokens[0] == 'struct' and tokens[-1] == '{' and len(tokens) >= 3:
+                name = tokens[1]
                 state = 'SCANNING'
         if state == 'SCANNING':
             if tokens[0] == '};':
                 state = 'END'
-            elif tokens[0] == 'DB_FIELD':
-                if len(tokens) != 3 or not tokens[2].endswith(';'):
-                    print('Cannot parse DB_FIELD line:\n{}'.format(line))
-                    sys.exit(1)
-                columns.append(('FIELD', tokens[1], tokens[2][:-1]))
-            elif tokens[0] == 'DB_REF':
-                if len(tokens) != 4 or not tokens[2] == '*' or not tokens[3].endswith(';'):
-                    print('Cannot parse DB_REF line:\n{}'.format(line))
-                    sys.exit(1)
-                columns.append(('REF', tokens[1], tokens[3][:-1]))
-            elif tokens[0] == 'DB_REFLIST':
-                if len(tokens) != 3 or not tokens[2].endswith(';'):
-                    print('Cannot parse DB_REFLIST line:\n{}'.format(line))
-                    sys.exit(1)
-                reflists.append((tokens[1], tokens[2][:-1]))
+            elif len(tokens) == 2:
+                if tokens[0] == 'uint64_t' or tokens[0] == 'int64_t' or tokens[0] == 'double':
+                    if tokens[1].endswith(';'):
+                        columns.append(('FIELD', tokens[0], tokens[1][:-1]))
+                elif tokens[0].startswith('IndexedMap') \
+                    and tokens[0][len('IndexedMap')] == '<' and tokens[0][-1] == '>' \
+                    and tokens[1].endswith(';'):
+                        object_type = tokens[0][len('IndexedMap')+1:-1]
+                        reflists.append((object_type, tokens[1][:-1]))
+            elif len(tokens) == 3 and tokens[1] == '*' and tokens[2].endswith(';'):
+                columns.append(('REF', tokens[0], tokens[2][:-1]))
     
     return TypeInfo(name, columns, reflists)
 
@@ -113,10 +107,6 @@ namespace varmodel {{
 struct {manager_type} {{
     uint64_t next_id;
     IndexedMap<{object_type}> collection;
-    
-    // Constructors
-    {manager_type}();
-    {manager_type}(uint64_t next_id);
     
     // Object management
     {object_type} * create();
@@ -152,7 +142,7 @@ namespace varmodel {{
 }}
 
 void {manager_type}::load_from_checkpoint(sqlite3 * db, char const * const table_name) {{
-    char sql[1024];
+    char sql[8192];
     int result = snprintf(sql, sizeof(sql), "SELECT * FROM %s;", table_name);
     assert(result >= 0 && result < sizeof(sql));
     
@@ -169,18 +159,41 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db, char const * const table
 }}
 
 {resolve_relationships_signature} {{
-
+    
 }}
 
 {save_to_checkpoint_signature} {{
-
+    char create_sql[8192];
+    int result = snprintf(create_sql, sizeof(create_sql),
+        "CREATE TABLE %s (id INTEGER{sql_create_columns});",
+        table_name
+    );
+    assert(result >= 0 && result < sizeof(create_sql));
+    sqlite3_exec(db, create_sql, NULL, NULL, NULL);
+    
+    char insert_sql[8192];
+    int result = snprintf(insert_sql, sizeof(insert_sql),
+        "INSERT INTO %s VALUES (?{sql_insert_qmarks});",
+        table_name
+    );
+    assert(result >= 0 && result <= sizeof(insert_sql));
+    
+    sqlite3_stmt * stmt = NULL;
+    sqlite3_prepare_v2(db, insert_sql, -1, &stmt, NULL);
+    for({object_type} * obj : objects.as_vector()) {{
+        sqlite3_bind_int64(stmt, 1, obj->id);
+        {bind_column_statements}
+        sqlite3_step(stmt);
+        sqlite3_reset(stmt); 
+    }}
+    sqlite3_finalize(stmt);
 }}
 
-}}
+}} // namespace varmodel
 '''
 
 resolve_relationships_signature_format = \
-    'void {prefix}resolve_relationships(sqlite3 * db, char const * const table_name{ref_table_name_args})'
+    'void {prefix}resolve_relationships(sqlite3 * db{ref_manager_args})'
 
 save_to_checkpoint_signature_format = \
     'void {prefix}save_to_checkpoint(sqlite3 * db, char const * const table_name{reflist_table_name_args})'
@@ -191,6 +204,7 @@ def generate_manager(output_dir, object_type_header_prefix, typeinfo):
     object_type = typeinfo.name
     manager_type = object_type + 'Manager'
     
+    ref_cols = [c for c in typeinfo.columns if c[0] == 'REF']
     ref_vars = [c[2] for c in typeinfo.columns if c[0] == 'REF']
     reflist_vars = [rl[1] for rl in typeinfo.reflists]
     
@@ -199,11 +213,16 @@ def generate_manager(output_dir, object_type_header_prefix, typeinfo):
             return ''
         return ', ' + ', '.join(['char const * const {}_table_name'.format(var) for var in vars])
     
+    def format_manager_args():
+        if len(ref_cols) == 0:
+            return ''
+        return ', ' + ', '.join(['{}Manager * {}_manager'.format(c[1], c[2]) for c in ref_cols])
+    
     def format_manager_header():
         def format_resolve_relationships_signature():
             return resolve_relationships_signature_format.format(
                 prefix = '',
-                ref_table_name_args = format_table_name_args(ref_vars + reflist_vars)
+                ref_manager_args = format_manager_args()
             )
         
         def format_save_to_checkpoint_signature():
@@ -236,12 +255,21 @@ def generate_manager(output_dir, object_type_header_prefix, typeinfo):
         elif type_str == 'std::string':
             return 'text'
         return 'int64'
+     
+    def sql_type_for_type(type_str):
+        if type_str.startswith('uint') or type_str.startswith('int'):
+            return 'INTEGER'
+        elif type_str == 'double':
+            return 'REAL'
+        elif type_str == 'std::string':
+            return 'TEXT'
+        return 'INTEGER'
     
     def format_manager_implementation():
         def format_resolve_relationships_signature():
             return resolve_relationships_signature_format.format(
                 prefix = manager_type + '::',
-                ref_table_name_args = format_table_name_args(ref_vars + reflist_vars)
+                ref_manager_args = format_manager_args(),
             )
         
         def format_save_to_checkpoint_signature():
@@ -252,7 +280,6 @@ def generate_manager(output_dir, object_type_header_prefix, typeinfo):
         
         def format_load_column_statements():
             def format_load_column_statement(col_info, index):
-                print(col_info, index)
                 return 'obj->{name} = sqlite3_column_{sqlite_type}(stmt, {index});'.format(
                     name = col_info[2],
                     sqlite_type = sqlite_type_for_type(col_info[1]),
@@ -264,6 +291,44 @@ def generate_manager(output_dir, object_type_header_prefix, typeinfo):
                 if col_info[0] == 'FIELD'
             ])
         
+        def format_sql_create_columns():
+            if len(typeinfo.columns) == 0:
+                return ''
+            
+            def format_create_column(col_info):
+                if col_info[0] == 'FIELD':
+                    return '{} {}'.format(col_info[2], sql_type_for_type(col_info[1]))
+                else:
+                    assert col_info[0] == 'REF'
+                    return '{}_id INTEGER'.format(col_info[2])
+            
+            return ', ' + ', '.join([format_create_column(col_info) for col_info in typeinfo.columns])
+        
+        def format_sql_insert_qmarks():
+            if len(typeinfo.columns) == 0:
+                return ''
+            
+            return ',' + ','.join(['?'] * len(typeinfo.columns))
+        
+        def format_bind_column_statements():
+            def format_bind_column_statement(col_info, index):
+                if col_info[0] == 'FIELD':
+                    return 'sqlite3_bind_{}(stmt, {}, obj->{});'.format(
+                        sqlite_type_for_type(col_info[1]),
+                        index,
+                        col_info[2]
+                    )
+                else:
+                    assert col_info[0] == 'REF'
+                    return 'sqlite3_bind_int64(stmt, {}, obj->{}->id);'.format(
+                        index,
+                        col_info[2]
+                    )
+            
+            return '\n        '.join([
+                format_bind_column_statement(col_info, index + 2) for index, col_info in enumerate(typeinfo.columns)
+            ])
+        
         return manager_implementation_format.format(
             object_type_header_prefix = object_type_header_prefix,
             object_type = object_type,
@@ -271,7 +336,10 @@ def generate_manager(output_dir, object_type_header_prefix, typeinfo):
             manager_type = manager_type,
             resolve_relationships_signature = format_resolve_relationships_signature(),
             save_to_checkpoint_signature = format_save_to_checkpoint_signature(),
-            load_column_statements = format_load_column_statements()
+            load_column_statements = format_load_column_statements(),
+            sql_create_columns = format_sql_create_columns(),
+            sql_insert_qmarks = format_sql_insert_qmarks(),
+            bind_column_statements = format_bind_column_statements()
         )
     
     manager_implementation_filename = os.path.join(output_dir, manager_type_header_prefix + '.cpp')
