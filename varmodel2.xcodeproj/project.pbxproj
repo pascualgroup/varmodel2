@@ -7,12 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		696C01F01F198D61009403B6 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 696C01EE1F198D61009403B6 /* main.cpp */; };
-		69D181AC1F2A69B4007D5C32 /* varmodel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181AB1F2A69B4007D5C32 /* varmodel.cpp */; };
 		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
-		69D181B61F2AFF49007D5C32 /* Event.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181B41F2AFF49007D5C32 /* Event.cpp */; };
-		69D181B91F2B8FFD007D5C32 /* random.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181B71F2B8FFD007D5C32 /* random.cpp */; };
-		69D181C01F2BBF22007D5C32 /* util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D181BE1F2BBF22007D5C32 /* util.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,29 +23,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		64DB67311F6B4C8700B08BBC /* generated */ = {isa = PBXFileReference; lastKnownFileType = folder; name = generated; path = build/generated; sourceTree = "<group>"; };
+		64DB67321F6B4C9300B08BBC /* src */ = {isa = PBXFileReference; lastKnownFileType = folder; name = src; path = build/src; sourceTree = "<group>"; };
+		64DB67331F6B4CF300B08BBC /* parameters.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; path = parameters.hpp.template; sourceTree = "<group>"; };
 		696C01E01F198B7F009403B6 /* varmodel2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = varmodel2; sourceTree = BUILT_PRODUCTS_DIR; };
-		696C01EE1F198D61009403B6 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		696C01EF1F198D61009403B6 /* varmodel.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = varmodel.hpp; sourceTree = "<group>"; };
-		696C01F11F19922D009403B6 /* parameters.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; path = parameters.hpp.template; sourceTree = "<group>"; };
-		699ABDE31F2A613500FBC9BF /* parameters.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = parameters.hpp; path = build/src/parameters.hpp; sourceTree = SOURCE_ROOT; };
-		69D181A81F2A68C2007D5C32 /* Population.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Population.hpp; sourceTree = "<group>"; };
-		69D181AB1F2A69B4007D5C32 /* varmodel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = varmodel.cpp; sourceTree = "<group>"; };
-		69D181AE1F2AABED007D5C32 /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Host.hpp; sourceTree = "<group>"; };
-		69D181B01F2AABFC007D5C32 /* IndexedMap.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IndexedMap.hpp; sourceTree = "<group>"; };
 		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
-		69D181B41F2AFF49007D5C32 /* Event.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Event.cpp; sourceTree = "<group>"; };
-		69D181B51F2AFF49007D5C32 /* Event.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Event.hpp; sourceTree = "<group>"; };
-		69D181B71F2B8FFD007D5C32 /* random.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = random.cpp; sourceTree = "<group>"; };
-		69D181B81F2B8FFD007D5C32 /* random.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = random.hpp; sourceTree = "<group>"; };
-		69D181BD1F2B9F49007D5C32 /* IndexedPriorityQueue.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IndexedPriorityQueue.hpp; sourceTree = "<group>"; };
-		69D181BE1F2BBF22007D5C32 /* util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = util.cpp; sourceTree = "<group>"; };
-		69D181BF1F2BBF22007D5C32 /* util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = util.hpp; sourceTree = "<group>"; };
-		69D181C11F2BBF29007D5C32 /* HashPair.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HashPair.hpp; sourceTree = "<group>"; };
-		69EB5C441F3A838E007B36F5 /* dbtypes.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = dbtypes.hpp; sourceTree = "<group>"; };
-		69F28E801F35377B00177DDB /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Infection.hpp; sourceTree = "<group>"; };
-		69F28E831F353F0E00177DDB /* Immunity.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Immunity.hpp; sourceTree = "<group>"; };
-		69F28E861F353F5B00177DDB /* Strain.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Strain.hpp; sourceTree = "<group>"; };
-		69F28E891F353F6A00177DDB /* Gene.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gene.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,7 +45,9 @@
 		696C01D71F198B7F009403B6 = {
 			isa = PBXGroup;
 			children = (
-				696C01ED1F198D4B009403B6 /* src */,
+				64DB67331F6B4CF300B08BBC /* parameters.hpp.template */,
+				64DB67321F6B4C9300B08BBC /* src */,
+				64DB67311F6B4C8700B08BBC /* generated */,
 				696C01E11F198B7F009403B6 /* Products */,
 				69D181B11F2AAC83007D5C32 /* Frameworks */,
 			);
@@ -80,42 +59,6 @@
 				696C01E01F198B7F009403B6 /* varmodel2 */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		696C01ED1F198D4B009403B6 /* src */ = {
-			isa = PBXGroup;
-			children = (
-				696C01EE1F198D61009403B6 /* main.cpp */,
-				696C01EF1F198D61009403B6 /* varmodel.hpp */,
-				69D181AB1F2A69B4007D5C32 /* varmodel.cpp */,
-				699ABDE31F2A613500FBC9BF /* parameters.hpp */,
-				69D181B81F2B8FFD007D5C32 /* random.hpp */,
-				69D181B71F2B8FFD007D5C32 /* random.cpp */,
-				69EB5C441F3A838E007B36F5 /* dbtypes.hpp */,
-				69D181B01F2AABFC007D5C32 /* IndexedMap.hpp */,
-				69D181BD1F2B9F49007D5C32 /* IndexedPriorityQueue.hpp */,
-				69D181BF1F2BBF22007D5C32 /* util.hpp */,
-				69D181BE1F2BBF22007D5C32 /* util.cpp */,
-				69D181C11F2BBF29007D5C32 /* HashPair.hpp */,
-				696C01F11F19922D009403B6 /* parameters.hpp.template */,
-				69D181A71F2A68A9007D5C32 /* datamodels */,
-			);
-			path = src;
-			sourceTree = "<group>";
-		};
-		69D181A71F2A68A9007D5C32 /* datamodels */ = {
-			isa = PBXGroup;
-			children = (
-				69F28E861F353F5B00177DDB /* Strain.hpp */,
-				69F28E891F353F6A00177DDB /* Gene.hpp */,
-				69D181A81F2A68C2007D5C32 /* Population.hpp */,
-				69D181AE1F2AABED007D5C32 /* Host.hpp */,
-				69F28E801F35377B00177DDB /* Infection.hpp */,
-				69F28E831F353F0E00177DDB /* Immunity.hpp */,
-				69D181B51F2AFF49007D5C32 /* Event.hpp */,
-				69D181B41F2AFF49007D5C32 /* Event.cpp */,
-			);
-			path = datamodels;
 			sourceTree = "<group>";
 		};
 		69D181B11F2AAC83007D5C32 /* Frameworks */ = {
@@ -183,11 +126,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				696C01F01F198D61009403B6 /* main.cpp in Sources */,
-				69D181B91F2B8FFD007D5C32 /* random.cpp in Sources */,
-				69D181B61F2AFF49007D5C32 /* Event.cpp in Sources */,
-				69D181AC1F2A69B4007D5C32 /* varmodel.cpp in Sources */,
-				69D181C01F2BBF22007D5C32 /* util.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
