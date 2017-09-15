@@ -4,144 +4,144 @@
 #include <string>
 #include <vector>
 
-namespace varmodel {
+namespace varmodel {{
 
 /*** OUTPUT SETTINGS ***/
 
 // Path to database output file for sampled data, absolute or relative to the working directory the program is executed in.
-const std::string {{SAMPLE_DB_FILENAME}};
+const std::string {SAMPLE_DB_FILENAME};
 
 // Whether or not to write out all hosts to database
-const bool {{OUTPUT_HOSTS}};
+const bool {OUTPUT_HOSTS};
 
 // Whether or not to write out all genes to database
-const bool {{OUTPUT_GENES}};
+const bool {OUTPUT_GENES};
 
 // Whether or not to write out all strains to database
-const bool {{OUTPUT_STRAINS}};
+const bool {OUTPUT_STRAINS};
 
 // How often to sample hosts, in simulation time units
-const double {{HOST_SAMPLING_PERIOD}};
+const double {HOST_SAMPLING_PERIOD};
 
 // How often to sample a transmission event, in number of transmission events.
-const uint64_t {{TRANSMISSION_EVENT_SAMPLING_SKIP}};
+const uint64_t {TRANSMISSION_EVENT_SAMPLING_SKIP};
 
 // Burn-in period for simulation before which output will not be written.
-const double {{T_BURNIN}};
+const double {T_BURNIN};
 
 
 /*** CHECKPOINT SETTINGS ***/
 
 // Path to checkpoint output file
-const std::string {{CHECKPOINT_SAVE_FILENAME}};
+const std::string {CHECKPOINT_SAVE_FILENAME};
 
 // How often, in simulation time units, to save checkpoints
-const double {{CHECKPOINT_SAVE_PERIOD}};
+const double {CHECKPOINT_SAVE_PERIOD};
 
 // Whether or not to load from a checkpoint file
-const bool {{LOAD_FROM_CHECKPOINT}};
+const bool {LOAD_FROM_CHECKPOINT};
 
 // Filename of checkpoint to load from
-const std::string {{CHECKPOINT_LOAD_FILENAME}};
+const std::string {CHECKPOINT_LOAD_FILENAME};
 
 
 /*** MODEL PARAMETERS ***/
 
 // Random seed for simulation.
-const uint64_t {{RANDOM_SEED}};
+const uint64_t {RANDOM_SEED};
 
 // Simulation time corresponding to one year
-const double {{T_YEAR}};
+const double {T_YEAR};
                 
 // Simulation end time
-const double {{T_END}};
+const double {T_END};
 
 // Number of genes in the global pool.
-const uint64_t {{N_GENES}};
+const uint64_t {N_GENES};
 
 // Number of genes per pathogen strain.
-const uint64_t {{N_GENES_PER_STRAIN}};
+const uint64_t {N_GENES_PER_STRAIN};
 
 // Probability per gene of a mutation when a strain is picked up.
-const double {{P_MUTATION}};
+const double {P_MUTATION};
 
 // Probability that a transmitted strain will be formed from recombination.
-const double {{P_STRAIN_RECOMBINATION}};
+const double {P_STRAIN_RECOMBINATION};
 
 // Duration of liver stage (pre-expression)
-const double {{T_LIVER_STAGE}};
+const double {T_LIVER_STAGE};
 
 // Host-lifetime distribution, specified as a discrete PDF, one weight per year, with uniform density within each year.
-const std::vector<double> {{HOST_LIFETIME_PDF}};
+const std::vector<double> {HOST_LIFETIME_PDF};
 
 // Number of populations
-const uint64_t {{N_POPULATIONS}};
+const uint64_t {N_POPULATIONS};
 
 // Number of hosts, by population.
-const std::vector<uint64_t> {{N_HOSTS}};
+const std::vector<uint64_t> {N_HOSTS};
 
 // Number of initial infections, by population.
-const std::vector<uint64_t> {{N_INITIAL_INFECTIONS}};
+const std::vector<uint64_t> {N_INITIAL_INFECTIONS};
 
 // Parameters governing the biting rate sinusoid for each population
 // BITING_RATE_MEAN: mean value.
 // BITING_RATE_RELATIVE_AMPLITUDE: amplitude as a fraction of the mean.
 // BITING_RATE_PEAK_PHASE: fraction of the year (between 0 and 1) at which the sinusoid should reach its peak. 
 // The period of the sinusoid is T_YEAR.
-const std::vector<double> {{BITING_RATE_MEAN}};
-const std::vector<double> {{BITING_RATE_RELATIVE_AMPLITUDE}};
-const std::vector<double> {{BITING_RATE_PEAK_PHASE}};
+const std::vector<double> {BITING_RATE_MEAN};
+const std::vector<double> {BITING_RATE_RELATIVE_AMPLITUDE};
+const std::vector<double> {BITING_RATE_PEAK_PHASE};
 
 // Immigration rate, in number of random infection events per unit time (per population, not per capita).
-const std::vector<double> {{IMMIGRATION_RATE}};
+const std::vector<double> {IMMIGRATION_RATE};
 
 // Parameters controlling the relationship between # active infections and clearance rate.
 // If inactive, clearanceRate = 0.
-// If active and {immune | not immune}:
-// clearanceRate = CLEARANCE_RATE_CONSTANT_{IMMUNE | NOTIMMUNE} * nActiveInfections^CLEARANCE_RATE_POWER
-const double {{CLEARANCE_RATE_CONSTANT_IMMUNE}};
-const double {{CLEARANCE_RATE_CONSTANT_NOTIMMUNE}};
-const double {{CLEARANCE_RATE_POWER}};
+// If active and [immune | not immune]:
+// clearanceRate = CLEARANCE_RATE_CONSTANT_[IMMUNE | NOTIMMUNE] * nActiveInfections^CLEARANCE_RATE_POWER
+const double {CLEARANCE_RATE_CONSTANT_IMMUNE};
+const double {CLEARANCE_RATE_CONSTANT_NOTIMMUNE};
+const double {CLEARANCE_RATE_POWER};
 
 // Baseline activation time.
-const double {{BASELINE_ACTIVATION_TIME}};
+const double {BASELINE_ACTIVATION_TIME};
 
 // Maximum expected duration of expression.
 // If not specified, expected duration will be d_i for each strain i.
-const double {{MAX_EXPRESSION_TIME}};
+const double {MAX_EXPRESSION_TIME};
 
 // Maximum effect transmissibility.
 // If not specified, will be set to t_i for each strain i.
-const double {{MAX_TRANSMISSIBILITY}};
+const double {MAX_TRANSMISSIBILITY};
 
 // Transmissibility of genes `t_i`.
 // If only one entry present, used for all genes.
-const std::vector<double> {{TRANSMISSIBILITY}};
+const std::vector<double> {TRANSMISSIBILITY};
     
 // Mean duration of expression d_i, in simulation time units ("days").
 // If only one entry present, used for all genes.
-const double {{EXPRESSION_TIME}};
+const double {EXPRESSION_TIME};
     
 // Power `p1_i` in expression for mean activation time, `C*(n+1)*p1_i`.
 // Mean activation time is expressed as `C*(n+1)*p1_i`, for constant `C` and number of active infections `n`.
 // If only one entry present, used for all genes.
-const std::vector<double> {{ACTIVATION_POWER}};
+const std::vector<double> {ACTIVATION_POWER};
 
 // Power `p2_i` in expression for transmissibility, `[...]n^p2_i`.
 // Effective transmissibility is expressed as
 // `E_t_i = [t_i + (T - t_i) * f1_i / (sum(a_i) - 1)] * n^p2_i`.
 // If only one entry present, used for all genes.
-const std::vector<double> {{TRANSMISSIBILITY_POWER}};
+const std::vector<double> {TRANSMISSIBILITY_POWER};
 
 // Immunity loss rate of genes.
 // If only one entry present, used for all genes.
-const std::vector<double> {{IMMUNITY_LOSS_RATE}};
+const std::vector<double> {IMMUNITY_LOSS_RATE};
 
 // Relative probabilities of transitions between different genes.
 // `mutationWeights[i][j]` is the relative probability that gene `i` will transition to gene `j`, given a mutation event.
 // `mutationWeights` is normalized so that `sum(mutationWeights[i][...])` = 1.
-const std::vector<std::vector<double>> {{MUTATION_WEIGHTS}};
+const std::vector<std::vector<double>> {MUTATION_WEIGHTS};
 
-} // namespace varmodel
+}} // namespace varmodel
 
 #endif // #ifndef parameters_hpp

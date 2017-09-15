@@ -1,0 +1,26 @@
+#ifndef {manager_type}_hpp
+#define {manager_type}_hpp
+
+#include "{object_type}.hpp"
+#include "IndexedMap.hpp"
+
+namespace varmodel {{
+
+struct {manager_type} {{
+    uint64_t next_id;
+    IndexedMap<{object_type}> collection;
+    
+    // Object management
+    {object_type} * create();
+    {object_type} * create(uint64_t id);
+    {object_type} * object_for_id(uint64_t id);
+    
+    // Checkpointing methods
+    void load_from_checkpoint(sqlite3 * db, char const * const table_name);
+    {resolve_relationships_signature};
+    {save_to_checkpoint_signature};
+}};
+
+}} // namespace varmodel
+
+#endif // #define {manager_type}_hpp

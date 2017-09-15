@@ -44,7 +44,7 @@ def main():
     copy_sources(args.d)
     process_template(
         params,
-        os.path.join(script_dir, 'parameters.hpp.template'),
+        os.path.join(script_dir, 'templates', 'parameters.hpp.template'),
         os.path.join(args.d, 'generated', 'parameters.hpp')
     )
     for object_type in ['Population', 'Host']:
@@ -106,18 +106,12 @@ def load_parameters_python(params_filename):
     params = importlib.import_module(module_name)
     sys.path = old_sys_path
     
-    return params
+    return {name: getattr(params, name) for name in params.__dict__.keys() if not name.startswith('_')}
     
 def load_parameters_json(params_filename):
-    '''Loads parameters from JSON file into object attributes.'''
-    
-    class JSONObject(object):
-        def __init__(self, pairs):
-            for key, value in pairs:
-                setattr(self, key, value)
-    
+    '''Loads parameters from JSON dictionary.'''
     with open(params_filename) as f:
-        return json.load(f, object_pairs_hook = JSONObject)
+        return json.load(f)
 
 def copy_sources(build_dir):
     '''Copies source files, inserting parameter values into templates along the way.'''
@@ -132,41 +126,24 @@ def copy_sources(build_dir):
             shutil.copy2(src_filename, dst_filename)
 
 def process_template(params, src_filename, dst_filename):
-    '''Replaces `{{varname}}' with `varname = value', where value is taken from params.
+    '''Replaces `{varname}' with `varname = value', where value is taken from params.
     
     Value is formatted appropriately using the format_value function.
     '''
+    
+    # Construct map: varname -> `varname = value` to use as a formatting dictionary
+    param_value_map = {}
+    for name, value in params.items():
+        param_value_map[name] = '{} = {}'.format(name, format_value(name, value))
+    
     with open(src_filename) as sf:
         with open(dst_filename, 'w') as df:
-            for line in sf:
-                pieces1 = line.split('{{')
-                if len(pieces1) == 2:
-                    pieces2 = pieces1[1].split('}}')
-                    if len(pieces2) == 2:
-                        varname = pieces2[0]
-                        
-                        if not hasattr(params, pieces2[0]):
-                            print('Error: parameter {} not present'.format(varname))
-                            sys.exit(1)
-                        else:
-                            value = getattr(params, pieces2[0])
-                        line_subs = '{}{} = {}{}'.format(
-                            pieces1[0],
-                            varname, format_value(varname, value),
-                            pieces2[1]
-                        )
-                        df.write(line_subs)
-                    else:
-                        df.write(line)
-                else:
-                    df.write(line)
+            df.write(sf.read().format(**param_value_map))
 
 def format_value(varname, value):
     '''Formats a parameter value for substitution into a template.
     
     The Python type is used to format the value for C++.
-    For simplicity: can find only a single instance of a variable substitution per line;
-    this is good enough for us.
     '''
     if isinstance(value, list):
         values = [format_value(varname, val) for val in value]
@@ -218,101 +195,11 @@ def parse_type(object_type, input_filename):
     
     return columns, reflists
 
-manager_header_format = '''#ifndef {manager_type}_hpp
-#define {manager_type}_hpp
+with open(os.path.join(script_dir, 'templates', 'Manager.hpp.template')) as f:
+    manager_header_format = f.read()
 
-#include "{object_type}.hpp"
-#include "IndexedMap.hpp"
-
-namespace varmodel {{
-
-struct {manager_type} {{
-    uint64_t next_id;
-    IndexedMap<{object_type}> collection;
-    
-    // Object management
-    {object_type} * create();
-    {object_type} * create(uint64_t id);
-    {object_type} * object_for_id(uint64_t id);
-    
-    // Checkpointing methods
-    void load_from_checkpoint(sqlite3 * db, char const * const table_name);
-    {resolve_relationships_signature};
-    {save_to_checkpoint_signature};
-}};
-
-}} // namespace varmodel
-
-#endif // #define {manager_type}_hpp
-'''
-
-manager_implementation_format = '''#include "{manager_type}.hpp"
-namespace varmodel {{
-
-{object_type} * {manager_type}::create() {{
-    return create(next_id++);
-}}
-
-{object_type} * {manager_type}::create(uint64_t id) {{
-    {object_type} * obj = new {object_type}(id);
-    collection.add(obj);
-    return obj;
-}}
-
-{object_type} * {manager_type}::object_for_id(uint64_t id) {{
-     return collection.object_for_id(id);
-}}
-
-void {manager_type}::load_from_checkpoint(sqlite3 * db, char const * const table_name) {{
-    char sql[8192];
-    int result = snprintf(sql, sizeof(sql), "SELECT * FROM %s;", table_name);
-    assert(result >= 0 && result < sizeof(sql));
-    
-    sqlite3_stmt * stmt = NULL;
-    sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-    while(true) {{
-        if(sqlite3_step(stmt) != SQLITE_ROW) {{
-            break;
-        }}
-        {object_type} * obj = create(sqlite3_column_int64(stmt, 0));
-        {load_column_statements}
-    }}
-    sqlite3_finalize(stmt);
-}}
-
-{resolve_relationships_signature} {{
-    
-}}
-
-{save_to_checkpoint_signature} {{
-    char create_sql[8192];
-    int result = snprintf(create_sql, sizeof(create_sql),
-        "CREATE TABLE %s (id INTEGER{sql_create_columns});",
-        table_name
-    );
-    assert(result >= 0 && result < sizeof(create_sql));
-    sqlite3_exec(db, create_sql, NULL, NULL, NULL);
-    
-    char insert_sql[8192];
-    result = snprintf(insert_sql, sizeof(insert_sql),
-        "INSERT INTO %s VALUES (?{sql_insert_qmarks});",
-        table_name
-    );
-    assert(result >= 0 && result <= sizeof(insert_sql));
-    
-    sqlite3_stmt * stmt = NULL;
-    sqlite3_prepare_v2(db, insert_sql, -1, &stmt, NULL);
-    for({object_type} * obj : collection.as_vector()) {{
-        sqlite3_bind_int64(stmt, 1, obj->id);
-        {bind_column_statements}
-        sqlite3_step(stmt);
-        sqlite3_reset(stmt); 
-    }}
-    sqlite3_finalize(stmt);
-}}
-
-}} // namespace varmodel
-'''
+with open(os.path.join(script_dir, 'templates', 'Manager.cpp.template')) as f:
+    manager_implementation_format = f.read()
 
 resolve_relationships_signature_format = \
     'void {prefix}resolve_relationships(sqlite3 * db{ref_manager_args})'

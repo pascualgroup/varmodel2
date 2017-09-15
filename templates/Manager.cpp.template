@@ -1,0 +1,66 @@
+#include "{manager_type}.hpp"
+namespace varmodel {{
+
+{object_type} * {manager_type}::create() {{
+    return create(next_id++);
+}}
+
+{object_type} * {manager_type}::create(uint64_t id) {{
+    {object_type} * obj = new {object_type}(id);
+    collection.add(obj);
+    return obj;
+}}
+
+{object_type} * {manager_type}::object_for_id(uint64_t id) {{
+     return collection.object_for_id(id);
+}}
+
+void {manager_type}::load_from_checkpoint(sqlite3 * db, char const * const table_name) {{
+    char sql[8192];
+    int result = snprintf(sql, sizeof(sql), "SELECT * FROM %s;", table_name);
+    assert(result >= 0 && result < sizeof(sql));
+    
+    sqlite3_stmt * stmt = NULL;
+    sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    while(true) {{
+        if(sqlite3_step(stmt) != SQLITE_ROW) {{
+            break;
+        }}
+        {object_type} * obj = create(sqlite3_column_int64(stmt, 0));
+        {load_column_statements}
+    }}
+    sqlite3_finalize(stmt);
+}}
+
+{resolve_relationships_signature} {{
+    
+}}
+
+{save_to_checkpoint_signature} {{
+    char create_sql[8192];
+    int result = snprintf(create_sql, sizeof(create_sql),
+        "CREATE TABLE %s (id INTEGER{sql_create_columns});",
+        table_name
+    );
+    assert(result >= 0 && result < sizeof(create_sql));
+    sqlite3_exec(db, create_sql, NULL, NULL, NULL);
+    
+    char insert_sql[8192];
+    result = snprintf(insert_sql, sizeof(insert_sql),
+        "INSERT INTO %s VALUES (?{sql_insert_qmarks});",
+        table_name
+    );
+    assert(result >= 0 && result <= sizeof(insert_sql));
+    
+    sqlite3_stmt * stmt = NULL;
+    sqlite3_prepare_v2(db, insert_sql, -1, &stmt, NULL);
+    for({object_type} * obj : collection.as_vector()) {{
+        sqlite3_bind_int64(stmt, 1, obj->id);
+        {bind_column_statements}
+        sqlite3_step(stmt);
+        sqlite3_reset(stmt); 
+    }}
+    sqlite3_finalize(stmt);
+}}
+
+}} // namespace varmodel
