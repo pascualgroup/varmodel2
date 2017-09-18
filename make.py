@@ -209,9 +209,6 @@ with open(os.path.join(script_dir, 'templates', 'create_reflist_block.cpp.templa
 resolve_relationships_signature_format = \
     'void {prefix}resolve_relationships(sqlite3 * db{ref_manager_args})'
 
-save_to_checkpoint_signature_format = \
-    'void {prefix}save_to_checkpoint(sqlite3 * db, char const * const table_name{reflist_table_name_args})'
-
 def generate_manager(object_type, src_dir, dst_dir):
     src_filename = os.path.join(src_dir, '{}.hpp'.format(object_type))
     
@@ -249,18 +246,11 @@ def generate_manager(object_type, src_dir, dst_dir):
                 ref_manager_args = format_manager_args()
             )
         
-        def format_save_to_checkpoint_signature():
-            return save_to_checkpoint_signature_format.format(
-                prefix = '',
-                reflist_table_name_args = format_table_name_args(reflist_vars)
-            )
-        
         return manager_header_format.format(
             object_type = object_type,
             manager_type = manager_type,
             forward_declarations = format_forward_declarations(),
-            resolve_relationships_signature = format_resolve_relationships_signature(),
-            save_to_checkpoint_signature = format_save_to_checkpoint_signature(),
+            resolve_relationships_signature = format_resolve_relationships_signature()
         )
     
     manager_header_filename = os.path.join(dst_dir, manager_type + '.hpp')
@@ -308,12 +298,6 @@ def generate_manager(object_type, src_dir, dst_dir):
             return resolve_relationships_signature_format.format(
                 prefix = manager_type + '::',
                 ref_manager_args = format_manager_args(),
-            )
-        
-        def format_save_to_checkpoint_signature():
-            return save_to_checkpoint_signature_format.format(
-                prefix = manager_type + '::',
-                reflist_table_name_args = format_table_name_args(reflist_vars)
             )
         
         def format_load_column_statements():
@@ -386,7 +370,6 @@ def generate_manager(object_type, src_dir, dst_dir):
             manager_includes = format_manager_includes(),
             object_includes = format_object_includes(),
             resolve_relationships_signature = format_resolve_relationships_signature(),
-            save_to_checkpoint_signature = format_save_to_checkpoint_signature(),
             load_column_statements = format_load_column_statements(),
             sql_create_columns = format_sql_create_columns(),
             sql_insert_qmarks = format_sql_insert_qmarks(),

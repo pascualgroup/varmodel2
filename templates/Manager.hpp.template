@@ -12,9 +12,6 @@ struct {object_type};
 {forward_declarations}
 
 struct {manager_type} {{
-    //{manager_type}();
-    //~{manager_type}();
-    
     uint64_t next_id;
     IndexedMap<{object_type}> collection;
     
@@ -24,9 +21,9 @@ struct {manager_type} {{
     {object_type} * object_for_id(uint64_t id);
     
     // Checkpointing methods
-    void load_from_checkpoint(sqlite3 * db, char const * const table_name);
+    void load_from_checkpoint(sqlite3 * db);
     {resolve_relationships_signature};
-    {save_to_checkpoint_signature};
+    void save_to_checkpoint(sqlite3 * db);
 }};
 
 }} // namespace varmodel

@@ -1,6 +1,8 @@
 #include "varmodel.hpp"
 #include "PopulationManager.hpp"
 #include "HostManager.hpp"
+#include "InfectionManager.hpp"
+#include "ImmunityManager.hpp"
 #include "random.hpp"
 #include "parameters.hpp"
 #include "EventQueue.hpp"
@@ -17,6 +19,8 @@ double next_checkpoint_time;
 
 PopulationManager * population_manager;
 HostManager * host_manager;
+InfectionManager * infection_manager;
+ImmunityManager * immunity_manager;
 
 #pragma mark \
 *** Event queues for different types of event ***
@@ -88,12 +92,12 @@ enum class EventType {
 };
 
 void run() {
-    Population * pop = population_manager->object_for_id(0);
-    printf("Population %llu\n", pop->id);
-    for(Host * host : pop->hosts.as_vector()) {
-        printf("Host %llu\n", host->id);
-    }
-    
+//    Population * pop = population_manager->object_for_id(0);
+//    printf("Population %llu\n", pop->id);
+//    for(Host * host : pop->hosts.as_vector()) {
+//        printf("Host %llu\n", host->id);
+//    }
+//    
 //    while(current_time < T_END) { 
 //        do_next_event();
 //    }
@@ -174,8 +178,11 @@ void initialize() {
     // Don't use the "new" keyword anywhere except here to create object managers.
     // These object managers handle allocating/freeing memory for all other objects.
     rng = new rng_t(RANDOM_SEED);
-    host_manager = new HostManager();
+    
     population_manager = new PopulationManager();
+    host_manager = new HostManager();
+    infection_manager = new InfectionManager();
+    immunity_manager = new ImmunityManager();
     
     initialize_populations();
     initialize_event_queues();
@@ -224,6 +231,25 @@ void initialize_population_hosts(Population * pop) {
 *** Checkpoint function implementations ***
 
 void save_checkpoint() {
+    sqlite3 * db;
+    int result;
+    
+    result = sqlite3_open(CHECKPOINT_SAVE_FILENAME.c_str(), &db);
+    assert(result == SQLITE_OK);
+    
+    result = sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+    assert(result == SQLITE_OK);
+    
+    population_manager->save_to_checkpoint(db);
+    host_manager->save_to_checkpoint(db);
+    infection_manager->save_to_checkpoint(db);
+    immunity_manager->save_to_checkpoint(db);
+    
+    result = sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+    assert(result == SQLITE_OK);
+    
+    result = sqlite3_close(db);
+    assert(result == SQLITE_OK);
 }
 
 void load_checkpoint() {
