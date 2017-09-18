@@ -47,7 +47,7 @@ def main():
         os.path.join(script_dir, 'templates', 'parameters.hpp.template'),
         os.path.join(args.d, 'generated', 'parameters.hpp')
     )
-    for object_type in ['Population', 'Host']:
+    for object_type in ['Population', 'Host', 'Infection', 'Immunity']:
         generate_manager(
             object_type,
             os.path.join(args.d, 'src'),
@@ -66,7 +66,7 @@ def parse_arguments():
     )
     parser.add_argument(
         '-d', metavar = '<destination>',
-        default = 'build',
+        default = os.path.join(script_dir, 'build'),
         help = 'Destination directory for built model.'
     )
     parser.add_argument(
@@ -172,11 +172,12 @@ def parse_type(object_type, input_filename):
     with open(input_filename) as input_file:
         state = 'START'
         for line in input_file:
-            tokens = line.strip().split()
+            tokens = line.strip().split('//')[0].split()
+            print(tokens, state)
             if len(tokens) == 0:
                 continue
             if state == 'START':
-                if len(tokens) == 3 and tokens[0] == 'struct' and tokens[1] == object_type and  tokens[-2] == '{':
+                if len(tokens) == 3 and tokens[0] == 'struct' and tokens[1] == object_type and  tokens[2] == '{':
                     state = 'SCANNING'
             if state == 'SCANNING':
                 if tokens[0] == '};':
@@ -190,8 +191,9 @@ def parse_type(object_type, input_filename):
                         and tokens[1].endswith(';'):
                             map_object_type = tokens[0][len('IndexedMap')+1:-1]
                             reflists.append((map_object_type, tokens[1][:-1]))
-                elif len(tokens) == 3 and tokens[1] == '*' and tokens[2].endswith(';'):
-                    columns.append(('REF', tokens[0], tokens[2][:-1]))
+                elif len(tokens) == 3:
+                    if tokens[1] == '*' and tokens[2].endswith(';'):
+                        columns.append(('REF', tokens[0], tokens[2][:-1]))
     
     return columns, reflists
 
@@ -200,6 +202,9 @@ with open(os.path.join(script_dir, 'templates', 'Manager.hpp.template')) as f:
 
 with open(os.path.join(script_dir, 'templates', 'Manager.cpp.template')) as f:
     manager_implementation_format = f.read()
+
+with open(os.path.join(script_dir, 'templates', 'create_reflist_block.cpp.template')) as f:
+    create_reflist_block_format = f.read()
 
 resolve_relationships_signature_format = \
     'void {prefix}resolve_relationships(sqlite3 * db{ref_manager_args})'
@@ -211,12 +216,21 @@ def generate_manager(object_type, src_dir, dst_dir):
     src_filename = os.path.join(src_dir, '{}.hpp'.format(object_type))
     
     manager_type = object_type + 'Manager'
+    print('Generating {}...'.format(manager_type))
     
     columns, reflists = parse_type(object_type, src_filename)
     
     ref_cols = [c for c in columns if c[0] == 'REF']
     ref_vars = [c[2] for c in columns if c[0] == 'REF']
     reflist_vars = [rl[1] for rl in reflists]
+    
+    print('Reference variables: {}'.format(json.dumps(ref_vars)))
+    print('Reference lists: {}'.format(json.dumps(reflist_vars)))
+    
+    def format_forward_declarations():
+        return '\n'.join([
+            'struct {}Manager;'.format(c[1]) for c in ref_cols
+        ])
     
     def format_table_name_args(vars):
         if len(vars) == 0:
@@ -244,8 +258,9 @@ def generate_manager(object_type, src_dir, dst_dir):
         return manager_header_format.format(
             object_type = object_type,
             manager_type = manager_type,
+            forward_declarations = format_forward_declarations(),
             resolve_relationships_signature = format_resolve_relationships_signature(),
-            save_to_checkpoint_signature = format_save_to_checkpoint_signature()
+            save_to_checkpoint_signature = format_save_to_checkpoint_signature(),
         )
     
     manager_header_filename = os.path.join(dst_dir, manager_type + '.hpp')
@@ -274,6 +289,21 @@ def generate_manager(object_type, src_dir, dst_dir):
         return 'INTEGER'
     
     def format_manager_implementation():
+        def format_manager_includes():
+            return '\n'.join([
+                '#include "{}Manager.hpp"'.format(c[0])
+                for c in reflists
+            ])
+        
+        def format_object_includes():
+            return '\n'.join([
+                '#include "{}.hpp"'.format(c[0])
+                for c in reflists
+            ] + [
+                '#include "{}.hpp"'.format(c[1])
+                for c in ref_cols
+            ])
+        
         def format_resolve_relationships_signature():
             return resolve_relationships_signature_format.format(
                 prefix = manager_type + '::',
@@ -337,15 +367,31 @@ def generate_manager(object_type, src_dir, dst_dir):
                 format_bind_column_statement(col_info, index + 2) for index, col_info in enumerate(columns)
             ])
         
+        def format_create_reflist_blocks():
+            def create_reflist_block(reflist_spec):
+                ref_type, reflist_var = reflist_spec
+                return create_reflist_block_format.format(
+                    object_type = object_type,
+                    ref_type = ref_type,
+                    reflist_var = reflist_var
+                )
+            
+            return '\n        '.join([
+                create_reflist_block(reflist_spec) for reflist_spec in reflists
+            ])
+        
         return manager_implementation_format.format(
             object_type = object_type,
             manager_type = manager_type,
+            manager_includes = format_manager_includes(),
+            object_includes = format_object_includes(),
             resolve_relationships_signature = format_resolve_relationships_signature(),
             save_to_checkpoint_signature = format_save_to_checkpoint_signature(),
             load_column_statements = format_load_column_statements(),
             sql_create_columns = format_sql_create_columns(),
             sql_insert_qmarks = format_sql_insert_qmarks(),
-            bind_column_statements = format_bind_column_statements()
+            bind_column_statements = format_bind_column_statements(),
+            create_reflist_blocks = format_create_reflist_blocks()
         )
     
     manager_implementation_filename = os.path.join(dst_dir, manager_type + '.cpp')

@@ -1,12 +1,20 @@
 #ifndef {manager_type}_hpp
 #define {manager_type}_hpp
 
-#include "{object_type}.hpp"
 #include "IndexedMap.hpp"
+#include <stdint.h>
+#include <sqlite3.h>
 
 namespace varmodel {{
 
+struct {object_type};
+
+{forward_declarations}
+
 struct {manager_type} {{
+    //{manager_type}();
+    //~{manager_type}();
+    
     uint64_t next_id;
     IndexedMap<{object_type}> collection;
     

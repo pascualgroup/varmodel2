@@ -1,5 +1,19 @@
 #include "{manager_type}.hpp"
+{manager_includes}
+#include "{object_type}.hpp"
+{object_includes}
+
+#include "IndexedMap.hpp"
+
 namespace varmodel {{
+
+//{manager_type}::{manager_type}() {{
+//    collection = new IndexedMap<{object_type}>();
+//}}
+//
+//{manager_type}::~{manager_type}() {{
+//    delete collection;
+//}}
 
 {object_type} * {manager_type}::create() {{
     return create(next_id++);
@@ -37,30 +51,39 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db, char const * const table
 }}
 
 {save_to_checkpoint_signature} {{
-    char create_sql[8192];
-    int result = snprintf(create_sql, sizeof(create_sql),
-        "CREATE TABLE %s (id INTEGER{sql_create_columns});",
-        table_name
-    );
-    assert(result >= 0 && result < sizeof(create_sql));
-    sqlite3_exec(db, create_sql, NULL, NULL, NULL);
-    
-    char insert_sql[8192];
-    result = snprintf(insert_sql, sizeof(insert_sql),
-        "INSERT INTO %s VALUES (?{sql_insert_qmarks});",
-        table_name
-    );
-    assert(result >= 0 && result <= sizeof(insert_sql));
-    
-    sqlite3_stmt * stmt = NULL;
-    sqlite3_prepare_v2(db, insert_sql, -1, &stmt, NULL);
-    for({object_type} * obj : collection.as_vector()) {{
-        sqlite3_bind_int64(stmt, 1, obj->id);
-        {bind_column_statements}
-        sqlite3_step(stmt);
-        sqlite3_reset(stmt); 
+    // Create main object table
+    {{
+        char sql[8192];
+        int result = snprintf(sql, sizeof(sql),
+            "CREATE TABLE %s (id INTEGER{sql_create_columns});",
+            table_name
+        );
+        assert(result >= 0 && result < sizeof(sql));
+        sqlite3_exec(db, sql, NULL, NULL, NULL);
     }}
-    sqlite3_finalize(stmt);
+    
+    // Insert rows into main object table
+    {{
+        char sql[8192];
+        int result = snprintf(sql, sizeof(sql),
+            "INSERT INTO %s VALUES (?{sql_insert_qmarks});",
+            table_name
+        );
+        assert(result >= 0 && result <= sizeof(sql));
+    
+        sqlite3_stmt * stmt = NULL;
+        sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+        for({object_type} * obj : collection.as_vector()) {{
+            sqlite3_bind_int64(stmt, 1, obj->id);
+            {bind_column_statements}
+            sqlite3_step(stmt);
+            sqlite3_reset(stmt); 
+        }}
+        sqlite3_finalize(stmt);
+    }}
+    
+    // Create and save one-to-many references
+    {create_reflist_blocks}
 }}
 
 }} // namespace varmodel

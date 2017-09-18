@@ -1,11 +1,15 @@
 #ifndef Host_hpp
 #define Host_hpp
 
-#include <sqlite3.h>
-#include "Infection.hpp"
 #include "IndexedMap.hpp"
 
+#include <stdint.h>
+#include <sqlite3.h>
+
 namespace varmodel {
+
+struct Infection;
+struct Immunity;
 
 struct Host {
     Host(uint64_t id) : id(id) { }
@@ -17,6 +21,7 @@ struct Host {
     
     // One-to-many relationships
     IndexedMap<Infection> infections;
+    IndexedMap<Immunity> immunities;
 };
 
 } // namespace varmodel

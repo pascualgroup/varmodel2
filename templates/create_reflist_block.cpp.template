@@ -1,0 +1,35 @@
+    // Create and insert rows into [{reflist_var}_table_name]
+    {{
+        // Create [{reflist_var}_table_name]
+        {{
+            char sql[8192];
+            int result = snprintf(sql, sizeof(sql),
+                "CREATE TABLE %s (id INTEGER, ref_id INTEGER);",
+                {reflist_var}_table_name
+            );
+            assert(result >= 0 && result < sizeof(sql));
+            sqlite3_exec(db, sql, NULL, NULL, NULL);
+        }}
+        
+        // Insert rows into [{reflist_var}_table_name]
+        {{
+            char sql[8192];
+            int result = snprintf(sql, sizeof(sql),
+                "INSERT INTO %s VALUES (?,?);",
+                {reflist_var}_table_name
+            );
+            assert(result >= 0 && result <= sizeof(sql));
+    
+            sqlite3_stmt * stmt = NULL;
+            sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+            for({object_type} * obj : collection.as_vector()) {{
+                for({ref_type} * ref : obj->{reflist_var}.as_vector()) {{
+                    sqlite3_bind_int64(stmt, 1, obj->id);
+                    sqlite3_bind_int64(stmt, 2, ref->id);
+                    sqlite3_step(stmt);
+                    sqlite3_reset(stmt);
+                }}
+            }}
+            sqlite3_finalize(stmt);
+        }}
+    }}

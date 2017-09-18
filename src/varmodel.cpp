@@ -28,7 +28,8 @@ bool compare_biting_time(Population * p1, Population * p2) {
     return p1->next_biting_time < p2->next_biting_time;
 }
 
-EventQueue<Population, compare_biting_time> * biting_queue;
+typedef EventQueue<Population, compare_biting_time> BitingQueue; 
+BitingQueue * biting_queue;
 
 bool compare_immigration_time(Population * p1, Population * p2) {
     if(p1->next_immigration_time == p2->next_immigration_time) {
@@ -37,7 +38,8 @@ bool compare_immigration_time(Population * p1, Population * p2) {
     return p1->next_immigration_time < p2->next_immigration_time;
 }
 
-EventQueue<Population, compare_immigration_time> * immigration_queue;
+typedef EventQueue<Population, compare_immigration_time> ImmigrationQueue;
+ImmigrationQueue * immigration_queue;
 
 bool compare_death_time(Host * h1, Host * h2)
 {
@@ -47,7 +49,8 @@ bool compare_death_time(Host * h1, Host * h2)
     return h1->death_time < h2->death_time;
 }
 
-EventQueue<Host, compare_death_time> * death_queue;
+typedef EventQueue<Host, compare_death_time> DeathQueue;
+DeathQueue * death_queue;
 
 #pragma mark \
 *** Helper function declarations ***
@@ -57,6 +60,11 @@ void do_checkpoint_event();
 void do_biting_event();
 void do_immigration_event();
 void do_death_event();
+
+void initialize_event_queues();
+void initialize_biting_queue();
+void initialize_immigration_queue();
+void initialize_death_queue();
 
 void initialize_populations();
 void initialize_population(uint64_t index);
@@ -80,9 +88,15 @@ enum class EventType {
 };
 
 void run() {
-    while(current_time < T_END) { 
-        do_next_event();
+    Population * pop = population_manager->object_for_id(0);
+    printf("Population %llu\n", pop->id);
+    for(Host * host : pop->hosts.as_vector()) {
+        printf("Host %llu\n", host->id);
     }
+    
+//    while(current_time < T_END) { 
+//        do_next_event();
+//    }
 }
 
 void do_next_event() {
@@ -112,6 +126,8 @@ void do_next_event() {
     }
     
     switch(next_event_type) {
+        case EventType::NONE:
+            break;
         case EventType::CHECKPOINT:
             do_checkpoint_event();
             break;
@@ -153,7 +169,6 @@ void do_death_event() {
 
 void initialize() {
     current_time = 0.0;
-    
     next_checkpoint_time = CHECKPOINT_SAVE_PERIOD;
     
     // Don't use the "new" keyword anywhere except here to create object managers.
@@ -163,12 +178,31 @@ void initialize() {
     population_manager = new PopulationManager();
     
     initialize_populations();
+    initialize_event_queues();
 }
 
 void initialize_populations() {
     for(uint64_t i = 0; i < N_POPULATIONS; i++) {
         initialize_population(i);
     }
+}
+
+void initialize_event_queues() {
+    initialize_biting_queue();
+    initialize_immigration_queue();
+    initialize_death_queue();
+}
+
+void initialize_biting_queue() {
+    biting_queue = new BitingQueue();
+}
+
+void initialize_immigration_queue() {
+    immigration_queue = new ImmigrationQueue();
+}
+
+void initialize_death_queue() {
+    death_queue = new DeathQueue();
 }
 
 void initialize_population(uint64_t index) {
@@ -189,10 +223,10 @@ void initialize_population_hosts(Population * pop) {
 #pragma mark \
 *** Checkpoint function implementations ***
 
-void load_checkpoint() {
+void save_checkpoint() {
 }
 
-void save_checkpoint() {
+void load_checkpoint() {
 }
 
 

@@ -15,7 +15,7 @@ struct IndexedMap {
     void add(T * obj) {
         assert(id_index_map.find(obj->id) == id_index_map.end());
         vec.push_back(obj);
-        id_index_map[obj->id] = id_index_map.size() - 1;
+        id_index_map[obj->id] = vec.size() - 1;
     }
     
     void remove(T * obj) {

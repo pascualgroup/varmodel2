@@ -1,33 +1,18 @@
 #ifndef Infection_hpp
 #define Infection_hpp
 
+#include <stdint.h>
 #include <sqlite3.h>
-#include "IndexedMap.hpp"
-
-struct Host;
 
 namespace varmodel {
 
+struct Host;
+
 struct Infection { 
+    Infection(uint64_t id) : id(id) { }
+    
     uint64_t const id;
     Host * host;
-    
-    Infection(uint64_t id);
-};
-
-struct InfectionManager {
-    uint64_t next_id;
-    IndexedMap<Infection> infections;
-    
-    InfectionManager();
-    InfectionManager(uint64_t next_id);
-    
-    InfectionManager * create();
-    InfectionManager * create(uint64_t id);
-    InfectionManager * infection_for_id(uint64_t id);
-    
-    void load_from_db(sqlite3 * db);
-    void write_to_db(sqlite3 * db);
 };
 
 } // namespace varmodel
