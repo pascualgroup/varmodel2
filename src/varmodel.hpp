@@ -5,6 +5,7 @@
 
 namespace varmodel {
 
+void validate_and_load_parameters();
 void initialize();
 
 void load_checkpoint();

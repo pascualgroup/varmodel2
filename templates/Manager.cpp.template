@@ -55,7 +55,7 @@ void {manager_type}::save_to_checkpoint(sqlite3 * db) {{
         sqlite3_finalize(stmt);
     }}
     
-    // Create and save one-to-many references
+    // Create and save IndexedMap references into separate tables
     {create_reflist_blocks}
 }}
 

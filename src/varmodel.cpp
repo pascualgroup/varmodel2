@@ -4,10 +4,21 @@
 #include "InfectionManager.hpp"
 #include "ImmunityManager.hpp"
 #include "random.hpp"
+#include "util.hpp"
 #include "parameters.hpp"
 #include "EventQueue.hpp"
 
 namespace varmodel {
+
+#pragma mark \
+*** Enum parameters ***
+
+enum class SelectionMode {
+    SPECIFIC_IMMUNITY,
+    GENERALIZED_IMMUNITY,
+    NEUTRALITY
+};
+SelectionMode SELECTION_MODE_ENUM;
 
 #pragma mark \
 *** Simulation state ***
@@ -15,6 +26,7 @@ namespace varmodel {
 rng_t * rng;
 
 double current_time;
+
 double next_checkpoint_time;
 
 PopulationManager * population_manager;
@@ -170,6 +182,68 @@ void do_death_event() {
 
 #pragma mark \
 *** Initialization function implementations ***
+
+void validate_and_load_parameters() {
+    assert(SAMPLE_DB_FILENAME == "" || !file_exists(SAMPLE_DB_FILENAME));
+    assert(HOST_SAMPLING_PERIOD > 0.0);
+    assert(!SAMPLE_TRANSMISSION_EVENTS || TRANSMISSION_EVENT_SAMPLING_SKIP > 0);
+    assert(T_BURNIN >= 0.0);
+    
+    assert(!SAVE_TO_CHECKPOINT || !file_exists(CHECKPOINT_SAVE_FILENAME));
+    assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
+    
+    assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
+    
+    if(SELECTION_MODE == "SPECIFIC_IMMUNITY") {
+        SELECTION_MODE_ENUM = SelectionMode::SPECIFIC_IMMUNITY;
+    }
+    else if(SELECTION_MODE == "GENERALIZED_IMMUNITY") {
+        SELECTION_MODE_ENUM = SelectionMode::GENERALIZED_IMMUNITY;
+    }
+    else if(SELECTION_MODE == "NEUTRALITY") {
+        SELECTION_MODE_ENUM = SelectionMode::NEUTRALITY;
+    }
+    else {
+        assert(false);
+    }
+    
+    assert(RANDOM_SEED > 0);
+    assert(T_YEAR > 0.0);
+    assert(T_END > 0.0);
+    assert(N_GENES >= 1);
+    assert(N_GENES_PER_STRAIN >= 1);
+    assert(P_MUTATION >= 0.0 && P_MUTATION <= 1.0);
+    assert(P_STRAIN_RECOMBINATION >= 0.0 && P_STRAIN_RECOMBINATION <= 1.0);
+    assert(T_LIVER_STAGE >= 0.0);
+    
+    assert(add(HOST_LIFETIME_PDF) > 0.0);
+    for(auto value : HOST_LIFETIME_PDF) {
+        assert(value >= 0.0);
+    }
+    
+    assert(N_POPULATIONS >= 1);
+    for(auto value : N_HOSTS) {
+        assert(value >= 1);
+    }
+    
+    assert(BITING_RATE_MEAN.size() == N_POPULATIONS);
+    for(auto value : BITING_RATE_MEAN) {
+        assert(value >= 0.0);
+    }
+    assert(BITING_RATE_RELATIVE_AMPLITUDE.size() == N_POPULATIONS);
+    for(auto value : BITING_RATE_RELATIVE_AMPLITUDE) {
+        assert(value >= 0.0 && value <= 1.0);
+    }
+    assert(BITING_RATE_PEAK_PHASE.size() == N_POPULATIONS);
+    for(auto value : BITING_RATE_PEAK_PHASE) {
+        assert(value >= 0.0 && value <= 1.0);
+    }
+    
+    assert(IMMIGRATION_RATE.size() == N_POPULATIONS);
+    for(auto value : IMMIGRATION_RATE) {
+        assert(value >= 0.0);
+    }
+}
 
 void initialize() {
     current_time = 0.0;

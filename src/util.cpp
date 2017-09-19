@@ -1,5 +1,6 @@
 #include <cassert>
 #include "util.hpp"
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -38,6 +39,11 @@ std::vector<double> addCumulative(std::vector<double> const & vec)
 		cumSum[i] += cumSum[i-1];
 	}
 	return cumSum;
+}
+
+bool file_exists(std::string const & filename) {
+    struct stat buffer;
+    return (stat(filename.c_str(), &buffer) == 0);
 }
 
 } // namespace varmodel
