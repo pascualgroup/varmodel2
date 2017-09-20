@@ -97,8 +97,18 @@ const double {P_STRAIN_RECOMBINATION};
 // Duration of liver stage (pre-expression)
 const double {T_LIVER_STAGE};
 
-// Host-lifetime distribution, specified as a discrete PDF, one weight per year, with uniform density within each year.
+// If true, use a discrete PDF for host lifetime distribution.
+// If false, draw host lifetimes from an exponential distribution with mean MEAN_HOST_LIFETIME.
+const bool {USE_HOST_LIFETIME_PDF};
+
+// If USE_HOST_LIFETIME_PDF is true: host-lifetime distribution, specified as a discrete PDF, one weight per year, with uniform density within each year.
 const std::vector<double> {HOST_LIFETIME_PDF};
+
+// If USE_HOST_LIFETIME_PDF is false, use this as the mean of the (truncated) exponential distribution used to draw host lifetimes
+const double {MEAN_HOST_LIFETIME};
+
+// If USE_HOST_LIFETIME_PDF is false, use this as a maximum value for host lifetimes used to truncate the exponential distribution.
+const double {MAX_HOST_LIFETIME};
 
 // Number of populations
 const uint64_t {N_POPULATIONS};

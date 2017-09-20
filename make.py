@@ -170,6 +170,7 @@ def format_value(varname, value):
 
 def parse_type(object_type, input_filename):
     columns = []
+    vectors = []
     reflists = []
     
     with open(input_filename) as input_file:
@@ -189,6 +190,10 @@ def parse_type(object_type, input_filename):
                     if tokens[0] == 'uint64_t' or tokens[0] == 'int64_t' or tokens[0] == 'double':
                         if tokens[1].endswith(';'):
                             columns.append(('FIELD', tokens[0], tokens[1][:-1]))
+                    elif tokens[0] == 'std::vector<uint64_t>' or tokens[0] == 'std::vector<int64_t>' or tokens[0] == 'std::vector<double>':
+                        if tokens[1].endswith(';'):
+                            field_type = tokens[0][len('std::vector')+1:-1]
+                            vectors.append((field_type, tokens[1][:-1]))
                     elif tokens[0].startswith('IndexedMap') \
                         and tokens[0][len('IndexedMap')] == '<' and tokens[0][-1] == '>' \
                         and tokens[1].endswith(';'):
@@ -198,7 +203,7 @@ def parse_type(object_type, input_filename):
                     if tokens[1] == '*' and tokens[2].endswith(';'):
                         columns.append(('REF', tokens[0], tokens[2][:-1]))
     
-    return columns, reflists
+    return columns, vectors, reflists
 
 with open(os.path.join(script_dir, 'templates', 'Manager.hpp.template')) as f:
     manager_header_format = f.read()
@@ -209,6 +214,9 @@ with open(os.path.join(script_dir, 'templates', 'Manager.cpp.template')) as f:
 with open(os.path.join(script_dir, 'templates', 'create_reflist_block.cpp.template')) as f:
     create_reflist_block_format = f.read()
 
+with open(os.path.join(script_dir, 'templates', 'create_vector_block.cpp.template')) as f:
+    create_vector_block_format = f.read()
+
 resolve_relationships_signature_format = \
     'void {prefix}resolve_relationships(sqlite3 * db{ref_manager_args})'
 
@@ -218,12 +226,13 @@ def generate_manager(object_type, src_dir, dst_dir):
     manager_type = object_type + 'Manager'
     print('Generating {}...'.format(manager_type))
     
-    columns, reflists = parse_type(object_type, src_filename)
+    columns, vectors, reflists = parse_type(object_type, src_filename)
     
     ref_cols = [c for c in columns if c[0] == 'REF']
     ref_vars = [c[2] for c in columns if c[0] == 'REF']
     reflist_vars = [rl[1] for rl in reflists]
     
+    print('Vector variables: {}'.format(json.dumps(vectors)))
     print('Reference variables: {}'.format(json.dumps(ref_vars)))
     print('Reference lists: {}'.format(json.dumps(reflist_vars)))
     
@@ -367,6 +376,20 @@ def generate_manager(object_type, src_dir, dst_dir):
                 create_reflist_block(reflist_spec) for reflist_spec in reflists
             ])
         
+        def format_create_vector_blocks():
+            def create_vector_block(spec):
+                value_type, vector_var = spec
+                return create_vector_block_format.format(
+                    object_type = object_type,
+                    sql_type = sql_type_for_type(value_type),
+                    vector_var = vector_var,
+                    sqlite3_bind_type = sqlite_type_for_type(value_type)
+                )
+            
+            return '\n        '.join([
+                create_vector_block(spec) for spec in vectors
+            ])
+        
         return manager_implementation_format.format(
             object_type = object_type,
             manager_type = manager_type,
@@ -377,6 +400,7 @@ def generate_manager(object_type, src_dir, dst_dir):
             sql_create_columns = format_sql_create_columns(),
             sql_insert_qmarks = format_sql_insert_qmarks(),
             bind_column_statements = format_bind_column_statements(),
+            create_vector_blocks = format_create_vector_blocks(),
             create_reflist_blocks = format_create_reflist_blocks()
         )
     

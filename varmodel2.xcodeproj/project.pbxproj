@@ -66,6 +66,7 @@
 		6471E6011F71D81100C5D18F /* StrainManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StrainManager.cpp; path = build/generated/StrainManager.cpp; sourceTree = "<group>"; };
 		6471E6031F71D81500C5D18F /* GeneManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = GeneManager.hpp; path = build/generated/GeneManager.hpp; sourceTree = "<group>"; };
 		6471E6041F71D81B00C5D18F /* GeneManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GeneManager.cpp; path = build/generated/GeneManager.cpp; sourceTree = "<group>"; };
+		6471E6061F72064C00C5D18F /* create_vector_block.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_vector_block.cpp.template; path = templates/create_vector_block.cpp.template; sourceTree = "<group>"; };
 		696C01E01F198B7F009403B6 /* varmodel2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = varmodel2; sourceTree = BUILT_PRODUCTS_DIR; };
 		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -132,6 +133,7 @@
 				6419D5521F6EE51C0052C98B /* Manager.hpp.template */,
 				6419D5511F6EE51C0052C98B /* Manager.cpp.template */,
 				643AD6331F705F6D00B8E345 /* create_reflist_block.cpp.template */,
+				6471E6061F72064C00C5D18F /* create_vector_block.cpp.template */,
 			);
 			name = templates;
 			sourceTree = "<group>";

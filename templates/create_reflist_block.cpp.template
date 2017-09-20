@@ -7,7 +7,7 @@
             NULL, NULL, NULL
         );
         
-        // Insert rows into [{reflist_var}_table_name]
+        // Insert rows into {object_type}_{reflist_var}
         {{
             sqlite3_stmt * stmt = NULL;
             sqlite3_prepare_v2(db, "INSERT INTO {object_type}_{reflist_var} VALUES (?,?);", -1, &stmt, NULL);

@@ -100,6 +100,7 @@ double draw_immigration_time(Population * pop);
 
 double draw_exponential(double lambda);
 uint64_t draw_uniform_index(uint64_t size);
+double draw_uniform_real(double min, double max);
 
 #pragma mark \
 *** Initialization function implementations ***
@@ -149,9 +150,15 @@ void validate_and_load_parameters() {
     assert(P_STRAIN_RECOMBINATION >= 0.0 && P_STRAIN_RECOMBINATION <= 1.0);
     assert(T_LIVER_STAGE >= 0.0);
     
-    assert(add(HOST_LIFETIME_PDF) > 0.0);
-    for(auto value : HOST_LIFETIME_PDF) {
-        assert(value >= 0.0);
+    if(USE_HOST_LIFETIME_PDF) {
+        assert(add(HOST_LIFETIME_PDF) > 0.0);
+        for(auto value : HOST_LIFETIME_PDF) {
+            assert(value >= 0.0);
+        }
+    }
+    else {
+        assert(MEAN_HOST_LIFETIME > 0.0);
+        assert(MAX_HOST_LIFETIME > MEAN_HOST_LIFETIME);
     }
     
     assert(N_POPULATIONS >= 1);
@@ -230,8 +237,23 @@ void initialize_population(uint64_t index) {
 
 void initialize_population_hosts(Population * pop) {
     for(uint64_t i = 0; i < N_HOSTS[pop->index]; i++) {
-        pop->hosts.add(host_manager->create());
-    } 
+        Host * host = host_manager->create();
+        
+        double lifetime;
+        if(USE_HOST_LIFETIME_PDF) {
+            assert(false); // TODO: implement
+        }
+        else {
+            lifetime = std::min(
+                draw_exponential(1.0 / MEAN_HOST_LIFETIME),
+                MAX_HOST_LIFETIME
+            );
+        }
+        host->birth_time = -draw_uniform_real(0.0, lifetime);
+        host->death_time = host->birth_time + lifetime;
+        
+        pop->hosts.add(host);
+    }
 }
 
 void initialize_event_queues() {
@@ -294,27 +316,24 @@ void do_next_event() {
     EventType next_event_type = EventType::NONE;
     
     // Find the event type with the lowest-timed event (simple linear search)
-    
     if(next_checkpoint_time < next_event_time) {
         next_event_time = next_checkpoint_time;
         next_event_type = EventType::CHECKPOINT;
     }
-    
     if(biting_queue->size() > 0 && biting_queue->head()->next_biting_time < next_event_time) {
         next_event_time = biting_queue->head()->next_biting_time;
         next_event_type = EventType::BITING; 
     }
-    
     if(immigration_queue->size() > 0 && immigration_queue->head()->next_immigration_time < next_event_time) {
         next_event_time = biting_queue->head()->next_immigration_time;
         next_event_type = EventType::IMMIGRATION;
     }
-    
     if(death_queue->size() > 0 && death_queue->head()->death_time < next_event_time) {
         next_event_time = death_queue->head()->death_time;
         next_event_type = EventType::DEATH;
     }
     
+    // Execute the next event
     switch(next_event_type) {
         case EventType::NONE:
             break;
@@ -359,24 +378,18 @@ void do_death_event() {
 
 void save_checkpoint() {
     sqlite3 * db;
-    int result;
+    sqlite3_open(CHECKPOINT_SAVE_FILENAME.c_str(), &db);
+    sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
     
-    result = sqlite3_open(CHECKPOINT_SAVE_FILENAME.c_str(), &db);
-    assert(result == SQLITE_OK);
-    
-    result = sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
-    assert(result == SQLITE_OK);
-    
+    strain_manager->save_to_checkpoint(db);
+    gene_manager->save_to_checkpoint(db);
     population_manager->save_to_checkpoint(db);
     host_manager->save_to_checkpoint(db);
     infection_manager->save_to_checkpoint(db);
     immunity_manager->save_to_checkpoint(db);
     
-    result = sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
-    assert(result == SQLITE_OK);
-    
-    result = sqlite3_close(db);
-    assert(result == SQLITE_OK);
+    sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+    sqlite3_close(db);
 }
 
 void load_checkpoint() {
@@ -392,6 +405,10 @@ double draw_exponential(double lambda) {
 
 uint64_t draw_uniform_index(uint64_t size) {
     return std::uniform_int_distribution<uint64_t>(0, size - 1)(*rng);
+}
+
+double draw_uniform_real(double min, double max) {
+    return std::uniform_real_distribution<double>(min, max)(*rng);
 }
 
 double draw_biting_time(Population * pop) {
