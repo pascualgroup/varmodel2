@@ -15,6 +15,8 @@
 		6419D54C1F6EDF8D0052C98B /* PopulationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5491F6EDF8D0052C98B /* PopulationManager.cpp */; };
 		6419D5551F70324F0052C98B /* InfectionManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5531F70324F0052C98B /* InfectionManager.cpp */; };
 		6419D5581F7032560052C98B /* ImmunityManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5561F7032560052C98B /* ImmunityManager.cpp */; };
+		6471E6021F71D81100C5D18F /* StrainManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6471E6011F71D81100C5D18F /* StrainManager.cpp */; };
+		6471E6051F71D81B00C5D18F /* GeneManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6471E6041F71D81B00C5D18F /* GeneManager.cpp */; };
 		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
 /* End PBXBuildFile section */
 
@@ -60,6 +62,10 @@
 		6419D5561F7032560052C98B /* ImmunityManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ImmunityManager.cpp; path = build/generated/ImmunityManager.cpp; sourceTree = "<group>"; };
 		6419D5571F7032560052C98B /* ImmunityManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ImmunityManager.hpp; path = build/generated/ImmunityManager.hpp; sourceTree = "<group>"; };
 		643AD6331F705F6D00B8E345 /* create_reflist_block.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_reflist_block.cpp.template; path = templates/create_reflist_block.cpp.template; sourceTree = "<group>"; };
+		6471E6001F71D80C00C5D18F /* StrainManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = StrainManager.hpp; path = build/generated/StrainManager.hpp; sourceTree = "<group>"; };
+		6471E6011F71D81100C5D18F /* StrainManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StrainManager.cpp; path = build/generated/StrainManager.cpp; sourceTree = "<group>"; };
+		6471E6031F71D81500C5D18F /* GeneManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = GeneManager.hpp; path = build/generated/GeneManager.hpp; sourceTree = "<group>"; };
+		6471E6041F71D81B00C5D18F /* GeneManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GeneManager.cpp; path = build/generated/GeneManager.cpp; sourceTree = "<group>"; };
 		696C01E01F198B7F009403B6 /* varmodel2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = varmodel2; sourceTree = BUILT_PRODUCTS_DIR; };
 		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -103,6 +109,10 @@
 			isa = PBXGroup;
 			children = (
 				6419D5481F6EDF8D0052C98B /* parameters.hpp */,
+				6471E6001F71D80C00C5D18F /* StrainManager.hpp */,
+				6471E6011F71D81100C5D18F /* StrainManager.cpp */,
+				6471E6031F71D81500C5D18F /* GeneManager.hpp */,
+				6471E6041F71D81B00C5D18F /* GeneManager.cpp */,
 				6419D54A1F6EDF8D0052C98B /* PopulationManager.hpp */,
 				6419D5491F6EDF8D0052C98B /* PopulationManager.cpp */,
 				6419D5471F6EDF8D0052C98B /* HostManager.hpp */,
@@ -215,6 +225,8 @@
 				6419D5421F6EDF7A0052C98B /* random.cpp in Sources */,
 				6419D5581F7032560052C98B /* ImmunityManager.cpp in Sources */,
 				6419D54B1F6EDF8D0052C98B /* HostManager.cpp in Sources */,
+				6471E6021F71D81100C5D18F /* StrainManager.cpp in Sources */,
+				6471E6051F71D81B00C5D18F /* GeneManager.cpp in Sources */,
 				6419D5411F6EDF7A0052C98B /* main.cpp in Sources */,
 				6419D5431F6EDF7A0052C98B /* util.cpp in Sources */,
 				6419D5441F6EDF7A0052C98B /* varmodel.cpp in Sources */,

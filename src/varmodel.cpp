@@ -1,4 +1,6 @@
 #include "varmodel.hpp"
+#include "StrainManager.hpp"
+#include "GeneManager.hpp"
 #include "PopulationManager.hpp"
 #include "HostManager.hpp"
 #include "InfectionManager.hpp"
@@ -26,8 +28,10 @@ SelectionMode SELECTION_MODE_ENUM;
 rng_t * rng;
 
 double current_time;
-
 double next_checkpoint_time;
+
+StrainManager * strain_manager;
+GeneManager * gene_manager;
 
 PopulationManager * population_manager;
 HostManager * host_manager;
@@ -71,26 +75,196 @@ DeathQueue * death_queue;
 #pragma mark \
 *** Helper function declarations ***
 
-void do_next_event(); 
-void do_checkpoint_event();
-void do_biting_event();
-void do_immigration_event();
-void do_death_event();
-
-void initialize_event_queues();
-void initialize_biting_queue();
-void initialize_immigration_queue();
-void initialize_death_queue();
+void initialize_gene_pool();
 
 void initialize_populations();
 void initialize_population(uint64_t index);
 void initialize_population_events(Population * pop);
 void initialize_population_hosts(Population * pop);
 
+void initialize_event_queues();
+void initialize_biting_queue();
+void initialize_immigration_queue();
+void initialize_death_queue();
+
+Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles);
+
+void do_next_event(); 
+void do_checkpoint_event();
+void do_biting_event();
+void do_immigration_event();
+void do_death_event();
+
 double draw_biting_time(Population * pop);
 double draw_immigration_time(Population * pop);
 
 double draw_exponential(double lambda);
+uint64_t draw_uniform_index(uint64_t size);
+
+#pragma mark \
+*** Initialization function implementations ***
+
+void validate_and_load_parameters() {
+    assert(SAMPLE_DB_FILENAME == "" || !file_exists(SAMPLE_DB_FILENAME));
+    assert(HOST_SAMPLING_PERIOD > 0.0);
+    assert(!SAMPLE_TRANSMISSION_EVENTS || TRANSMISSION_EVENT_SAMPLING_SKIP > 0);
+    assert(T_END >= 0.0);
+    assert(T_BURNIN >= 0.0);
+    assert(T_BURNIN < T_END);
+    
+    assert(!SAVE_TO_CHECKPOINT || !file_exists(CHECKPOINT_SAVE_FILENAME));
+    assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
+    
+    assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
+    
+    if(SELECTION_MODE == "SPECIFIC_IMMUNITY") {
+        SELECTION_MODE_ENUM = SelectionMode::SPECIFIC_IMMUNITY;
+    }
+    else if(SELECTION_MODE == "GENERALIZED_IMMUNITY") {
+        SELECTION_MODE_ENUM = SelectionMode::GENERALIZED_IMMUNITY;
+    }
+    else if(SELECTION_MODE == "NEUTRALITY") {
+        SELECTION_MODE_ENUM = SelectionMode::NEUTRALITY;
+    }
+    else {
+        assert(false);
+    }
+    
+    assert(RANDOM_SEED > 0);
+    assert(T_YEAR > 0.0);
+    assert(T_END > 0.0);
+    
+    assert(N_GENES_IN_POOL >= 1);
+    assert(N_GENES_PER_STRAIN >= 1);
+    assert(N_LOCI >= 1);
+    assert(N_ALLELES.size() == N_LOCI);
+    for(auto value : N_ALLELES) {
+        assert(value >= 1);
+    }
+    
+    assert(GENE_TRANSMISSIBILITY >= 0.0 && GENE_TRANSMISSIBILITY <= 1.0);
+    assert(IMMUNITY_LOSS_RATE >= 0.0);
+    
+    assert(P_MUTATION >= 0.0 && P_MUTATION <= 1.0);
+    assert(P_STRAIN_RECOMBINATION >= 0.0 && P_STRAIN_RECOMBINATION <= 1.0);
+    assert(T_LIVER_STAGE >= 0.0);
+    
+    assert(add(HOST_LIFETIME_PDF) > 0.0);
+    for(auto value : HOST_LIFETIME_PDF) {
+        assert(value >= 0.0);
+    }
+    
+    assert(N_POPULATIONS >= 1);
+    for(auto value : N_HOSTS) {
+        assert(value >= 1);
+    }
+    
+    assert(BITING_RATE_MEAN.size() == N_POPULATIONS);
+    for(auto value : BITING_RATE_MEAN) {
+        assert(value >= 0.0);
+    }
+    assert(BITING_RATE_RELATIVE_AMPLITUDE.size() == N_POPULATIONS);
+    for(auto value : BITING_RATE_RELATIVE_AMPLITUDE) {
+        assert(value >= 0.0 && value <= 1.0);
+    }
+    assert(BITING_RATE_PEAK_PHASE.size() == N_POPULATIONS);
+    for(auto value : BITING_RATE_PEAK_PHASE) {
+        assert(value >= 0.0 && value <= 1.0);
+    }
+    
+    assert(IMMIGRATION_RATE.size() == N_POPULATIONS);
+    for(auto value : IMMIGRATION_RATE) {
+        assert(value >= 0.0);
+    }
+}
+
+void initialize() {
+    current_time = 0.0;
+    next_checkpoint_time = CHECKPOINT_SAVE_PERIOD;
+    
+    // Don't use the "new" keyword anywhere except here to create object managers.
+    // These object managers handle allocating/freeing memory for all other objects.
+    rng = new rng_t(RANDOM_SEED);
+    
+    strain_manager = new StrainManager();
+    gene_manager = new GeneManager();
+    population_manager = new PopulationManager();
+    host_manager = new HostManager();
+    infection_manager = new InfectionManager();
+    immunity_manager = new ImmunityManager();
+    
+    initialize_gene_pool();
+    initialize_populations();
+    initialize_event_queues();
+}
+
+void initialize_gene_pool() {
+    // Create gene pool
+    for(uint64_t i = 0; i < N_GENES_IN_POOL; i++) {
+        // Draw random alleles different from all other existing genes
+        std::vector<uint64_t> alleles(N_LOCI);
+        do {
+            for(uint64_t j = 0; j < N_LOCI; j++) {
+                alleles[j] = draw_uniform_index(N_ALLELES[j]);
+            }
+        } while(get_gene_with_alleles(alleles) != NULL);
+        
+        Gene * gene = gene_manager->create();
+        gene->alleles = alleles;
+    }
+}
+
+void initialize_populations() {
+    for(uint64_t i = 0; i < N_POPULATIONS; i++) {
+        initialize_population(i);
+    }
+}
+
+void initialize_population(uint64_t index) {
+    Population * pop = population_manager->create();
+    pop->index = index;
+    pop->transmission_count = 0;
+    
+    initialize_population_hosts(pop);
+}
+
+void initialize_population_hosts(Population * pop) {
+    for(uint64_t i = 0; i < N_HOSTS[pop->index]; i++) {
+        pop->hosts.add(host_manager->create());
+    } 
+}
+
+void initialize_event_queues() {
+    initialize_biting_queue();
+    initialize_immigration_queue();
+    initialize_death_queue();
+}
+
+void initialize_biting_queue() {
+    biting_queue = new BitingQueue();
+}
+
+void initialize_immigration_queue() {
+    immigration_queue = new ImmigrationQueue();
+}
+
+void initialize_death_queue() {
+    death_queue = new DeathQueue();
+}
+
+
+#pragma mark \
+*** Strain/gene management functions ***
+
+Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles) {
+    for(Gene * gene : gene_manager->objects()) {
+        assert(gene->alleles.size() == N_LOCI);
+        if(gene->alleles == alleles) {
+            return gene;
+        }
+    }
+    return nullptr;
+}
 
 #pragma mark \
 *** Main simulation loop ***
@@ -181,127 +355,6 @@ void do_death_event() {
 }
 
 #pragma mark \
-*** Initialization function implementations ***
-
-void validate_and_load_parameters() {
-    assert(SAMPLE_DB_FILENAME == "" || !file_exists(SAMPLE_DB_FILENAME));
-    assert(HOST_SAMPLING_PERIOD > 0.0);
-    assert(!SAMPLE_TRANSMISSION_EVENTS || TRANSMISSION_EVENT_SAMPLING_SKIP > 0);
-    assert(T_BURNIN >= 0.0);
-    
-    assert(!SAVE_TO_CHECKPOINT || !file_exists(CHECKPOINT_SAVE_FILENAME));
-    assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
-    
-    assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
-    
-    if(SELECTION_MODE == "SPECIFIC_IMMUNITY") {
-        SELECTION_MODE_ENUM = SelectionMode::SPECIFIC_IMMUNITY;
-    }
-    else if(SELECTION_MODE == "GENERALIZED_IMMUNITY") {
-        SELECTION_MODE_ENUM = SelectionMode::GENERALIZED_IMMUNITY;
-    }
-    else if(SELECTION_MODE == "NEUTRALITY") {
-        SELECTION_MODE_ENUM = SelectionMode::NEUTRALITY;
-    }
-    else {
-        assert(false);
-    }
-    
-    assert(RANDOM_SEED > 0);
-    assert(T_YEAR > 0.0);
-    assert(T_END > 0.0);
-    assert(N_GENES >= 1);
-    assert(N_GENES_PER_STRAIN >= 1);
-    assert(P_MUTATION >= 0.0 && P_MUTATION <= 1.0);
-    assert(P_STRAIN_RECOMBINATION >= 0.0 && P_STRAIN_RECOMBINATION <= 1.0);
-    assert(T_LIVER_STAGE >= 0.0);
-    
-    assert(add(HOST_LIFETIME_PDF) > 0.0);
-    for(auto value : HOST_LIFETIME_PDF) {
-        assert(value >= 0.0);
-    }
-    
-    assert(N_POPULATIONS >= 1);
-    for(auto value : N_HOSTS) {
-        assert(value >= 1);
-    }
-    
-    assert(BITING_RATE_MEAN.size() == N_POPULATIONS);
-    for(auto value : BITING_RATE_MEAN) {
-        assert(value >= 0.0);
-    }
-    assert(BITING_RATE_RELATIVE_AMPLITUDE.size() == N_POPULATIONS);
-    for(auto value : BITING_RATE_RELATIVE_AMPLITUDE) {
-        assert(value >= 0.0 && value <= 1.0);
-    }
-    assert(BITING_RATE_PEAK_PHASE.size() == N_POPULATIONS);
-    for(auto value : BITING_RATE_PEAK_PHASE) {
-        assert(value >= 0.0 && value <= 1.0);
-    }
-    
-    assert(IMMIGRATION_RATE.size() == N_POPULATIONS);
-    for(auto value : IMMIGRATION_RATE) {
-        assert(value >= 0.0);
-    }
-}
-
-void initialize() {
-    current_time = 0.0;
-    next_checkpoint_time = CHECKPOINT_SAVE_PERIOD;
-    
-    // Don't use the "new" keyword anywhere except here to create object managers.
-    // These object managers handle allocating/freeing memory for all other objects.
-    rng = new rng_t(RANDOM_SEED);
-    
-    population_manager = new PopulationManager();
-    host_manager = new HostManager();
-    infection_manager = new InfectionManager();
-    immunity_manager = new ImmunityManager();
-    
-    initialize_populations();
-    initialize_event_queues();
-}
-
-void initialize_populations() {
-    for(uint64_t i = 0; i < N_POPULATIONS; i++) {
-        initialize_population(i);
-    }
-}
-
-void initialize_event_queues() {
-    initialize_biting_queue();
-    initialize_immigration_queue();
-    initialize_death_queue();
-}
-
-void initialize_biting_queue() {
-    biting_queue = new BitingQueue();
-}
-
-void initialize_immigration_queue() {
-    immigration_queue = new ImmigrationQueue();
-}
-
-void initialize_death_queue() {
-    death_queue = new DeathQueue();
-}
-
-void initialize_population(uint64_t index) {
-    Population * pop = population_manager->create();
-    pop->index = index;
-    pop->transmission_count = 0;
-    
-    initialize_population_hosts(pop);
-}
-
-void initialize_population_hosts(Population * pop) {
-    for(uint64_t i = 0; i < N_HOSTS[pop->index]; i++) {
-        pop->hosts.add(host_manager->create());
-    } 
-}
-
-
-#pragma mark \
 *** Checkpoint function implementations ***
 
 void save_checkpoint() {
@@ -335,6 +388,10 @@ void load_checkpoint() {
 
 double draw_exponential(double lambda) {
     return std::exponential_distribution<>(lambda)(*rng); 
+}
+
+uint64_t draw_uniform_index(uint64_t size) {
+    return std::uniform_int_distribution<uint64_t>(0, size - 1)(*rng);
 }
 
 double draw_biting_time(Population * pop) {

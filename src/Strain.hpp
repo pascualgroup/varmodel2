@@ -1,7 +1,12 @@
 #ifndef Strain_hpp
 #define Strain_hpp
 
+#include <stdint.h>
+#include <vector>
+
 namespace varmodel {
+
+struct Gene;
 
 struct Strain {
     Strain(uint64_t id) : id(id) { }

@@ -65,13 +65,28 @@ const double {T_YEAR};
 const double {T_END};
 
 // Number of genes in the global pool.
-const uint64_t {N_GENES};
+const uint64_t {N_GENES_IN_POOL};
 
 // Number of genes per pathogen strain.
 const uint64_t {N_GENES_PER_STRAIN};
 
-// Number of loci per gene
-const uint64_t {N_LOCI_PER_GENE};
+// Number of loci
+const uint64_t {N_LOCI};
+
+// Number of alleles at each locus
+const std::vector<uint64_t> {N_ALLELES};
+
+// Transmissibility of genes
+const double {GENE_TRANSMISSIBILITY};
+
+// Number of microsatellites
+const uint64_t {N_MICROSATS};
+
+// Number of alleles at each microsatellite
+const std::vector<uint64_t> {N_MICROSAT_ALLELES}; 
+
+// Global immunity loss rate
+const double {IMMUNITY_LOSS_RATE};
 
 // Probability per gene of a mutation when a strain is picked up.
 const double {P_MUTATION};

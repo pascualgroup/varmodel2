@@ -1,15 +1,17 @@
 #ifndef Gene_hpp
 #define Gene_hpp
 
+#include <stdint.h>
+#include <vector>
+
 namespace varmodel {
 
 struct Gene {
-    Strain(uint64_t id) : id(id) { }
+    Gene(uint64_t id) : id(id) { }
     
     uint64_t const id;
     
-    double transmissibility;
-    double immunity_loss_rate;
+    std::vector<uint64_t> alleles;
 };
 
 } // namespace varmodel

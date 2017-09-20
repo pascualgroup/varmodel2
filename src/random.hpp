@@ -12,8 +12,6 @@ namespace varmodel {
 
 typedef std::mt19937_64 rng_t;
 
-double draw_exponential(double lambda);
-
 template<typename T>
 T drawUniformIndex(rng_t & rng, T size) {
 	std::uniform_int_distribution<T> unif(0, size - 1);

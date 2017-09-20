@@ -21,6 +21,10 @@ namespace varmodel {{
      return collection.object_for_id(id);
 }}
 
+std::vector<{object_type} *> & {manager_type}::objects() {{
+    return collection.as_vector();
+}}
+
 void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
     sqlite3_stmt * stmt = NULL;
     sqlite3_prepare_v2(db, "SELECT * FROM {object_type};", -1, &stmt, NULL);

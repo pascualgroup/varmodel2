@@ -47,7 +47,10 @@ def main():
         os.path.join(script_dir, 'templates', 'parameters.hpp.template'),
         os.path.join(args.d, 'generated', 'parameters.hpp')
     )
-    for object_type in ['Population', 'Host', 'Infection', 'Immunity']:
+    for object_type in [
+        'Strain', 'Gene',
+        'Population', 'Host', 'Infection', 'Immunity'
+    ]:
         generate_manager(
             object_type,
             os.path.join(args.d, 'src'),
