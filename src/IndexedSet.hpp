@@ -1,5 +1,5 @@
-#ifndef IndexedMap_hpp
-#define IndexedMap_hpp
+#ifndef IndexedSet_hpp
+#define IndexedSet_hpp
 
 #include <vector>
 #include <unordered_map>
@@ -8,7 +8,7 @@
 namespace varmodel {
 
 template<typename T>
-struct IndexedMap {
+struct IndexedSet {
     std::vector<T *> vec;
     std::unordered_map<int64_t, size_t> id_index_map; 
     
@@ -47,4 +47,4 @@ struct IndexedMap {
 
 }; // namespace varmodel
 
-#endif // #ifndef IndexedMap_hpp
+#endif // #ifndef IndexedSet_hpp

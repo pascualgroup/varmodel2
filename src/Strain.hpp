@@ -2,7 +2,7 @@
 #define Strain_hpp
 
 #include <stdint.h>
-#include <vector>
+#include <unordered_set>
 
 namespace varmodel {
 
@@ -12,8 +12,7 @@ struct Strain {
     Strain(uint64_t id) : id(id) { }
     
     uint64_t const id;
-    
-    std::vector<Gene *> genes;
+    std::unordered_set<Gene *> genes;
 };
 
 } // namespace varmodel

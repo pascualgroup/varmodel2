@@ -171,7 +171,8 @@ def format_value(varname, value):
 def parse_type(object_type, input_filename):
     columns = []
     vectors = []
-    reflists = []
+    reflists_IM = []
+    reflists_us = []
     
     with open(input_filename) as input_file:
         state = 'START'
@@ -194,16 +195,20 @@ def parse_type(object_type, input_filename):
                         if tokens[1].endswith(';'):
                             field_type = tokens[0][len('std::vector')+1:-1]
                             vectors.append((field_type, tokens[1][:-1]))
-                    elif tokens[0].startswith('IndexedMap') \
-                        and tokens[0][len('IndexedMap')] == '<' and tokens[0][-1] == '>' \
+                    elif tokens[0].startswith('IndexedSet') \
+                        and tokens[0][len('IndexedSet')] == '<' and tokens[0][-1] == '>' \
                         and tokens[1].endswith(';'):
-                            map_object_type = tokens[0][len('IndexedMap')+1:-1]
-                            reflists.append((map_object_type, tokens[1][:-1]))
+                            map_object_type = tokens[0][len('IndexedSet')+1:-1]
+                            reflists_IM.append((map_object_type, tokens[1][:-1]))
                 elif len(tokens) == 3:
                     if tokens[1] == '*' and tokens[2].endswith(';'):
                         columns.append(('REF', tokens[0], tokens[2][:-1]))
+                    elif tokens[0].startswith('std::unordered_set<') \
+                        and tokens[1] == '*>' and tokens[2].endswith(';'):
+                        set_object_type = tokens[0][len('std::unordered_set')+1:]
+                        reflists_us.append((set_object_type, tokens[2][:-1]))
     
-    return columns, vectors, reflists
+    return columns, vectors, reflists_IM, reflists_us
 
 with open(os.path.join(script_dir, 'templates', 'Manager.hpp.template')) as f:
     manager_header_format = f.read()
@@ -211,8 +216,11 @@ with open(os.path.join(script_dir, 'templates', 'Manager.hpp.template')) as f:
 with open(os.path.join(script_dir, 'templates', 'Manager.cpp.template')) as f:
     manager_implementation_format = f.read()
 
-with open(os.path.join(script_dir, 'templates', 'create_reflist_block.cpp.template')) as f:
-    create_reflist_block_format = f.read()
+with open(os.path.join(script_dir, 'templates', 'create_reflist_block_IndexedSet.cpp.template')) as f:
+    create_reflist_block_IndexedSet_format = f.read()
+
+with open(os.path.join(script_dir, 'templates', 'create_reflist_block_unordered_set.cpp.template')) as f:
+    create_reflist_block_unordered_set_format = f.read()
 
 with open(os.path.join(script_dir, 'templates', 'create_vector_block.cpp.template')) as f:
     create_vector_block_format = f.read()
@@ -226,11 +234,11 @@ def generate_manager(object_type, src_dir, dst_dir):
     manager_type = object_type + 'Manager'
     print('Generating {}...'.format(manager_type))
     
-    columns, vectors, reflists = parse_type(object_type, src_filename)
+    columns, vectors, reflists_IM, reflists_us = parse_type(object_type, src_filename)
     
     ref_cols = [c for c in columns if c[0] == 'REF']
     ref_vars = [c[2] for c in columns if c[0] == 'REF']
-    reflist_vars = [rl[1] for rl in reflists]
+    reflist_vars = [rl[1] for rl in reflists_IM + reflists_us]
     
     print('Vector variables: {}'.format(json.dumps(vectors)))
     print('Reference variables: {}'.format(json.dumps(ref_vars)))
@@ -294,13 +302,13 @@ def generate_manager(object_type, src_dir, dst_dir):
         def format_manager_includes():
             return '\n'.join([
                 '#include "{}Manager.hpp"'.format(c[0])
-                for c in reflists
+                for c in reflists_IM + reflists_us
             ])
         
         def format_object_includes():
             return '\n'.join([
                 '#include "{}.hpp"'.format(c[0])
-                for c in reflists
+                for c in reflists_IM + reflists_us
             ] + [
                 '#include "{}.hpp"'.format(c[1])
                 for c in ref_cols
@@ -363,17 +371,30 @@ def generate_manager(object_type, src_dir, dst_dir):
                 format_bind_column_statement(col_info, index + 2) for index, col_info in enumerate(columns)
             ])
         
-        def format_create_reflist_blocks():
+        def format_create_reflist_blocks_IndexedSet():
             def create_reflist_block(reflist_spec):
                 ref_type, reflist_var = reflist_spec
-                return create_reflist_block_format.format(
+                return create_reflist_block_IndexedSet_format.format(
                     object_type = object_type,
                     ref_type = ref_type,
                     reflist_var = reflist_var
                 )
             
             return '\n        '.join([
-                create_reflist_block(reflist_spec) for reflist_spec in reflists
+                create_reflist_block(reflist_spec) for reflist_spec in reflists_IM
+            ])
+        
+        def format_create_reflist_blocks_unordered_set():
+            def create_reflist_block(reflist_spec):
+                ref_type, reflist_var = reflist_spec
+                return create_reflist_block_unordered_set_format.format(
+                    object_type = object_type,
+                    ref_type = ref_type,
+                    reflist_var = reflist_var
+                )
+            
+            return '\n        '.join([
+                create_reflist_block(reflist_spec) for reflist_spec in reflists_us
             ])
         
         def format_create_vector_blocks():
@@ -401,7 +422,8 @@ def generate_manager(object_type, src_dir, dst_dir):
             sql_insert_qmarks = format_sql_insert_qmarks(),
             bind_column_statements = format_bind_column_statements(),
             create_vector_blocks = format_create_vector_blocks(),
-            create_reflist_blocks = format_create_reflist_blocks()
+            create_reflist_blocks_IndexedSet = format_create_reflist_blocks_IndexedSet(),
+            create_reflist_blocks_unordered_set = format_create_reflist_blocks_unordered_set()
         )
     
     manager_implementation_filename = os.path.join(dst_dir, manager_type + '.cpp')

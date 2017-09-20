@@ -3,7 +3,7 @@
 #include "{object_type}.hpp"
 {object_includes}
 
-#include "IndexedMap.hpp"
+#include "IndexedSet.hpp"
 
 namespace varmodel {{
 
@@ -71,8 +71,11 @@ void {manager_type}::save_to_checkpoint(sqlite3 * db) {{
     // Create and save vector-valued fields into separate tables
     {create_vector_blocks}
     
-    // Create and save IndexedMap references into separate tables
-    {create_reflist_blocks}
+    // Create and save IndexedSet references into separate tables
+    {create_reflist_blocks_IndexedSet}
+    
+    // Create and save std::unordered_set references into separate tables
+    {create_reflist_blocks_unordered_set}
 }}
 
 }} // namespace varmodel

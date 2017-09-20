@@ -38,7 +38,7 @@
 		6419D5331F6EDF7A0052C98B /* HashPair.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HashPair.hpp; path = src/HashPair.hpp; sourceTree = "<group>"; };
 		6419D5341F6EDF7A0052C98B /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Host.hpp; path = src/Host.hpp; sourceTree = "<group>"; };
 		6419D5351F6EDF7A0052C98B /* Immunity.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Immunity.hpp; path = src/Immunity.hpp; sourceTree = "<group>"; };
-		6419D5361F6EDF7A0052C98B /* IndexedMap.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = IndexedMap.hpp; path = src/IndexedMap.hpp; sourceTree = "<group>"; };
+		6419D5361F6EDF7A0052C98B /* IndexedSet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = IndexedSet.hpp; path = src/IndexedSet.hpp; sourceTree = "<group>"; };
 		6419D5371F6EDF7A0052C98B /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Infection.hpp; path = src/Infection.hpp; sourceTree = "<group>"; };
 		6419D5381F6EDF7A0052C98B /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = "<group>"; };
 		6419D5391F6EDF7A0052C98B /* Population.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Population.hpp; path = src/Population.hpp; sourceTree = "<group>"; };
@@ -61,7 +61,8 @@
 		6419D5541F70324F0052C98B /* InfectionManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = InfectionManager.hpp; path = build/generated/InfectionManager.hpp; sourceTree = "<group>"; };
 		6419D5561F7032560052C98B /* ImmunityManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ImmunityManager.cpp; path = build/generated/ImmunityManager.cpp; sourceTree = "<group>"; };
 		6419D5571F7032560052C98B /* ImmunityManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ImmunityManager.hpp; path = build/generated/ImmunityManager.hpp; sourceTree = "<group>"; };
-		643AD6331F705F6D00B8E345 /* create_reflist_block.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_reflist_block.cpp.template; path = templates/create_reflist_block.cpp.template; sourceTree = "<group>"; };
+		643AD6331F705F6D00B8E345 /* create_reflist_block_IndexedSet.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_reflist_block_IndexedSet.cpp.template; path = templates/create_reflist_block_IndexedSet.cpp.template; sourceTree = "<group>"; };
+		64645DA31F72679300824130 /* create_reflist_block_unordered_set.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_reflist_block_unordered_set.cpp.template; path = templates/create_reflist_block_unordered_set.cpp.template; sourceTree = "<group>"; };
 		6471E6001F71D80C00C5D18F /* StrainManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = StrainManager.hpp; path = build/generated/StrainManager.hpp; sourceTree = "<group>"; };
 		6471E6011F71D81100C5D18F /* StrainManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StrainManager.cpp; path = build/generated/StrainManager.cpp; sourceTree = "<group>"; };
 		6471E6031F71D81500C5D18F /* GeneManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = GeneManager.hpp; path = build/generated/GeneManager.hpp; sourceTree = "<group>"; };
@@ -97,7 +98,7 @@
 				6419D5351F6EDF7A0052C98B /* Immunity.hpp */,
 				6419D5311F6EDF7A0052C98B /* EventQueue.hpp */,
 				6419D5331F6EDF7A0052C98B /* HashPair.hpp */,
-				6419D5361F6EDF7A0052C98B /* IndexedMap.hpp */,
+				6419D5361F6EDF7A0052C98B /* IndexedSet.hpp */,
 				6419D53B1F6EDF7A0052C98B /* random.hpp */,
 				6419D53A1F6EDF7A0052C98B /* random.cpp */,
 				6419D53E1F6EDF7A0052C98B /* util.hpp */,
@@ -132,7 +133,8 @@
 				6419D5501F6EE5170052C98B /* parameters.hpp.template */,
 				6419D5521F6EE51C0052C98B /* Manager.hpp.template */,
 				6419D5511F6EE51C0052C98B /* Manager.cpp.template */,
-				643AD6331F705F6D00B8E345 /* create_reflist_block.cpp.template */,
+				643AD6331F705F6D00B8E345 /* create_reflist_block_IndexedSet.cpp.template */,
+				64645DA31F72679300824130 /* create_reflist_block_unordered_set.cpp.template */,
 				6471E6061F72064C00C5D18F /* create_vector_block.cpp.template */,
 			);
 			name = templates;

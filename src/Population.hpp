@@ -4,7 +4,7 @@
 #include <sqlite3.h>
 #include <vector>
 #include "Host.hpp"
-#include "IndexedMap.hpp"
+#include "IndexedSet.hpp"
 
 namespace varmodel {
 
@@ -16,13 +16,13 @@ struct Population {
     uint64_t const id;
     
     // Scalar fields
-    uint64_t index;
+    uint64_t order;
     uint64_t transmission_count;
     double next_biting_time;
     double next_immigration_time;
     
     // Collections of objects
-    IndexedMap<Host> hosts;
+    IndexedSet<Host> hosts;
 };
 
 } // namespace varmodel

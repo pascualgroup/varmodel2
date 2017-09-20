@@ -34,6 +34,8 @@ double current_time;
 double next_checkpoint_time;
 
 StrainManager * strain_manager;
+std::unordered_map<std::vector<Gene *>, Strain *, HashVector<Gene *>> genes_strain_map;
+
 GeneManager * gene_manager;
 
 PopulationManager * population_manager;
@@ -81,17 +83,24 @@ DeathQueue * death_queue;
 void initialize_gene_pool();
 
 void initialize_populations();
-void initialize_population(uint64_t index);
+void initialize_population(uint64_t order);
 void initialize_population_events(Population * pop);
 void initialize_population_hosts(Population * pop);
+void initialize_population_infections(Population * pop);
 
 void initialize_event_queues();
 void initialize_biting_queue();
 void initialize_immigration_queue();
 void initialize_death_queue();
 
-Host * create_new_host(Population * pop);
+Host * create_new_host(Population * pop, bool initial);
 Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles);
+Strain * generate_random_strain();
+Strain * create_strain(std::vector<Gene *> const & genes);
+Gene * draw_random_gene();
+Strain * get_strain_with_genes(std::vector<Gene *> genes);
+
+void infect_host(Host * host, Strain * strain);
 
 void do_next_event(); 
 void do_checkpoint_event();
@@ -144,6 +153,12 @@ void validate_and_load_parameters() {
     assert(N_LOCI >= 1);
     assert(N_ALLELES.size() == N_LOCI);
     for(auto value : N_ALLELES) {
+        assert(value >= 1);
+    }
+    
+    assert(!USE_MICROSATS || N_MICROSATS > 0);
+    assert(!USE_MICROSATS || N_MICROSAT_ALLELES.size() == N_MICROSATS);
+    for(auto value : N_MICROSAT_ALLELES) {
         assert(value >= 1);
     }
     
@@ -231,17 +246,28 @@ void initialize_populations() {
     }
 }
 
-void initialize_population(uint64_t index) {
+void initialize_population(uint64_t order) {
     Population * pop = population_manager->create();
-    pop->index = index;
+    pop->order = order;
     pop->transmission_count = 0;
     
     initialize_population_hosts(pop);
+    initialize_population_infections(pop);
 }
 
 void initialize_population_hosts(Population * pop) {
-    for(uint64_t i = 0; i < N_HOSTS[pop->index]; i++) {
-        create_new_host(pop);
+    for(uint64_t i = 0; i < N_HOSTS[pop->order]; i++) {
+        create_new_host(pop, true);
+    }
+}
+
+void initialize_population_infections(Population * pop) {
+    assert(!USE_MICROSATS);
+    
+    for(uint64_t i = 0; i < N_INITIAL_INFECTIONS[pop->order]; i++) {
+        Host * host = pop->hosts.object_at_index(draw_uniform_index(pop->hosts.size())); 
+        Strain * strain = generate_random_strain();
+        infect_host(host, strain);
     }
 }
 
@@ -271,7 +297,7 @@ void initialize_death_queue() {
 #pragma mark \
 *** Object management functions ***
 
-Host * create_new_host(Population * pop) {
+Host * create_new_host(Population * pop, bool initial) {
     Host * host = host_manager->create();
     host->population = pop;
     
@@ -285,7 +311,12 @@ Host * create_new_host(Population * pop) {
             MAX_HOST_LIFETIME
         );
     }
-    host->birth_time = current_time;
+    if(initial) {
+        host->birth_time = -draw_uniform_real(0, lifetime);
+    }
+    else {
+        host->birth_time = current_time;
+    }
     host->death_time = host->birth_time + lifetime;
     
     pop->hosts.add(host);
@@ -301,6 +332,39 @@ Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles) {
         }
     }
     return nullptr;
+}
+
+Strain * generate_random_strain() {
+    std::vector<Gene *> genes(N_GENES_PER_STRAIN);
+    for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
+        genes[i] = draw_random_gene();
+    }
+    return get_strain_with_genes(genes);
+}
+
+Strain * get_strain_with_genes(std::vector<Gene *> genes) {
+    std::sort(genes.begin(), genes.end());
+    auto itr = genes_strain_map.find(genes);
+    if(itr == genes_strain_map.end()) {
+        Strain * strain = strain_manager->create();
+        for(Gene * gene : genes) {
+            strain->genes.insert(gene);
+        }
+        genes_strain_map[genes] = strain;
+        return strain;
+    }
+    return itr->second;
+}
+
+Gene * draw_random_gene() {
+    return gene_manager->objects()[draw_uniform_index(gene_manager->size())];
+}
+
+void infect_host(Host * host, Strain * strain) {
+    Infection * infection = infection_manager->create();
+    infection->host = host;
+    infection->strain = strain;
+    host->infections.insert(infection);
 }
 
 #pragma mark \
@@ -391,11 +455,19 @@ void do_death_event() {
     Population * pop = host->population;
     printf("Removing host id %llu from population %llu\n", host->id, pop->id);
     
+    for(Infection * infection : host->infections) {
+        infection_manager->destroy(infection);
+    }
+    
+    for(Immunity * immunity : host->immunities) {
+        immunity_manager->destroy(immunity);
+    }
+    
     pop->hosts.remove(host);
     death_queue->remove(host);
     host_manager->destroy(host);
     
-    host = create_new_host(pop);
+    host = create_new_host(pop, false);
     printf("Created new host id %llu in population %llu\n", host->id, pop->id);
     death_queue->add(host);
 }
@@ -450,9 +522,9 @@ double draw_uniform_real(double min, double max) {
 }
 
 double draw_biting_time(Population * pop) {
-    double biting_rate = BITING_RATE_MEAN[pop->index] * (
-        1.0 + BITING_RATE_RELATIVE_AMPLITUDE[pop->index] * cos(
-            2 * M_PI * ((current_time / T_YEAR) - BITING_RATE_PEAK_PHASE[pop->index])
+    double biting_rate = BITING_RATE_MEAN[pop->order] * (
+        1.0 + BITING_RATE_RELATIVE_AMPLITUDE[pop->order] * cos(
+            2 * M_PI * ((current_time / T_YEAR) - BITING_RATE_PEAK_PHASE[pop->order])
         )
     );
     
@@ -460,7 +532,7 @@ double draw_biting_time(Population * pop) {
 }
 
 double draw_immigration_time(Population * pop) {
-    return current_time + draw_exponential(IMMIGRATION_RATE[pop->index]);
+    return current_time + draw_exponential(IMMIGRATION_RATE[pop->order]);
 }
 
 } // namespace varmodel

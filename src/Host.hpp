@@ -1,10 +1,9 @@
 #ifndef Host_hpp
 #define Host_hpp
 
-#include "IndexedMap.hpp"
-
 #include <stdint.h>
 #include <sqlite3.h>
+#include <unordered_set>
 
 namespace varmodel {
 
@@ -23,8 +22,8 @@ struct Host {
     double death_time;
     
     // One-to-many relationships
-    IndexedMap<Infection> infections;
-    IndexedMap<Immunity> immunities;
+    std::unordered_set<Infection *> infections;
+    std::unordered_set<Immunity *> immunities;
 };
 
 } // namespace varmodel

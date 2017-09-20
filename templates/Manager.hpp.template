@@ -2,7 +2,7 @@
 #define {manager_type}_hpp
 
 #include "{object_type}.hpp"
-#include "IndexedMap.hpp"
+#include "IndexedSet.hpp"
 #include <stdint.h>
 #include <sqlite3.h>
 
@@ -12,7 +12,7 @@ namespace varmodel {{
 
 struct {manager_type} {{
     uint64_t next_id;
-    IndexedMap<{object_type}> collection;
+    IndexedSet<{object_type}> collection;
     
     size_t size();
     std::vector<{object_type} *> & objects();
