@@ -14,11 +14,14 @@ struct {manager_type} {{
     uint64_t next_id;
     IndexedMap<{object_type}> collection;
     
+    size_t size();
+    std::vector<{object_type} *> & objects();
+    {object_type} * object_for_id(uint64_t id);
+    
     // Object management
     {object_type} * create();
     {object_type} * create(uint64_t id);
-    {object_type} * object_for_id(uint64_t id);
-    std::vector<{object_type} *> & objects();
+    void destroy({object_type} * obj);
     
     // Checkpointing methods
     void load_from_checkpoint(sqlite3 * db);

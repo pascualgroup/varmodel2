@@ -61,7 +61,7 @@ public:
 			indexes.erase(itr);
 		}
 		else {
-			T obj = heap.back();
+			T * obj = heap.back();
 			heap.pop_back();
 			heap[index] = obj;
 			indexes.erase(itr);
@@ -247,8 +247,8 @@ private:
 		assert(i2 < heap.size());
 		assert(i1 != i2);
 		
-		T e1 = heap[i2];
-		T e2 = heap[i1];
+		T * e1 = heap[i2];
+		T * e2 = heap[i1];
 		heap[i1] = e1;
 		heap[i2] = e2;
 		

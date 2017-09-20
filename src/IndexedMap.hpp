@@ -36,6 +36,10 @@ struct IndexedMap {
         return vec[index];
     }
     
+    size_t size() {
+        return vec.size();
+    }
+    
     std::vector<T *> & as_vector() {
         return vec;
     }

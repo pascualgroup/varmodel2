@@ -8,6 +8,7 @@
 
 namespace varmodel {
 
+struct Population;
 struct Infection;
 struct Immunity;
 
@@ -15,6 +16,8 @@ struct Host {
     Host(uint64_t id) : id(id) { }
     
     uint64_t const id;
+    
+    Population * population;
     
     double birth_time;
     double death_time;

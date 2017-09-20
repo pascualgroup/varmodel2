@@ -1,4 +1,7 @@
 #include "varmodel.hpp"
+
+#include <unistd.h>
+
 #include "StrainManager.hpp"
 #include "GeneManager.hpp"
 #include "PopulationManager.hpp"
@@ -87,6 +90,7 @@ void initialize_biting_queue();
 void initialize_immigration_queue();
 void initialize_death_queue();
 
+Host * create_new_host(Population * pop);
 Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles);
 
 void do_next_event(); 
@@ -237,22 +241,7 @@ void initialize_population(uint64_t index) {
 
 void initialize_population_hosts(Population * pop) {
     for(uint64_t i = 0; i < N_HOSTS[pop->index]; i++) {
-        Host * host = host_manager->create();
-        
-        double lifetime;
-        if(USE_HOST_LIFETIME_PDF) {
-            assert(false); // TODO: implement
-        }
-        else {
-            lifetime = std::min(
-                draw_exponential(1.0 / MEAN_HOST_LIFETIME),
-                MAX_HOST_LIFETIME
-            );
-        }
-        host->birth_time = -draw_uniform_real(0.0, lifetime);
-        host->death_time = host->birth_time + lifetime;
-        
-        pop->hosts.add(host);
+        create_new_host(pop);
     }
 }
 
@@ -272,11 +261,37 @@ void initialize_immigration_queue() {
 
 void initialize_death_queue() {
     death_queue = new DeathQueue();
+    
+    for(Host * host : host_manager->objects()) {
+        death_queue->add(host);
+    }
 }
 
 
 #pragma mark \
-*** Strain/gene management functions ***
+*** Object management functions ***
+
+Host * create_new_host(Population * pop) {
+    Host * host = host_manager->create();
+    host->population = pop;
+    
+    double lifetime;
+    if(USE_HOST_LIFETIME_PDF) {
+        assert(false); // TODO: implement
+    }
+    else {
+        lifetime = std::min(
+            draw_exponential(1.0 / MEAN_HOST_LIFETIME),
+            MAX_HOST_LIFETIME
+        );
+    }
+    host->birth_time = current_time;
+    host->death_time = host->birth_time + lifetime;
+    
+    pop->hosts.add(host);
+    
+    return host;
+}
 
 Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles) {
     for(Gene * gene : gene_manager->objects()) {
@@ -300,15 +315,9 @@ enum class EventType {
 };
 
 void run() {
-//    Population * pop = population_manager->object_for_id(0);
-//    printf("Population %llu\n", pop->id);
-//    for(Host * host : pop->hosts.as_vector()) {
-//        printf("Host %llu\n", host->id);
-//    }
-//    
-//    while(current_time < T_END) { 
-//        do_next_event();
-//    }
+    while(current_time < T_END) { 
+        do_next_event();
+    }
 }
 
 void do_next_event() {
@@ -333,7 +342,12 @@ void do_next_event() {
         next_event_type = EventType::DEATH;
     }
     
+    printf("next_event_time: %f\n", next_event_time);
+    printf("next_event_type: %d\n", next_event_type);
+    
     // Execute the next event
+    assert(current_time <= next_event_time);
+    current_time = next_event_time;
     switch(next_event_type) {
         case EventType::NONE:
             break;
@@ -371,13 +385,32 @@ void do_immigration_event() {
 
 void do_death_event() {
     printf("do_death_event()\n");
+    assert(death_queue->size() > 0);
+    
+    Host * host = death_queue->head();
+    Population * pop = host->population;
+    printf("Removing host id %llu from population %llu\n", host->id, pop->id);
+    
+    pop->hosts.remove(host);
+    death_queue->remove(host);
+    host_manager->destroy(host);
+    
+    host = create_new_host(pop);
+    printf("Created new host id %llu in population %llu\n", host->id, pop->id);
+    death_queue->add(host);
 }
 
 #pragma mark \
 *** Checkpoint function implementations ***
 
 void save_checkpoint() {
+    std::string old_checkpoint_filename = CHECKPOINT_SAVE_FILENAME + "-old";
+    if(file_exists(CHECKPOINT_SAVE_FILENAME)) {
+        assert(!rename(CHECKPOINT_SAVE_FILENAME.c_str(), old_checkpoint_filename.c_str()));
+    }
+    
     sqlite3 * db;
+    assert(!file_exists(CHECKPOINT_SAVE_FILENAME));
     sqlite3_open(CHECKPOINT_SAVE_FILENAME.c_str(), &db);
     sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
     
@@ -389,7 +422,12 @@ void save_checkpoint() {
     immunity_manager->save_to_checkpoint(db);
     
     sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
-    sqlite3_close(db);
+    int result = sqlite3_close(db);
+    assert(result == SQLITE_OK);
+    
+    if(file_exists(old_checkpoint_filename)) {
+        assert(!unlink(old_checkpoint_filename.c_str()));
+    }
 }
 
 void load_checkpoint() {

@@ -17,8 +17,17 @@ namespace varmodel {{
     return obj;
 }}
 
+void {manager_type}::destroy({object_type} * obj) {{
+    collection.remove(obj);
+    delete obj;
+}}
+
 {object_type} * {manager_type}::object_for_id(uint64_t id) {{
      return collection.object_for_id(id);
+}}
+
+size_t {manager_type}::size() {{
+    return collection.size();
 }}
 
 std::vector<{object_type} *> & {manager_type}::objects() {{
