@@ -136,12 +136,6 @@ void validate_and_load_parameters() {
         assert(value >= 1);
     }
     
-    assert(!USE_MICROSATS || N_MICROSATS > 0);
-    assert(!USE_MICROSATS || N_MICROSAT_ALLELES.size() == N_MICROSATS);
-    for(auto value : N_MICROSAT_ALLELES) {
-        assert(value >= 1);
-    }
-    
     assert(GENE_TRANSMISSIBILITY >= 0.0 && GENE_TRANSMISSIBILITY <= 1.0);
     assert(IMMUNITY_LOSS_RATE >= 0.0);
     
@@ -242,8 +236,6 @@ void initialize_population_hosts(Population * pop) {
 }
 
 void initialize_population_infections(Population * pop) {
-    assert(!USE_MICROSATS);
-    
     for(uint64_t i = 0; i < N_INITIAL_INFECTIONS[pop->order]; i++) {
         Host * host = pop->hosts.object_at_index(draw_uniform_index(pop->hosts.size())); 
         Strain * strain = generate_random_strain();

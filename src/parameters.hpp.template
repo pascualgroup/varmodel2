@@ -82,16 +82,7 @@ const uint64_t {N_LOCI};
 const std::vector<uint64_t> {N_ALLELES};
 
 // Transmissibility of genes
-const double {GENE_TRANSMISSIBILITY};
-
-// Whether or not to use microsats
-const bool {USE_MICROSATS};
-
-// Number of microsatellites
-const uint64_t {N_MICROSATS};
-
-// Number of alleles at each microsatellite
-const std::vector<uint64_t> {N_MICROSAT_ALLELES}; 
+const double {GENE_TRANSMISSIBILITY}; 
 
 // Global immunity loss rate
 const double {IMMUNITY_LOSS_RATE};
