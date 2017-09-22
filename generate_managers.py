@@ -29,33 +29,17 @@ def main():
     '''Runs everything.'''
     args = parse_arguments()
     
-    if os.path.exists(args.d):
-        if not os.path.isdir(args.d):
-            print('Destination path {} exists but is not directory.'.format(args.d))
-            sys.exit(1)
-    else:
-        os.makedirs(args.d)
+    dst_dir = os.path.join(args.d, 'generated', 'managers')
+    try:
+        os.makedirs(dst_dir)
+    except:
+        pass
     
-    params = load_parameters(args.p)
-    
-    os.makedirs(os.path.join(args.d, 'src'))
-    os.makedirs(os.path.join(args.d, 'generated'))
-    
-    copy_sources(args.d)
-    process_template(
-        params,
-        os.path.join(script_dir, 'templates', 'parameters.hpp.template'),
-        os.path.join(args.d, 'generated', 'parameters.hpp')
-    )
     for object_type in [
         'Strain', 'Gene',
         'Population', 'Host', 'Infection', 'Immunity'
     ]:
-        generate_manager(
-            object_type,
-            os.path.join(args.d, 'src'),
-            os.path.join(args.d, 'generated')
-        )
+        generate_manager(object_type, dst_dir)
 
 def parse_arguments():
     '''Parses command-line arguments.'''
@@ -71,17 +55,6 @@ def parse_arguments():
         '-d', metavar = '<destination>',
         default = os.path.join(script_dir, 'build'),
         help = 'Destination directory for built model.'
-    )
-    parser.add_argument(
-        '-p', metavar = '<params-file>',
-        default = os.path.join(script_dir, 'parameters-example.py'),
-        help = '''
-            Filename for model parameters, either a Python module (.py) or JSON (.json).
-            These parameters are used to generate `parameters.hpp' from `parameters.hpp.template'
-            (or any other source files ending in `.template'),
-            filling in all entries of the form {{variable_name}} with the corresponding value defined in the file.
-            Use parameter names as variable names in a Python module, or as dictionary keys in a JSON file.
-        '''
     )
     parser.add_argument('-c', metavar = '<compiler>', default = 'c++', help = 'C++ compiler.')
     parser.add_argument('-f', metavar = '<flags>', default = '-O2', help = 'Compiler flags.')
@@ -115,33 +88,6 @@ def load_parameters_json(params_filename):
     '''Loads parameters from JSON dictionary.'''
     with open(params_filename) as f:
         return json.load(f)
-
-def copy_sources(build_dir):
-    '''Copies source files, inserting parameter values into templates along the way.'''
-    
-    src_dir = os.path.join(script_dir, 'src')
-    build_src_dir = os.path.join(build_dir, 'src')
-    
-    for filename in os.listdir(src_dir):
-        if filename.endswith('.hpp') or filename.endswith('.cpp'):
-            src_filename = os.path.join(src_dir, filename)
-            dst_filename = os.path.join(build_src_dir, filename)
-            shutil.copy2(src_filename, dst_filename)
-
-def process_template(params, src_filename, dst_filename):
-    '''Replaces `{varname}' with `varname = value', where value is taken from params.
-    
-    Value is formatted appropriately using the format_value function.
-    '''
-    
-    # Construct map: varname -> `varname = value` to use as a formatting dictionary
-    param_value_map = {}
-    for name, value in params.items():
-        param_value_map[name] = '{} = {}'.format(name, format_value(name, value))
-    
-    with open(src_filename) as sf:
-        with open(dst_filename, 'w') as df:
-            df.write(sf.read().format(**param_value_map))
 
 def format_value(varname, value):
     '''Formats a parameter value for substitution into a template.
@@ -210,26 +156,21 @@ def parse_type(object_type, input_filename):
     
     return columns, vectors, reflists_IM, reflists_us
 
-with open(os.path.join(script_dir, 'templates', 'Manager.hpp.template')) as f:
-    manager_header_format = f.read()
+def get_template(filename):
+    with open(os.path.join(script_dir, 'src', 'manager_templates', filename)) as f:
+        return f.read()
 
-with open(os.path.join(script_dir, 'templates', 'Manager.cpp.template')) as f:
-    manager_implementation_format = f.read()
-
-with open(os.path.join(script_dir, 'templates', 'create_reflist_block_IndexedSet.cpp.template')) as f:
-    create_reflist_block_IndexedSet_format = f.read()
-
-with open(os.path.join(script_dir, 'templates', 'create_reflist_block_unordered_set.cpp.template')) as f:
-    create_reflist_block_unordered_set_format = f.read()
-
-with open(os.path.join(script_dir, 'templates', 'create_vector_block.cpp.template')) as f:
-    create_vector_block_format = f.read()
+manager_header_format = get_template('Manager.hpp.template')
+manager_implementation_format = get_template('Manager.cpp.template')
+create_reflist_block_IndexedSet_format = get_template('create_reflist_block_IndexedSet.cpp.template')
+create_reflist_block_unordered_set_format = get_template('create_reflist_block_unordered_set.cpp.template')
+create_vector_block_format = get_template('create_vector_block.cpp.template')
 
 resolve_relationships_signature_format = \
     'void {prefix}resolve_relationships(sqlite3 * db{ref_manager_args})'
 
-def generate_manager(object_type, src_dir, dst_dir):
-    src_filename = os.path.join(src_dir, '{}.hpp'.format(object_type))
+def generate_manager(object_type, dst_dir):
+    src_filename = os.path.join(script_dir, 'src', 'datamodel', '{}.hpp'.format(object_type))
     
     manager_type = object_type + 'Manager'
     print('Generating {}...'.format(manager_type))
@@ -274,9 +215,6 @@ def generate_manager(object_type, src_dir, dst_dir):
         )
     
     manager_header_filename = os.path.join(dst_dir, manager_type + '.hpp')
-    if os.path.exists(manager_header_filename):
-        print('{} already exists.'.format(manager_header_filename))
-        sys.exit(1)
     with open(manager_header_filename, 'w') as header_file:
         header_file.write(format_manager_header())
     
@@ -427,9 +365,6 @@ def generate_manager(object_type, src_dir, dst_dir):
         )
     
     manager_implementation_filename = os.path.join(dst_dir, manager_type + '.cpp')
-    if os.path.exists(manager_implementation_filename):
-        print('{} already exists.'.format(manager_implementation_filename))
-        sys.exit(1)
     with open(manager_implementation_filename, 'w') as implementation_file:
         implementation_file.write(format_manager_implementation())
 

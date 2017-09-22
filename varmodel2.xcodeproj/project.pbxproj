@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		6419D5411F6EDF7A0052C98B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5381F6EDF7A0052C98B /* main.cpp */; };
-		6419D5421F6EDF7A0052C98B /* random.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D53A1F6EDF7A0052C98B /* random.cpp */; };
-		6419D5431F6EDF7A0052C98B /* util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D53D1F6EDF7A0052C98B /* util.cpp */; };
-		6419D5441F6EDF7A0052C98B /* varmodel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D53F1F6EDF7A0052C98B /* varmodel.cpp */; };
-		6419D54B1F6EDF8D0052C98B /* HostManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5461F6EDF8D0052C98B /* HostManager.cpp */; };
-		6419D54C1F6EDF8D0052C98B /* PopulationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5491F6EDF8D0052C98B /* PopulationManager.cpp */; };
-		6419D5551F70324F0052C98B /* InfectionManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5531F70324F0052C98B /* InfectionManager.cpp */; };
-		6419D5581F7032560052C98B /* ImmunityManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6419D5561F7032560052C98B /* ImmunityManager.cpp */; };
-		6471E6021F71D81100C5D18F /* StrainManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6471E6011F71D81100C5D18F /* StrainManager.cpp */; };
-		6471E6051F71D81B00C5D18F /* GeneManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6471E6041F71D81B00C5D18F /* GeneManager.cpp */; };
+		6428FDAF1F75A55D00902EBD /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FD9E1F75A55D00902EBD /* main.cpp */; };
+		6428FDB01F75A55D00902EBD /* random.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDA91F75A55D00902EBD /* random.cpp */; };
+		6428FDB11F75A55D00902EBD /* util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDAB1F75A55D00902EBD /* util.cpp */; };
+		6428FDB21F75A55D00902EBD /* varmodel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDAD1F75A55D00902EBD /* varmodel.cpp */; };
+		6428FDC21F75A57F00902EBD /* GeneManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDB51F75A57F00902EBD /* GeneManager.cpp */; };
+		6428FDC31F75A57F00902EBD /* HostManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDB71F75A57F00902EBD /* HostManager.cpp */; };
+		6428FDC41F75A57F00902EBD /* ImmunityManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDB91F75A57F00902EBD /* ImmunityManager.cpp */; };
+		6428FDC51F75A57F00902EBD /* InfectionManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */; };
+		6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */; };
+		6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBF1F75A57F00902EBD /* StrainManager.cpp */; };
 		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
 /* End PBXBuildFile section */
 
@@ -33,41 +33,41 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6419D5311F6EDF7A0052C98B /* EventQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = EventQueue.hpp; path = src/EventQueue.hpp; sourceTree = "<group>"; };
-		6419D5321F6EDF7A0052C98B /* Gene.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Gene.hpp; path = src/Gene.hpp; sourceTree = "<group>"; };
-		6419D5331F6EDF7A0052C98B /* HashPair.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HashPair.hpp; path = src/HashPair.hpp; sourceTree = "<group>"; };
-		6419D5341F6EDF7A0052C98B /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Host.hpp; path = src/Host.hpp; sourceTree = "<group>"; };
-		6419D5351F6EDF7A0052C98B /* Immunity.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Immunity.hpp; path = src/Immunity.hpp; sourceTree = "<group>"; };
-		6419D5361F6EDF7A0052C98B /* IndexedSet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = IndexedSet.hpp; path = src/IndexedSet.hpp; sourceTree = "<group>"; };
-		6419D5371F6EDF7A0052C98B /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Infection.hpp; path = src/Infection.hpp; sourceTree = "<group>"; };
-		6419D5381F6EDF7A0052C98B /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = "<group>"; };
-		6419D5391F6EDF7A0052C98B /* Population.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Population.hpp; path = src/Population.hpp; sourceTree = "<group>"; };
-		6419D53A1F6EDF7A0052C98B /* random.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = random.cpp; path = src/random.cpp; sourceTree = "<group>"; };
-		6419D53B1F6EDF7A0052C98B /* random.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = random.hpp; path = src/random.hpp; sourceTree = "<group>"; };
-		6419D53C1F6EDF7A0052C98B /* Strain.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Strain.hpp; path = src/Strain.hpp; sourceTree = "<group>"; };
-		6419D53D1F6EDF7A0052C98B /* util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = util.cpp; path = src/util.cpp; sourceTree = "<group>"; };
-		6419D53E1F6EDF7A0052C98B /* util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = util.hpp; path = src/util.hpp; sourceTree = "<group>"; };
-		6419D53F1F6EDF7A0052C98B /* varmodel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = varmodel.cpp; path = src/varmodel.cpp; sourceTree = "<group>"; };
-		6419D5401F6EDF7A0052C98B /* varmodel.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = varmodel.hpp; path = src/varmodel.hpp; sourceTree = "<group>"; };
-		6419D5461F6EDF8D0052C98B /* HostManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HostManager.cpp; path = build/generated/HostManager.cpp; sourceTree = "<group>"; };
-		6419D5471F6EDF8D0052C98B /* HostManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HostManager.hpp; path = build/generated/HostManager.hpp; sourceTree = "<group>"; };
-		6419D5481F6EDF8D0052C98B /* parameters.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = parameters.hpp; path = build/generated/parameters.hpp; sourceTree = "<group>"; };
-		6419D5491F6EDF8D0052C98B /* PopulationManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PopulationManager.cpp; path = build/generated/PopulationManager.cpp; sourceTree = "<group>"; };
-		6419D54A1F6EDF8D0052C98B /* PopulationManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = PopulationManager.hpp; path = build/generated/PopulationManager.hpp; sourceTree = "<group>"; };
-		6419D5501F6EE5170052C98B /* parameters.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; name = parameters.hpp.template; path = templates/parameters.hpp.template; sourceTree = "<group>"; };
-		6419D5511F6EE51C0052C98B /* Manager.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = Manager.cpp.template; path = templates/Manager.cpp.template; sourceTree = "<group>"; };
-		6419D5521F6EE51C0052C98B /* Manager.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; name = Manager.hpp.template; path = templates/Manager.hpp.template; sourceTree = "<group>"; };
-		6419D5531F70324F0052C98B /* InfectionManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InfectionManager.cpp; path = build/generated/InfectionManager.cpp; sourceTree = "<group>"; };
-		6419D5541F70324F0052C98B /* InfectionManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = InfectionManager.hpp; path = build/generated/InfectionManager.hpp; sourceTree = "<group>"; };
-		6419D5561F7032560052C98B /* ImmunityManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ImmunityManager.cpp; path = build/generated/ImmunityManager.cpp; sourceTree = "<group>"; };
-		6419D5571F7032560052C98B /* ImmunityManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ImmunityManager.hpp; path = build/generated/ImmunityManager.hpp; sourceTree = "<group>"; };
-		643AD6331F705F6D00B8E345 /* create_reflist_block_IndexedSet.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_reflist_block_IndexedSet.cpp.template; path = templates/create_reflist_block_IndexedSet.cpp.template; sourceTree = "<group>"; };
-		64645DA31F72679300824130 /* create_reflist_block_unordered_set.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_reflist_block_unordered_set.cpp.template; path = templates/create_reflist_block_unordered_set.cpp.template; sourceTree = "<group>"; };
-		6471E6001F71D80C00C5D18F /* StrainManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = StrainManager.hpp; path = build/generated/StrainManager.hpp; sourceTree = "<group>"; };
-		6471E6011F71D81100C5D18F /* StrainManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StrainManager.cpp; path = build/generated/StrainManager.cpp; sourceTree = "<group>"; };
-		6471E6031F71D81500C5D18F /* GeneManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = GeneManager.hpp; path = build/generated/GeneManager.hpp; sourceTree = "<group>"; };
-		6471E6041F71D81B00C5D18F /* GeneManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GeneManager.cpp; path = build/generated/GeneManager.cpp; sourceTree = "<group>"; };
-		6471E6061F72064C00C5D18F /* create_vector_block.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; name = create_vector_block.cpp.template; path = templates/create_vector_block.cpp.template; sourceTree = "<group>"; };
+		6428FD981F75A55D00902EBD /* Gene.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gene.hpp; sourceTree = "<group>"; };
+		6428FD991F75A55D00902EBD /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Host.hpp; sourceTree = "<group>"; };
+		6428FD9A1F75A55D00902EBD /* Immunity.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Immunity.hpp; sourceTree = "<group>"; };
+		6428FD9B1F75A55D00902EBD /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Infection.hpp; sourceTree = "<group>"; };
+		6428FD9C1F75A55D00902EBD /* Population.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Population.hpp; sourceTree = "<group>"; };
+		6428FD9D1F75A55D00902EBD /* Strain.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Strain.hpp; sourceTree = "<group>"; };
+		6428FD9E1F75A55D00902EBD /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		6428FDA01F75A55D00902EBD /* create_reflist_block_IndexedSet.cpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = create_reflist_block_IndexedSet.cpp.template; sourceTree = "<group>"; };
+		6428FDA11F75A55D00902EBD /* create_reflist_block_unordered_set.cpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = create_reflist_block_unordered_set.cpp.template; sourceTree = "<group>"; };
+		6428FDA21F75A55D00902EBD /* create_vector_block.cpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = create_vector_block.cpp.template; sourceTree = "<group>"; };
+		6428FDA31F75A55D00902EBD /* Manager.cpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Manager.cpp.template; sourceTree = "<group>"; };
+		6428FDA41F75A55D00902EBD /* Manager.hpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Manager.hpp.template; sourceTree = "<group>"; };
+		6428FDA51F75A55D00902EBD /* parameters.hpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = parameters.hpp.template; sourceTree = "<group>"; };
+		6428FDA71F75A55D00902EBD /* EventQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = EventQueue.hpp; sourceTree = "<group>"; };
+		6428FDA81F75A55D00902EBD /* IndexedSet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IndexedSet.hpp; sourceTree = "<group>"; };
+		6428FDA91F75A55D00902EBD /* random.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = random.cpp; sourceTree = "<group>"; };
+		6428FDAA1F75A55D00902EBD /* random.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = random.hpp; sourceTree = "<group>"; };
+		6428FDAB1F75A55D00902EBD /* util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = util.cpp; sourceTree = "<group>"; };
+		6428FDAC1F75A55D00902EBD /* util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = util.hpp; sourceTree = "<group>"; };
+		6428FDAD1F75A55D00902EBD /* varmodel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = varmodel.cpp; sourceTree = "<group>"; };
+		6428FDAE1F75A55D00902EBD /* varmodel.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = varmodel.hpp; sourceTree = "<group>"; };
+		6428FDB51F75A57F00902EBD /* GeneManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GeneManager.cpp; sourceTree = "<group>"; };
+		6428FDB61F75A57F00902EBD /* GeneManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GeneManager.hpp; sourceTree = "<group>"; };
+		6428FDB71F75A57F00902EBD /* HostManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HostManager.cpp; sourceTree = "<group>"; };
+		6428FDB81F75A57F00902EBD /* HostManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = HostManager.hpp; sourceTree = "<group>"; };
+		6428FDB91F75A57F00902EBD /* ImmunityManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImmunityManager.cpp; sourceTree = "<group>"; };
+		6428FDBA1F75A57F00902EBD /* ImmunityManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImmunityManager.hpp; sourceTree = "<group>"; };
+		6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InfectionManager.cpp; sourceTree = "<group>"; };
+		6428FDBC1F75A57F00902EBD /* InfectionManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = InfectionManager.hpp; sourceTree = "<group>"; };
+		6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PopulationManager.cpp; sourceTree = "<group>"; };
+		6428FDBE1F75A57F00902EBD /* PopulationManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = PopulationManager.hpp; sourceTree = "<group>"; };
+		6428FDBF1F75A57F00902EBD /* StrainManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StrainManager.cpp; sourceTree = "<group>"; };
+		6428FDC01F75A57F00902EBD /* StrainManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = StrainManager.hpp; sourceTree = "<group>"; };
+		6428FDC11F75A57F00902EBD /* parameters.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = parameters.hpp; sourceTree = "<group>"; };
+		6428FDC81F75A5EE00902EBD /* HashPair.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HashPair.hpp; sourceTree = "<group>"; };
 		696C01E01F198B7F009403B6 /* varmodel2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = varmodel2; sourceTree = BUILT_PRODUCTS_DIR; };
 		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -84,68 +84,93 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		6419D5301F6EDF6F0052C98B /* src */ = {
+		6428FD961F75A55D00902EBD /* src */ = {
 			isa = PBXGroup;
 			children = (
-				6419D5381F6EDF7A0052C98B /* main.cpp */,
-				6419D5401F6EDF7A0052C98B /* varmodel.hpp */,
-				6419D53F1F6EDF7A0052C98B /* varmodel.cpp */,
-				6419D53C1F6EDF7A0052C98B /* Strain.hpp */,
-				6419D5321F6EDF7A0052C98B /* Gene.hpp */,
-				6419D5391F6EDF7A0052C98B /* Population.hpp */,
-				6419D5341F6EDF7A0052C98B /* Host.hpp */,
-				6419D5371F6EDF7A0052C98B /* Infection.hpp */,
-				6419D5351F6EDF7A0052C98B /* Immunity.hpp */,
-				6419D5311F6EDF7A0052C98B /* EventQueue.hpp */,
-				6419D5331F6EDF7A0052C98B /* HashPair.hpp */,
-				6419D5361F6EDF7A0052C98B /* IndexedSet.hpp */,
-				6419D53B1F6EDF7A0052C98B /* random.hpp */,
-				6419D53A1F6EDF7A0052C98B /* random.cpp */,
-				6419D53E1F6EDF7A0052C98B /* util.hpp */,
-				6419D53D1F6EDF7A0052C98B /* util.cpp */,
+				6428FDA51F75A55D00902EBD /* parameters.hpp.template */,
+				6428FD9E1F75A55D00902EBD /* main.cpp */,
+				6428FDAE1F75A55D00902EBD /* varmodel.hpp */,
+				6428FDAD1F75A55D00902EBD /* varmodel.cpp */,
+				6428FD971F75A55D00902EBD /* datamodel */,
+				6428FDA61F75A55D00902EBD /* util */,
+				6428FD9F1F75A55D00902EBD /* manager_templates */,
 			);
-			name = src;
+			path = src;
 			sourceTree = "<group>";
 		};
-		6419D5451F6EDF7E0052C98B /* generated */ = {
+		6428FD971F75A55D00902EBD /* datamodel */ = {
 			isa = PBXGroup;
 			children = (
-				6419D5481F6EDF8D0052C98B /* parameters.hpp */,
-				6471E6001F71D80C00C5D18F /* StrainManager.hpp */,
-				6471E6011F71D81100C5D18F /* StrainManager.cpp */,
-				6471E6031F71D81500C5D18F /* GeneManager.hpp */,
-				6471E6041F71D81B00C5D18F /* GeneManager.cpp */,
-				6419D54A1F6EDF8D0052C98B /* PopulationManager.hpp */,
-				6419D5491F6EDF8D0052C98B /* PopulationManager.cpp */,
-				6419D5471F6EDF8D0052C98B /* HostManager.hpp */,
-				6419D5461F6EDF8D0052C98B /* HostManager.cpp */,
-				6419D5541F70324F0052C98B /* InfectionManager.hpp */,
-				6419D5531F70324F0052C98B /* InfectionManager.cpp */,
-				6419D5571F7032560052C98B /* ImmunityManager.hpp */,
-				6419D5561F7032560052C98B /* ImmunityManager.cpp */,
+				6428FD9D1F75A55D00902EBD /* Strain.hpp */,
+				6428FD981F75A55D00902EBD /* Gene.hpp */,
+				6428FD9C1F75A55D00902EBD /* Population.hpp */,
+				6428FD991F75A55D00902EBD /* Host.hpp */,
+				6428FD9B1F75A55D00902EBD /* Infection.hpp */,
+				6428FD9A1F75A55D00902EBD /* Immunity.hpp */,
+			);
+			path = datamodel;
+			sourceTree = "<group>";
+		};
+		6428FD9F1F75A55D00902EBD /* manager_templates */ = {
+			isa = PBXGroup;
+			children = (
+				6428FDA01F75A55D00902EBD /* create_reflist_block_IndexedSet.cpp.template */,
+				6428FDA11F75A55D00902EBD /* create_reflist_block_unordered_set.cpp.template */,
+				6428FDA21F75A55D00902EBD /* create_vector_block.cpp.template */,
+				6428FDA31F75A55D00902EBD /* Manager.cpp.template */,
+				6428FDA41F75A55D00902EBD /* Manager.hpp.template */,
+			);
+			path = manager_templates;
+			sourceTree = "<group>";
+		};
+		6428FDA61F75A55D00902EBD /* util */ = {
+			isa = PBXGroup;
+			children = (
+				6428FDA71F75A55D00902EBD /* EventQueue.hpp */,
+				6428FDA81F75A55D00902EBD /* IndexedSet.hpp */,
+				6428FDC81F75A5EE00902EBD /* HashPair.hpp */,
+				6428FDA91F75A55D00902EBD /* random.cpp */,
+				6428FDAA1F75A55D00902EBD /* random.hpp */,
+				6428FDAB1F75A55D00902EBD /* util.cpp */,
+				6428FDAC1F75A55D00902EBD /* util.hpp */,
+			);
+			path = util;
+			sourceTree = "<group>";
+		};
+		6428FDB31F75A57F00902EBD /* generated */ = {
+			isa = PBXGroup;
+			children = (
+				6428FDC11F75A57F00902EBD /* parameters.hpp */,
+				6428FDB41F75A57F00902EBD /* managers */,
 			);
 			name = generated;
+			path = build/generated;
 			sourceTree = "<group>";
 		};
-		6419D54F1F6EE5040052C98B /* templates */ = {
+		6428FDB41F75A57F00902EBD /* managers */ = {
 			isa = PBXGroup;
 			children = (
-				6419D5501F6EE5170052C98B /* parameters.hpp.template */,
-				6419D5521F6EE51C0052C98B /* Manager.hpp.template */,
-				6419D5511F6EE51C0052C98B /* Manager.cpp.template */,
-				643AD6331F705F6D00B8E345 /* create_reflist_block_IndexedSet.cpp.template */,
-				64645DA31F72679300824130 /* create_reflist_block_unordered_set.cpp.template */,
-				6471E6061F72064C00C5D18F /* create_vector_block.cpp.template */,
+				6428FDB51F75A57F00902EBD /* GeneManager.cpp */,
+				6428FDB61F75A57F00902EBD /* GeneManager.hpp */,
+				6428FDB71F75A57F00902EBD /* HostManager.cpp */,
+				6428FDB81F75A57F00902EBD /* HostManager.hpp */,
+				6428FDB91F75A57F00902EBD /* ImmunityManager.cpp */,
+				6428FDBA1F75A57F00902EBD /* ImmunityManager.hpp */,
+				6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */,
+				6428FDBC1F75A57F00902EBD /* InfectionManager.hpp */,
+				6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */,
+				6428FDBE1F75A57F00902EBD /* PopulationManager.hpp */,
+				6428FDBF1F75A57F00902EBD /* StrainManager.cpp */,
+				6428FDC01F75A57F00902EBD /* StrainManager.hpp */,
 			);
-			name = templates;
+			path = managers;
 			sourceTree = "<group>";
 		};
 		696C01D71F198B7F009403B6 = {
 			isa = PBXGroup;
 			children = (
-				6419D5301F6EDF6F0052C98B /* src */,
-				6419D54F1F6EE5040052C98B /* templates */,
-				6419D5451F6EDF7E0052C98B /* generated */,
+				6428FD961F75A55D00902EBD /* src */,
+				6428FDB31F75A57F00902EBD /* generated */,
 				696C01E11F198B7F009403B6 /* Products */,
 				69D181B11F2AAC83007D5C32 /* Frameworks */,
 			);
@@ -174,6 +199,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 696C01E71F198B7F009403B6 /* Build configuration list for PBXNativeTarget "varmodel2" */;
 			buildPhases = (
+				6428FD7F1F759A4900902EBD /* ShellScript */,
+				6428FD951F759FC700902EBD /* ShellScript */,
 				696C01DC1F198B7F009403B6 /* Sources */,
 				696C01DD1F198B7F009403B6 /* Frameworks */,
 				6419D54D1F6EE0600052C98B /* CopyFiles */,
@@ -219,21 +246,50 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		6428FD7F1F759A4900902EBD /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "${SRCROOT}/generate_managers.py";
+		};
+		6428FD951F759FC700902EBD /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "${SRCROOT}/generate_parameters.py";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		696C01DC1F198B7F009403B6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6419D54C1F6EDF8D0052C98B /* PopulationManager.cpp in Sources */,
-				6419D5551F70324F0052C98B /* InfectionManager.cpp in Sources */,
-				6419D5421F6EDF7A0052C98B /* random.cpp in Sources */,
-				6419D5581F7032560052C98B /* ImmunityManager.cpp in Sources */,
-				6419D54B1F6EDF8D0052C98B /* HostManager.cpp in Sources */,
-				6471E6021F71D81100C5D18F /* StrainManager.cpp in Sources */,
-				6471E6051F71D81B00C5D18F /* GeneManager.cpp in Sources */,
-				6419D5411F6EDF7A0052C98B /* main.cpp in Sources */,
-				6419D5431F6EDF7A0052C98B /* util.cpp in Sources */,
-				6419D5441F6EDF7A0052C98B /* varmodel.cpp in Sources */,
+				6428FDB01F75A55D00902EBD /* random.cpp in Sources */,
+				6428FDC21F75A57F00902EBD /* GeneManager.cpp in Sources */,
+				6428FDC41F75A57F00902EBD /* ImmunityManager.cpp in Sources */,
+				6428FDAF1F75A55D00902EBD /* main.cpp in Sources */,
+				6428FDB11F75A55D00902EBD /* util.cpp in Sources */,
+				6428FDB21F75A55D00902EBD /* varmodel.cpp in Sources */,
+				6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */,
+				6428FDC31F75A57F00902EBD /* HostManager.cpp in Sources */,
+				6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */,
+				6428FDC51F75A57F00902EBD /* InfectionManager.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
