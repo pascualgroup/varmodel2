@@ -53,7 +53,12 @@ const double {CHECKPOINT_SAVE_PERIOD};
 
 /*** MODEL PARAMETERS ***/
 
-const std::string {SELECTION_MODE};
+enum SelectionMode {{
+    SPECIFIC_IMMUNITY,
+    GENERALIZED_IMMUNITY,
+    NEUTRALITY
+}};
+const SelectionMode {SELECTION_MODE};
 
 // Random seed for simulation.
 const uint64_t {RANDOM_SEED};

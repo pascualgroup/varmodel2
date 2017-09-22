@@ -18,13 +18,6 @@ namespace varmodel {
 #pragma mark \
 *** Enum parameters ***
 
-enum class SelectionMode {
-    SPECIFIC_IMMUNITY,
-    GENERALIZED_IMMUNITY,
-    NEUTRALITY
-};
-SelectionMode SELECTION_MODE_ENUM;
-
 #pragma mark \
 *** Simulation state ***
 
@@ -130,19 +123,6 @@ void validate_and_load_parameters() {
     assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
     
     assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
-    
-    if(SELECTION_MODE == "SPECIFIC_IMMUNITY") {
-        SELECTION_MODE_ENUM = SelectionMode::SPECIFIC_IMMUNITY;
-    }
-    else if(SELECTION_MODE == "GENERALIZED_IMMUNITY") {
-        SELECTION_MODE_ENUM = SelectionMode::GENERALIZED_IMMUNITY;
-    }
-    else if(SELECTION_MODE == "NEUTRALITY") {
-        SELECTION_MODE_ENUM = SelectionMode::NEUTRALITY;
-    }
-    else {
-        assert(false);
-    }
     
     assert(RANDOM_SEED > 0);
     assert(T_YEAR > 0.0);

@@ -45,7 +45,7 @@
 		6428FDA21F75A55D00902EBD /* create_vector_block.cpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = create_vector_block.cpp.template; sourceTree = "<group>"; };
 		6428FDA31F75A55D00902EBD /* Manager.cpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Manager.cpp.template; sourceTree = "<group>"; };
 		6428FDA41F75A55D00902EBD /* Manager.hpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Manager.hpp.template; sourceTree = "<group>"; };
-		6428FDA51F75A55D00902EBD /* parameters.hpp.template */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = parameters.hpp.template; sourceTree = "<group>"; };
+		6428FDA51F75A55D00902EBD /* parameters.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = parameters.hpp.template; sourceTree = "<group>"; };
 		6428FDA71F75A55D00902EBD /* EventQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = EventQueue.hpp; sourceTree = "<group>"; };
 		6428FDA81F75A55D00902EBD /* IndexedSet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IndexedSet.hpp; sourceTree = "<group>"; };
 		6428FDA91F75A55D00902EBD /* random.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = random.cpp; sourceTree = "<group>"; };

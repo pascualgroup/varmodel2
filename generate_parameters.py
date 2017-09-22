@@ -142,7 +142,7 @@ def format_value(varname, value):
     elif isinstance(value, float):
         return json.dumps(value) # It's possible this will break in weird situations
     elif isinstance(value, basestring):
-        return '"{}"'.format(value)
+        return '{}'.format(value)
     print('Error: invalid type {} for value {} for parameter {}'.format(type(value), value, varname))
     sys.exit(1)
 
