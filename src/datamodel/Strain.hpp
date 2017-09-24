@@ -2,7 +2,7 @@
 #define Strain_hpp
 
 #include <stdint.h>
-#include <unordered_set>
+#include "IndexedSet.hpp"
 
 namespace varmodel {
 
@@ -12,7 +12,7 @@ struct Strain {
     Strain(uint64_t id) : id(id) { }
     
     uint64_t const id;
-    std::unordered_set<Gene *> genes;
+    IndexedSet<Gene> genes;
 };
 
 } // namespace varmodel

@@ -131,8 +131,8 @@
 				6428FDC81F75A5EE00902EBD /* HashPair.hpp */,
 				6428FDA91F75A55D00902EBD /* random.cpp */,
 				6428FDAA1F75A55D00902EBD /* random.hpp */,
-				6428FDAB1F75A55D00902EBD /* util.cpp */,
 				6428FDAC1F75A55D00902EBD /* util.hpp */,
+				6428FDAB1F75A55D00902EBD /* util.cpp */,
 			);
 			path = util;
 			sourceTree = "<group>";

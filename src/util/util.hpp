@@ -26,8 +26,22 @@ struct HashVector
 	std::hash<T> _hash;
 };
 
-std::vector<size_t> makeRange(size_t from, size_t to);
-std::vector<size_t> makeRange(size_t size);
+template<typename T>
+std::vector<T> make_range(T from, T to) {
+	assert(to >= from);
+	T size = to - from;
+	std::vector<T> range(size);
+	for(T i = 0; i < size; i++)
+	{
+		range[i] = from + i;
+	}
+	return range;
+}
+
+template<typename T>
+std::vector<T> make_range(T size) {
+    return make_range(0, size);
+}
 
 double add(std::vector<double> const & vec);
 std::vector<double> addCumulative(std::vector<double> const & vec);

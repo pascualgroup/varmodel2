@@ -45,7 +45,6 @@ bool compare_biting_time(Population * p1, Population * p2) {
     }
     return p1->next_biting_time < p2->next_biting_time;
 }
-
 typedef EventQueue<Population, compare_biting_time> BitingQueue; 
 BitingQueue * biting_queue;
 
@@ -55,20 +54,53 @@ bool compare_immigration_time(Population * p1, Population * p2) {
     }
     return p1->next_immigration_time < p2->next_immigration_time;
 }
-
 typedef EventQueue<Population, compare_immigration_time> ImmigrationQueue;
 ImmigrationQueue * immigration_queue;
 
-bool compare_death_time(Host * h1, Host * h2)
-{
+bool compare_death_time(Host * h1, Host * h2) {
     if(h1->death_time == h2->death_time) {
         return h1->id < h2->id;
     }
     return h1->death_time < h2->death_time;
 }
-
 typedef EventQueue<Host, compare_death_time> DeathQueue;
 DeathQueue * death_queue;
+
+bool compare_transition_time(Infection * o1, Infection * o2) {
+    if(o1->transition_time == o2->transition_time) {
+        return o1->id < o2->id;
+    }
+    return o1->transition_time < o1->transition_time;
+}
+typedef EventQueue<Infection, compare_transition_time> TransitionQueue;
+TransitionQueue * transition_queue;
+
+bool compare_mutation_time(Infection * o1, Infection * o2) {
+    if(o1->mutation_time == o2->mutation_time) {
+        return o1->id < o2->id;
+    }
+    return o1->mutation_time < o1->mutation_time;
+}
+typedef EventQueue<Infection, compare_mutation_time> MutationQueue;
+MutationQueue * mutation_queue;
+
+bool compare_recombination_time(Infection * o1, Infection * o2) {
+    if(o1->recombination_time == o2->recombination_time) {
+        return o1->id < o2->id;
+    }
+    return o1->recombination_time < o1->recombination_time;
+}
+typedef EventQueue<Infection, compare_recombination_time> RecombinationQueue;
+RecombinationQueue * recombination_queue;
+
+bool compare_clearance_time(Infection * o1, Infection * o2) {
+    if(o1->clearance_time == o2->clearance_time) {
+        return o1->id < o2->id;
+    }
+    return o1->clearance_time < o1->clearance_time;
+}
+typedef EventQueue<Infection, compare_clearance_time> ClearanceQueue;
+ClearanceQueue * clearance_queue;
 
 #pragma mark \
 *** Helper function declarations ***
@@ -81,11 +113,7 @@ void initialize_population_events(Population * pop);
 void initialize_population_hosts(Population * pop);
 void initialize_population_infections(Population * pop);
 
-void initialize_event_queues();
-void initialize_biting_queue();
-void initialize_immigration_queue();
-void initialize_death_queue();
-
+void destroy_host(Host * host);
 Host * create_new_host(Population * pop, bool initial);
 Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles);
 Strain * generate_random_strain();
@@ -95,11 +123,23 @@ Strain * get_strain_with_genes(std::vector<Gene *> genes);
 
 void infect_host(Host * host, Strain * strain);
 
+double draw_transition_time(Infection * infection);
+double draw_mutation_time(Infection * infection);
+double draw_recombination_time(Infection * infection);
+
 void do_next_event(); 
+
 void do_checkpoint_event();
+
 void do_biting_event();
 void do_immigration_event();
+
 void do_death_event();
+
+void do_transition_event();
+void do_mutation_event();
+void do_recombination_event();
+void do_clearance_event(); 
 
 double draw_biting_time(Population * pop);
 double draw_immigration_time(Population * pop);
@@ -193,9 +233,16 @@ void initialize() {
     infection_manager = new InfectionManager();
     immunity_manager = new ImmunityManager();
     
+    biting_queue = new BitingQueue();
+    immigration_queue = new ImmigrationQueue();
+    death_queue = new DeathQueue();
+    transition_queue = new TransitionQueue();
+    mutation_queue = new MutationQueue();
+    recombination_queue = new RecombinationQueue();
+    clearance_queue = new ClearanceQueue();
+    
     initialize_gene_pool();
     initialize_populations();
-    initialize_event_queues();
 }
 
 void initialize_gene_pool() {
@@ -224,6 +271,11 @@ void initialize_population(uint64_t order) {
     Population * pop = population_manager->create();
     pop->order = order;
     pop->transmission_count = 0;
+    pop->next_biting_time = draw_biting_time(pop);
+    pop->next_immigration_time = draw_immigration_time(pop);
+    
+    biting_queue->add(pop);
+    immigration_queue->add(pop);
     
     initialize_population_hosts(pop);
     initialize_population_infections(pop);
@@ -240,28 +292,6 @@ void initialize_population_infections(Population * pop) {
         Host * host = pop->hosts.object_at_index(draw_uniform_index(pop->hosts.size())); 
         Strain * strain = generate_random_strain();
         infect_host(host, strain);
-    }
-}
-
-void initialize_event_queues() {
-    initialize_biting_queue();
-    initialize_immigration_queue();
-    initialize_death_queue();
-}
-
-void initialize_biting_queue() {
-    biting_queue = new BitingQueue();
-}
-
-void initialize_immigration_queue() {
-    immigration_queue = new ImmigrationQueue();
-}
-
-void initialize_death_queue() {
-    death_queue = new DeathQueue();
-    
-    for(Host * host : host_manager->objects()) {
-        death_queue->add(host);
     }
 }
 
@@ -290,10 +320,28 @@ Host * create_new_host(Population * pop, bool initial) {
         host->birth_time = current_time;
     }
     host->death_time = host->birth_time + lifetime;
+    death_queue->add(host);
     
     pop->hosts.add(host);
     
     return host;
+}
+
+void destroy_host(Host * host) {
+    Population * pop = host->population;
+    printf("Removing host id %llu from population %llu\n", host->id, pop->id);
+    
+    for(Infection * infection : host->infections) {
+        infection_manager->destroy(infection);
+    }
+    
+    for(Immunity * immunity : host->immunities) {
+        immunity_manager->destroy(immunity);
+    }
+    
+    pop->hosts.remove(host);
+    death_queue->remove(host);
+    host_manager->destroy(host);
 }
 
 Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles) {
@@ -320,7 +368,7 @@ Strain * get_strain_with_genes(std::vector<Gene *> genes) {
     if(itr == genes_strain_map.end()) {
         Strain * strain = strain_manager->create();
         for(Gene * gene : genes) {
-            strain->genes.insert(gene);
+            strain->genes.add(gene);
         }
         genes_strain_map[genes] = strain;
         return strain;
@@ -336,8 +384,50 @@ void infect_host(Host * host, Strain * strain) {
     Infection * infection = infection_manager->create();
     infection->host = host;
     infection->strain = strain;
+    
+    for(Gene * gene : strain->genes.as_vector()) {
+        infection->expression_order.push_back(gene);
+    }
+    std::shuffle(
+        infection->expression_order.begin(), infection->expression_order.end(), *rng
+    );
+    
+    infection->active = false;
+    if(T_LIVER_STAGE == 0.0) {
+        infection->expression_index = 0;
+        infection->transition_time = draw_transition_time(infection);
+    }
+    else {
+        infection->expression_index = -1;
+        infection->transition_time = current_time + T_LIVER_STAGE;
+    }
+    
+    infection->mutation_time = draw_mutation_time(infection);
+    infection->recombination_time = draw_recombination_time(infection);
+    
     host->infections.insert(infection);
 }
+
+double draw_transition_time(Infection * infection) {
+    if(infection->active) {
+        return current_time + draw_exponential(DEACTIVATION_RATE);
+    }
+    else {
+        return current_time + draw_exponential(ACTIVATION_RATE);
+    }
+}
+
+double draw_mutation_time(Infection * infection) {
+    
+}
+
+double draw_recombination_time(Infection * infection) {
+}
+
+double draw_clearance_time(Infection * infection) {
+    return current_time + draw_exponential(CLEARANCE_RATE);
+}
+
 
 #pragma mark \
 *** Main simulation loop ***
@@ -412,11 +502,28 @@ void do_biting_event() {
     printf("do_biting_event()\n");
     assert(biting_queue->size() > 0);
     Population * pop = biting_queue->head();
+    
+    printf("biting event pop: %llu\n", pop->id);
+    
+    // TODO: biting activity
+    
+    // Update biting event time
     pop->next_biting_time += draw_biting_time(pop);
+    biting_queue->update(pop);
 }
 
 void do_immigration_event() {
     printf("do_immigration_event()\n");
+    assert(immigration_queue->size() > 0);
+    Population * pop = immigration_queue->head();
+    
+    printf("immigration event pop: %llu\n", pop->id);
+    
+    // TODO: immigration activity
+    
+    // Update immigration event time
+    pop->next_immigration_time += draw_immigration_time(pop);
+    immigration_queue->update(pop);
 }
 
 void do_death_event() {
@@ -425,23 +532,9 @@ void do_death_event() {
     
     Host * host = death_queue->head();
     Population * pop = host->population;
-    printf("Removing host id %llu from population %llu\n", host->id, pop->id);
-    
-    for(Infection * infection : host->infections) {
-        infection_manager->destroy(infection);
-    }
-    
-    for(Immunity * immunity : host->immunities) {
-        immunity_manager->destroy(immunity);
-    }
-    
-    pop->hosts.remove(host);
-    death_queue->remove(host);
-    host_manager->destroy(host);
-    
-    host = create_new_host(pop, false);
-    printf("Created new host id %llu in population %llu\n", host->id, pop->id);
-    death_queue->add(host);
+    destroy_host(host);
+    Host * new_host = create_new_host(pop, false);
+    printf("Created new host id %llu in population %llu\n", new_host->id, pop->id);
 }
 
 #pragma mark \

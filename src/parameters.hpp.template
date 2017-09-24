@@ -96,6 +96,15 @@ const double {P_STRAIN_RECOMBINATION};
 // Duration of liver stage (pre-expression)
 const double {T_LIVER_STAGE};
 
+// Gene activation rate
+const double {ACTIVATION_RATE};
+
+// Gene deactivation rate
+const double {DEACTIVATION_RATE};
+
+// Infection clearance rate
+const double {CLEARANCE_RATE};
+
 // If true, use a discrete PDF for host lifetime distribution.
 // If false, draw host lifetimes from an exponential distribution with mean MEAN_HOST_LIFETIME.
 const bool {USE_HOST_LIFETIME_PDF};

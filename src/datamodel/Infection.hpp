@@ -4,10 +4,13 @@
 #include <stdint.h>
 #include <sqlite3.h>
 
+#include <vector>
+
 namespace varmodel {
 
 struct Strain;
 struct Host;
+struct Gene;
 
 struct Infection { 
     Infection(uint64_t id) : id(id) { }
@@ -17,9 +20,15 @@ struct Infection {
     Strain * strain;
     Host * host;
     
-    uint64_t gene_index;
+    int64_t expression_index;
     bool active;
+    
     double transition_time;
+    double mutation_time;
+    double recombination_time;
+    double clearance_time;
+    
+    std::vector<Gene *> expression_order;
 };
 
 } // namespace varmodel

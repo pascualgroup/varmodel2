@@ -1,7 +1,6 @@
 #ifndef Gene_hpp
 #define Gene_hpp
 
-#include <stdint.h>
 #include <vector>
 
 namespace varmodel {
