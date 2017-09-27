@@ -8,8 +8,11 @@ namespace varmodel {
 void validate_and_load_parameters();
 void initialize();
 
+void verify_simulation_state();
+
 void load_checkpoint();
 void save_checkpoint();
+
 
 void run();
 

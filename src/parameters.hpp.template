@@ -6,6 +6,11 @@
 
 namespace varmodel {{
 
+/*** DEBUGGING ***/
+
+const bool {PRINT_FUNCTION_TRACE};
+const int64_t {PRINT_DEBUG_LEVEL};
+
 /*** OUTPUT SETTINGS ***/
 
 // Path to database output file for sampled data, absolute or relative to the working directory the program is executed in.
@@ -31,6 +36,13 @@ const uint64_t {TRANSMISSION_EVENT_SAMPLING_SKIP};
 
 // Burn-in period for simulation before which output will not be written.
 const double {T_BURNIN};
+
+
+/*** VERIFICATION SETTINGS ***/
+
+// How often to verify the validity of all data structures
+
+const double {VERIFICATION_PERIOD};
 
 
 /*** CHECKPOINT SETTINGS ***/

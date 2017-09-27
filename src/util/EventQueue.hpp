@@ -9,7 +9,15 @@
 
 namespace varmodel {
 
-template<typename T, bool (*C)(T * ,T *)>
+template<typename T, double (*V)(T *)>
+bool Compare(T * o1, T * o2) {
+    if(V(o1) == V(o2)) {
+        return o1->id < o2->id;
+    }
+    return V(o1) < V(o2);
+}
+
+template<typename T, double (*V)(T *)>
 class EventQueue
 {
 public:
@@ -88,7 +96,7 @@ public:
 		return (heap.size() - 2)/2;
 	}
 	
-	bool verifyHeap()
+	bool verify_heap()
 	{
 		if(heap.size() <= 1) {
 			return true;
@@ -99,15 +107,13 @@ public:
 		{
 			size_t left = 2*i + 1;
 			assert(left < heap.size());
-			if(C(heap[left], heap[i])) {
-                std::cerr << "A" << std::endl;
+			if(Compare<T, V>(heap[left], heap[i])) {
 				return false;
 			}
 			
 			size_t right = left + 1;
 			if(right < heap.size()) {
-				if(C(heap[right], heap[i])) {
-                    std::cerr << "B" << std::endl;
+				if(Compare<T, V>(heap[right], heap[i])) {
 					return false;
 				}
 			}
@@ -171,7 +177,7 @@ private:
 		bool moved = false;
 		while(i > 0) {
 			size_t parent = (i-1)/2;
-			if(C(heap[i], heap[parent])) {
+			if(Compare<T, V>(heap[i], heap[parent])) {
 				swap(i, parent);
 				i = parent;
 				moved = true;
@@ -210,16 +216,16 @@ private:
 			
 			size_t min = i;
 			
-			if(removing || C(leftVal, nVal))
+			if(removing || Compare<T, V>(leftVal, nVal))
 			{
-				if(rightVal != NULL && C(rightVal, leftVal)) {
+				if(rightVal != NULL && Compare<T, V>(rightVal, leftVal)) {
 					min = right;
 				}
 				else {
 					min = left;
 				}
 			}
-			else if(rightVal != NULL && C(rightVal, nVal)) {
+			else if(rightVal != NULL && Compare<T, V>(rightVal, nVal)) {
 				min = right;
 			}
 			else {
