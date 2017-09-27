@@ -41,96 +41,48 @@ LocusImmunityManager * locus_immunity_manager;
 #pragma mark \
 *** Event queues for different types of event ***
 
-//bool compare_biting_time(Population * p1, Population * p2) {
-//    if(p1->next_biting_time == p2->next_biting_time) {
-//        return p1->id < p2->id;
-//    }
-//    return p1->next_biting_time < p2->next_biting_time;
-//}
 double get_biting_time(Population * p) {
     return p->next_biting_time;
 }
 typedef EventQueue<Population, get_biting_time> BitingQueue; 
 BitingQueue * biting_queue;
 
-//bool compare_immigration_time(Population * p1, Population * p2) {
-//    if(p1->next_immigration_time == p2->next_immigration_time) {
-//        return p1->id < p2->id;
-//    }
-//    return p1->next_immigration_time < p2->next_immigration_time;
-//}
 double get_immigration_time(Population * p) {
     return p->next_immigration_time;
 }
 typedef EventQueue<Population, get_immigration_time> ImmigrationQueue;
 ImmigrationQueue * immigration_queue;
 
-//bool compare_immunity_loss_time(Host * o1, Host * o2) {
-//    if(o1->immunity_loss_time == o2->immunity_loss_time) {
-//        return o1->id < o2->id;
-//    }
-//    return o1->immunity_loss_time < o1->immunity_loss_time;
-//}
 double get_immunity_loss_time(Host * h) {
     return h->immunity_loss_time;
 }
 typedef EventQueue<Host, get_immunity_loss_time> ImmunityLossQueue;
 ImmunityLossQueue * immunity_loss_queue;
 
-//bool compare_death_time(Host * h1, Host * h2) {
-//    if(h1->death_time == h2->death_time) {
-//        return h1->id < h2->id;
-//    }
-//    return h1->death_time < h2->death_time;
-//}
 double get_death_time(Host * host) {
     return host->death_time;
 }
 typedef EventQueue<Host, get_death_time> DeathQueue;
 DeathQueue * death_queue;
 
-//bool compare_transition_time(Infection * o1, Infection * o2) {
-//    if(o1->transition_time == o2->transition_time) {
-//        return o1->id < o2->id;
-//    }
-//    return o1->transition_time < o1->transition_time;
-//}
 double get_transition_time(Infection * infection) {
     return infection->transition_time;
 }
 typedef EventQueue<Infection, get_transition_time> TransitionQueue;
 TransitionQueue * transition_queue;
 
-//bool compare_mutation_time(Infection * o1, Infection * o2) {
-//    if(o1->mutation_time == o2->mutation_time) {
-//        return o1->id < o2->id;
-//    }
-//    return o1->mutation_time < o1->mutation_time;
-//}
 double get_mutation_time(Infection * infection) {
     return infection->mutation_time;
 }
 typedef EventQueue<Infection, get_mutation_time> MutationQueue;
 MutationQueue * mutation_queue;
 
-//bool compare_recombination_time(Infection * o1, Infection * o2) {
-//    if(o1->recombination_time == o2->recombination_time) {
-//        return o1->id < o2->id;
-//    }
-//    return o1->recombination_time < o1->recombination_time;
-//}
 double get_recombination_time(Infection * infection) {
     return infection->recombination_time;
 }
 typedef EventQueue<Infection, get_recombination_time> RecombinationQueue;
 RecombinationQueue * recombination_queue;
 
-//bool compare_clearance_time(Infection * o1, Infection * o2) {
-//    if(o1->clearance_time == o2->clearance_time) {
-//        return o1->id < o2->id;
-//    }
-//    return o1->clearance_time < o1->clearance_time;
-//}
 double get_clearance_time(Infection * infection) {
     return infection->clearance_time;
 }
