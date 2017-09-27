@@ -1,0 +1,28 @@
+
+    // Create and insert rows into {object_type}_{matrix_var}
+    {{
+        // Create {object_type}_{matrix_var}
+        sqlite3_exec(db,
+            "CREATE TABLE {object_type}_{matrix_var} (id INTEGER, row INTEGER, col INTEGER, val {sql_type});",
+            NULL, NULL, NULL
+        );
+        
+        // Insert rows into {object_type}_{matrix_var}
+        {{
+            sqlite3_stmt * stmt = NULL;
+            sqlite3_prepare_v2(db, "INSERT INTO {object_type}_{matrix_var} VALUES (?,?,?,?);", -1, &stmt, NULL);
+            for({object_type} * obj : collection.as_vector()) {{
+                for(uint64_t i = 0; i < obj->{matrix_var}.size(); i++) {{
+                    for(uint64_t j = 0; j < obj->{matrix_var}[i].size(); j++) {{
+                        sqlite3_bind_int64(stmt, 1, obj->id);
+                        sqlite3_bind_int64(stmt, 2, i);
+                        sqlite3_bind_int64(stmt, 3, j);
+                        sqlite3_bind_{sqlite3_bind_type}(stmt, 4, obj->{matrix_var}[i][j]);
+                        sqlite3_step(stmt);
+                        sqlite3_reset(stmt);
+                    }}
+                }}
+            }}
+            sqlite3_finalize(stmt);
+        }}
+    }}

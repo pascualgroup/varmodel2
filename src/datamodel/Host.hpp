@@ -3,13 +3,15 @@
 
 #include <stdint.h>
 #include <sqlite3.h>
+#include <vector>
 #include <unordered_set>
 
 namespace varmodel {
 
 struct Population;
 struct Infection;
-struct Immunity;
+struct GeneImmuneHistory;
+struct AlleleImmuneHistory;
 
 struct Host {
     Host(uint64_t id) : id(id) { }
@@ -21,9 +23,13 @@ struct Host {
     double birth_time;
     double death_time;
     
+    double immunity_loss_time;
+    
     // One-to-many relationships
     std::unordered_set<Infection *> infections;
-    std::unordered_set<Immunity *> immunities;
+    
+    GeneImmuneHistory * gene_immune_history;
+    AlleleImmuneHistory * allele_immune_history;
 };
 
 } // namespace varmodel

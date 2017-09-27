@@ -54,8 +54,9 @@ const double {CHECKPOINT_SAVE_PERIOD};
 /*** MODEL PARAMETERS ***/
 
 enum SelectionMode {{
-    SPECIFIC_IMMUNITY,
-    GENERALIZED_IMMUNITY,
+    ALLELE_SPECIFIC_IMMUNITY,
+    GENE_SPECIFIC_IMMUNITY,
+    GENERAL_IMMUNITY,
     NEUTRALITY
 }};
 const SelectionMode {SELECTION_MODE};
@@ -99,8 +100,11 @@ const double {T_LIVER_STAGE};
 // Gene activation rate
 const double {ACTIVATION_RATE};
 
-// Gene deactivation rate
-const double {DEACTIVATION_RATE};
+// Gene deactivation rate when not immune or under neutrality
+const double {DEACTIVATION_RATE_NOT_IMMUNE};
+
+// Gene deactivation rate when fully immune
+const double {DEACTIVATION_RATE_IMMUNE};
 
 // Infection clearance rate
 const double {CLEARANCE_RATE};

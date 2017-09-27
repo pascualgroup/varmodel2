@@ -71,11 +71,17 @@ void {manager_type}::save_to_checkpoint(sqlite3 * db) {{
     // Create and save vector-valued fields into separate tables
     {create_vector_blocks}
     
+    // Create and save matrix-valued fields into separate tables
+    {create_matrix_blocks}
+    
+    // Create and save map-valued fields into separate tables
+    {create_map_blocks}
+    
     // Create and save IndexedSet references into separate tables
     {create_reflist_blocks_IndexedSet}
     
-    // Create and save std::unordered_set references into separate tables
-    {create_reflist_blocks_unordered_set}
+    // Create and save std::vector and std::unordered_set references into separate tables
+    {create_reflist_blocks_vector}
 }}
 
 }} // namespace varmodel
