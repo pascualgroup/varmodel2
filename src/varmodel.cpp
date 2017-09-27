@@ -136,14 +136,22 @@ Strain * get_strain_with_genes(std::vector<Gene *> genes);
 
 Gene * get_current_gene(Infection * infection);
 
+uint64_t get_immune_allele_count(Host * host);
+
 void gain_immunity(Host * host, Gene * gene, bool is_clearing);
 void gain_allele_specific_immunity(Host * host, Gene * gene);
+double draw_allele_specific_immunity_loss_time(Host * host);
 void gain_gene_specific_immunity(Host * host, Gene * gene);
+double draw_gene_specific_immunity_loss_time(Host * host);
 void gain_general_immunity(Host * host, Gene * gene);
+double draw_general_immunity_loss_time(Host * host);
 
-void lose_allele_specific_immunity(Host * host);
+void lose_random_allele_specific_immunity(Host * host);
 void lose_gene_specific_immunity(Host * host);
 void lose_general_immunity(Host * host);
+
+void update_host_infection_times(Host * host);
+void update_infection_times(Infection * infection);
 
 double get_specific_immunity_level(Host * host, Gene * gene);
 uint64_t get_active_infection_count(Host * host);
@@ -151,8 +159,6 @@ void infect_host(Host * host, Strain * strain);
 
 void perform_infection_transition(Infection * infection);
 void clear_infection(Infection * infection);
-
-void update_all_infection_times(Host * host);
 
 double draw_transition_time(Infection * infection);
 double draw_activation_time(Infection * infection);
@@ -472,6 +478,26 @@ void gain_immunity(Host * host, Gene * gene, bool is_clearing) {
 }
 
 void gain_allele_specific_immunity(Host * host, Gene * gene) {
+    AlleleImmuneHistory * immune_history = host->allele_immune_history;
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        LocusImmunity * immunity = immune_history->immunity_by_locus[i];
+        auto itr = immunity->immunity_level_by_allele.find(gene->alleles[i]);
+        if(itr == immunity->immunity_level_by_allele.end()) {
+            immunity->immunity_level_by_allele[gene->alleles[i]] = 1;
+        }
+        else {
+            immunity->immunity_level_by_allele[gene->alleles[i]]++;
+        }
+    }
+    host->immunity_loss_time = draw_allele_specific_immunity_loss_time(host);
+}
+
+double draw_allele_specific_immunity_loss_time(Host * host) {
+    uint64_t immune_allele_count = get_immune_allele_count(host);
+    if(immune_allele_count == 0) {
+        return std::numeric_limits<double>::infinity();
+    }
+    return current_time + draw_exponential(IMMUNITY_LOSS_RATE * immune_allele_count);
 }
 
 void gain_gene_specific_immunity(Host * host, Gene * gene) {
@@ -480,7 +506,44 @@ void gain_gene_specific_immunity(Host * host, Gene * gene) {
 void gain_general_immunity(Host * host, Gene * gene) {
 }
 
-void lose_allele_specific_immunity(Host * host) {
+void lose_random_allele_specific_immunity(Host * host) {
+    AlleleImmuneHistory * immune_history = host->allele_immune_history;
+    uint64_t cur_index = 0;
+    uint64_t index = draw_uniform_index(get_immune_allele_count(host));
+    bool found = false;
+    for(uint64_t i = 0; i < N_LOCI && !found; i++) {
+        LocusImmunity * immunity = immune_history->immunity_by_locus[i];
+        for(auto kv : immunity->immunity_level_by_allele) {
+            if(index == cur_index) {
+                assert(kv.second > 0);
+                if(kv.second == 1) {
+                    immunity->immunity_level_by_allele.erase(kv.first);
+                }
+                else {
+                    immunity->immunity_level_by_allele[kv.first]--;
+                }
+                found = true;
+            }
+            if(found) {
+                break;
+            }
+            cur_index++;
+        }
+    }
+    assert(found);
+    
+    host->immunity_loss_time = draw_allele_specific_immunity_loss_time(host);
+    immunity_loss_queue->update(host);
+}
+
+uint64_t get_immune_allele_count(Host * host) {
+    uint64_t immune_allele_count = 0;
+    AlleleImmuneHistory * immune_history = host->allele_immune_history;
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        LocusImmunity * immunity = immune_history->immunity_by_locus[i];
+        immune_allele_count += immunity->immunity_level_by_allele.size();
+    }
+    return immune_allele_count;
 }
 
 void lose_gene_specific_immunity(Host * host) {
@@ -568,20 +631,32 @@ void perform_infection_transition(Infection * infection) {
         infection->active = true;
     }
     
-    if(infection->expression_index == -1) {
-        infection->transition_time = draw_transition_time(infection);
-    }
-    else {
-        update_all_infection_times(infection->host);
-    }
+    update_host_infection_times(infection->host);
 }
 
 void clear_infection(Infection * infection) {
-    // TODO
+    transition_queue->remove(infection);
+    mutation_queue->remove(infection);
+    recombination_queue->remove(infection);
+    clearance_queue->remove(infection);
+    
+    Host * host = infection->host;
+    host->infections.erase(infection);
+    
+    infection_manager->destroy(infection);
 }
 
-void update_all_infection_times(Host * host) {
-    // TODO
+void update_host_infection_times(Host * host) {
+    for(Infection * infection : host->infections) {
+        update_infection_times(infection);
+    }
+}
+
+void update_infection_times(Infection * infection) {
+    if(infection->expression_index >= 0) {
+        infection->transition_time = draw_transition_time(infection);
+        transition_queue->update(infection);
+    }
 }
 
 double draw_transition_time(Infection * infection) {
@@ -807,7 +882,7 @@ void do_immunity_loss_event() {
     
     switch(SELECTION_MODE) {
         case ALLELE_SPECIFIC_IMMUNITY:
-            lose_allele_specific_immunity(host);
+            lose_random_allele_specific_immunity(host);
             break;
         case GENE_SPECIFIC_IMMUNITY:
             lose_gene_specific_immunity(host);
@@ -855,6 +930,8 @@ void do_recombination_event() {
 }
 
 void do_clearance_event() {
+    Infection * infection = clearance_queue->head();
+    clear_infection(infection);
 }
 
 #pragma mark \
