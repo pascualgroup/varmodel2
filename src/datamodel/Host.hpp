@@ -25,6 +25,8 @@ struct Host {
     
     double immunity_loss_time;
     
+    uint64_t completed_infection_count;
+    
     // One-to-many relationships
     std::unordered_set<Infection *> infections;
     

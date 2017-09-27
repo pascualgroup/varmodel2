@@ -18,9 +18,6 @@
 namespace varmodel {
 
 #pragma mark \
-*** Enum parameters ***
-
-#pragma mark \
 *** Simulation state ***
 
 rng_t * rng;
@@ -29,7 +26,7 @@ double current_time;
 double next_checkpoint_time;
 
 StrainManager * strain_manager;
-std::unordered_map<std::vector<Gene *>, Strain *, HashVector<Gene *>> genes_strain_map;
+std::unordered_map<std::array<Gene *, N_GENES_PER_STRAIN>, Strain *, HashArray<Gene *, N_GENES_PER_STRAIN>> genes_strain_map;
 
 GeneManager * gene_manager;
 
@@ -128,11 +125,11 @@ void initialize_population_infections(Population * pop);
 
 void destroy_host(Host * host);
 Host * create_host(Population * pop, bool initial);
-Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles);
+Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
 Strain * generate_random_strain();
 Strain * create_strain(std::vector<Gene *> const & genes);
 Gene * draw_random_gene();
-Strain * get_strain_with_genes(std::vector<Gene *> genes);
+Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
 
 Gene * get_current_gene(Infection * infection);
 
@@ -296,7 +293,7 @@ void initialize_gene_pool() {
     // Create gene pool
     for(uint64_t i = 0; i < N_GENES_IN_POOL; i++) {
         // Draw random alleles different from all other existing genes
-        std::vector<uint64_t> alleles(N_LOCI);
+        std::array<uint64_t, N_LOCI> alleles;
         do {
             for(uint64_t j = 0; j < N_LOCI; j++) {
                 alleles[j] = draw_uniform_index(N_ALLELES[j]);
@@ -369,12 +366,13 @@ Host * create_host(Population * pop, bool initial) {
     host->death_time = host->birth_time + lifetime;
     death_queue->add(host);
     
+    host->completed_infection_count = 0;
     host->immunity_loss_time = std::numeric_limits<double>::infinity();
     
     if(SELECTION_MODE == ALLELE_SPECIFIC_IMMUNITY) {
         AlleleImmuneHistory * allele_immune_history = allele_immune_history_manager->create();
         for(uint64_t i = 0; i < N_LOCI; i++) {
-            allele_immune_history->immunity_by_locus.push_back(locus_immunity_manager->create());
+            allele_immune_history->immunity_by_locus[i] = locus_immunity_manager->create();
         }
         host->allele_immune_history = allele_immune_history;
     }
@@ -417,7 +415,7 @@ void destroy_host(Host * host) {
     host_manager->destroy(host);
 }
 
-Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles) {
+Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles) {
     for(Gene * gene : gene_manager->objects()) {
         assert(gene->alleles.size() == N_LOCI);
         if(gene->alleles == alleles) {
@@ -428,14 +426,14 @@ Gene * get_gene_with_alleles(std::vector<uint64_t> const & alleles) {
 }
 
 Strain * generate_random_strain() {
-    std::vector<Gene *> genes(N_GENES_PER_STRAIN);
+    std::array<Gene *, N_GENES_PER_STRAIN> genes;
     for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
         genes[i] = draw_random_gene();
     }
     return get_strain_with_genes(genes);
 }
 
-Strain * get_strain_with_genes(std::vector<Gene *> genes) {
+Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
     std::sort(genes.begin(), genes.end(),
         [](Gene * o1, Gene * o2) {
             return o1->id < o2->id;
@@ -490,6 +488,7 @@ void gain_allele_specific_immunity(Host * host, Gene * gene) {
         }
     }
     host->immunity_loss_time = draw_allele_specific_immunity_loss_time(host);
+    immunity_loss_queue->update(host);
 }
 
 double draw_allele_specific_immunity_loss_time(Host * host) {
@@ -501,9 +500,15 @@ double draw_allele_specific_immunity_loss_time(Host * host) {
 }
 
 void gain_gene_specific_immunity(Host * host, Gene * gene) {
+    GeneImmuneHistory * immune_history = host->gene_immune_history;
+    if(!immune_history->immune_genes.contains_object(gene)) {
+        immune_history->immune_genes.add(gene);
+        update_host_infection_times(host);
+    }
 }
 
 void gain_general_immunity(Host * host, Gene * gene) {
+    
 }
 
 void lose_random_allele_specific_immunity(Host * host) {
@@ -549,9 +554,6 @@ uint64_t get_immune_allele_count(Host * host) {
 void lose_gene_specific_immunity(Host * host) {
 }
 
-void lose_general_immunity(Host * host) {
-}
-
 double get_specific_immunity_level(Host * host, Gene * gene) {
     uint64_t immunity_count = 0;
     for(uint64_t i = 0; i < N_LOCI; i++) {
@@ -579,8 +581,8 @@ void infect_host(Host * host, Strain * strain) {
     infection->host = host;
     infection->strain = strain;
     
-    for(Gene * gene : strain->genes_sorted) {
-        infection->expression_order.push_back(gene);
+    for(uint64_t i = 0; i < strain->genes_sorted.size(); i++) {
+        infection->expression_order[i] = strain->genes_sorted[i];
     }
     std::shuffle(
         infection->expression_order.begin(), infection->expression_order.end(), *rng

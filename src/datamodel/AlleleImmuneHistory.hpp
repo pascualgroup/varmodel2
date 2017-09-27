@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 #include <sqlite3.h>
-#include <vector>
+#include <array>
+#include "parameters.hpp"
 
 namespace varmodel {
 
@@ -13,7 +14,7 @@ struct AlleleImmuneHistory {
     AlleleImmuneHistory(uint64_t id) : id(id) { }
      
     uint64_t const id;
-    std::vector<LocusImmunity *> immunity_by_locus;
+    std::array<LocusImmunity *, N_LOCI> immunity_by_locus;
 };
 
 } // namespace varmodel }

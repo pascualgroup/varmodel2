@@ -10,7 +10,7 @@ namespace varmodel {
 template<typename T>
 struct IndexedSet {
     std::vector<T *> vec;
-    std::unordered_map<int64_t, size_t> id_index_map; 
+    std::unordered_map<uint64_t, size_t> id_index_map; 
     
     void add(T * obj) {
         assert(id_index_map.find(obj->id) == id_index_map.end());
@@ -26,6 +26,14 @@ struct IndexedSet {
             id_index_map[vec[index]->id] = index;
         }
         vec.pop_back();
+    }
+    
+    bool contains_id(uint64_t id) {
+        return id_index_map.find(id) != id_index_map.end();
+    }
+    
+    bool contains_object(T * obj) {
+        return contains_id(obj->id);
     }
     
     T * object_for_id(int64_t id) {

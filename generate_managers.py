@@ -157,7 +157,11 @@ def parse_type(object_type, input_filename):
                             map_object_type = tokens[0][len('IndexedSet')+1:-1]
                             reflists_IM.append((map_object_type, tokens[1][:-1]))
                 elif len(tokens) == 3:
-                    if tokens[1] == '*' and tokens[2].endswith(';'):
+                    if tokens[0].startswith('std::array<') and tokens[0].endswith(',') and tokens[1].endswith('>'):
+                        if tokens[2].endswith(';'):
+                            field_type = tokens[0][len('std::array<'):-1]
+                            vectors.append((field_type, tokens[2][:-1]))
+                    elif tokens[1] == '*' and tokens[2].endswith(';'):
                         columns.append(('REF', tokens[0], tokens[2][:-1]))
                     elif tokens[0].startswith('std::unordered_set<') \
                         and tokens[1] == '*>' and tokens[2].endswith(';'):
@@ -167,6 +171,11 @@ def parse_type(object_type, input_filename):
                         and tokens[1] == '*>' and tokens[2].endswith(';'):
                         vec_object_type = tokens[0][len('std::vector<'):]
                         reflists_vector.append((vec_object_type, tokens[2][:-1]))
+                elif len(tokens) == 4:
+                    if tokens[0].startswith('std::array<') \
+                        and tokens[1] == '*,' and tokens[2].endswith('>') and tokens[3].endswith(';'):
+                        vec_object_type = tokens[0][len('std::array<'):]
+                        reflists_vector.append((vec_object_type, tokens[3][:-1]))
     
     return columns, vectors, matrices, maps, reflists_IM, reflists_vector
 
@@ -318,9 +327,9 @@ def generate_manager(object_type, dst_dir):
                     )
                 else:
                     assert col_info[0] == 'REF'
-                    return 'sqlite3_bind_int64(stmt, {}, obj->{}->id);'.format(
-                        index,
-                        col_info[2]
+                    return 'if(obj->{name} == NULL) {{ sqlite3_bind_null(stmt, {index}); }} else {{ sqlite3_bind_int64(stmt, {index}, obj->{name}->id); }}'.format(
+                        index = index,
+                        name = col_info[2]
                     )
             
             return '\n        '.join([

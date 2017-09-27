@@ -2,7 +2,8 @@
 #define Strain_hpp
 
 #include <stdint.h>
-#include <vector>
+#include <array>
+#include "parameters.hpp"
 
 namespace varmodel {
 
@@ -12,7 +13,7 @@ struct Strain {
     Strain(uint64_t id) : id(id) { }
     
     uint64_t const id;
-    std::vector<Gene *> genes_sorted;
+    std::array<Gene *, N_GENES_PER_STRAIN> genes_sorted;
 };
 
 } // namespace varmodel

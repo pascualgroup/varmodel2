@@ -1,7 +1,8 @@
 #ifndef Gene_hpp
 #define Gene_hpp
 
-#include <vector>
+#include <array>
+#include "parameters.hpp"
 
 namespace varmodel {
 
@@ -10,7 +11,7 @@ struct Gene {
     
     uint64_t const id;
     
-    std::vector<uint64_t> alleles;
+    std::array<uint64_t, N_LOCI> alleles;
 };
 
 } // namespace varmodel

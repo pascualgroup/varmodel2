@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <sqlite3.h>
 
-#include <vector>
+#include "parameters.hpp"
+#include <array>
 
 namespace varmodel {
 
@@ -28,7 +29,7 @@ struct Infection {
     double recombination_time;
     double clearance_time;
     
-    std::vector<Gene *> expression_order;
+    std::array<Gene *, N_GENES_PER_STRAIN> expression_order;
 };
 
 } // namespace varmodel
