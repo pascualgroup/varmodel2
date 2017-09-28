@@ -30,8 +30,7 @@ struct Host {
     // One-to-many relationships
     std::unordered_set<Infection *> infections;
     
-    GeneImmuneHistory * gene_immune_history;
-    AlleleImmuneHistory * allele_immune_history;
+    AlleleImmuneHistory * immune_history;
 };
 
 } // namespace varmodel

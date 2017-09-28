@@ -7,7 +7,6 @@
 #include "PopulationManager.hpp"
 #include "HostManager.hpp"
 #include "InfectionManager.hpp"
-#include "GeneImmuneHistoryManager.hpp"
 #include "AlleleImmuneHistoryManager.hpp"
 #include "LocusImmunityManager.hpp"
 #include "random.hpp"
@@ -18,76 +17,57 @@
 namespace varmodel {
 
 #pragma mark \
-*** Simulation state ***
+*** SIMULATION STATE ***
 
-rng_t * rng;
+double INF = std::numeric_limits<double>::infinity();
 
-double now;
-double next_verification_time;
-double next_checkpoint_time;
+rng_t rng(RANDOM_SEED);
 
-StrainManager * strain_manager;
-std::unordered_map<std::array<Gene *, N_GENES_PER_STRAIN>, Strain *, HashArray<Gene *, N_GENES_PER_STRAIN>> genes_strain_map;
+double now = 0.0;
+double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
+double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 
-GeneManager * gene_manager;
+StrainManager strain_manager;
+std::unordered_map<
+    std::array<Gene *, N_GENES_PER_STRAIN>,
+    Strain *,
+    HashArray<Gene *, N_GENES_PER_STRAIN>
+> genes_strain_map;
 
-PopulationManager * population_manager;
-HostManager * host_manager;
-InfectionManager * infection_manager;
-GeneImmuneHistoryManager * gene_immune_history_manager;
-AlleleImmuneHistoryManager * allele_immune_history_manager;
-LocusImmunityManager * locus_immunity_manager;
+GeneManager gene_manager;
+
+PopulationManager population_manager;
+HostManager host_manager;
+InfectionManager infection_manager;
+AlleleImmuneHistoryManager immune_history_manager;
+LocusImmunityManager locus_immunity_manager;
 
 #pragma mark \
-*** Event queues for different types of event ***
+*** EVENT QUEUES ***
 
-double get_biting_time(Population * p) {
-    return p->next_biting_time;
-}
-typedef EventQueue<Population, get_biting_time> BitingQueue; 
-BitingQueue * biting_queue;
+double get_biting_time(Population * p) { return p->next_biting_time; }
+EventQueue<Population, get_biting_time> biting_queue; 
 
-double get_immigration_time(Population * p) {
-    return p->next_immigration_time;
-}
-typedef EventQueue<Population, get_immigration_time> ImmigrationQueue;
-ImmigrationQueue * immigration_queue;
+double get_immigration_time(Population * p) { return p->next_immigration_time; }
+EventQueue<Population, get_immigration_time> immigration_queue;
 
-double get_immunity_loss_time(Host * h) {
-    return h->immunity_loss_time;
-}
-typedef EventQueue<Host, get_immunity_loss_time> ImmunityLossQueue;
-ImmunityLossQueue * immunity_loss_queue;
+double get_immunity_loss_time(Host * h) { return h->immunity_loss_time; }
+EventQueue<Host, get_immunity_loss_time> immunity_loss_queue;
 
-double get_death_time(Host * host) {
-    return host->death_time;
-}
-typedef EventQueue<Host, get_death_time> DeathQueue;
-DeathQueue * death_queue;
+double get_death_time(Host * host) { return host->death_time; }
+EventQueue<Host, get_death_time> death_queue;
 
-double get_transition_time(Infection * infection) {
-    return infection->transition_time;
-}
-typedef EventQueue<Infection, get_transition_time> TransitionQueue;
-TransitionQueue * transition_queue;
+double get_transition_time(Infection * infection) { return infection->transition_time; }
+EventQueue<Infection, get_transition_time> transition_queue;
 
-double get_mutation_time(Infection * infection) {
-    return infection->mutation_time;
-}
-typedef EventQueue<Infection, get_mutation_time> MutationQueue;
-MutationQueue * mutation_queue;
+double get_mutation_time(Infection * infection) { return infection->mutation_time; }
+EventQueue<Infection, get_mutation_time> mutation_queue;
 
-double get_recombination_time(Infection * infection) {
-    return infection->recombination_time;
-}
-typedef EventQueue<Infection, get_recombination_time> RecombinationQueue;
-RecombinationQueue * recombination_queue;
+double get_recombination_time(Infection * infection) { return infection->recombination_time; }
+EventQueue<Infection, get_recombination_time> recombination_queue;
 
-double get_clearance_time(Infection * infection) {
-    return infection->clearance_time;
-}
-typedef EventQueue<Infection, get_clearance_time> ClearanceQueue;
-ClearanceQueue * clearance_queue;
+double get_clearance_time(Infection * infection) { return infection->clearance_time; }
+EventQueue<Infection, get_clearance_time> clearance_queue;
 
 #pragma mark \
 *** Helper function declarations ***
@@ -114,17 +94,10 @@ Gene * get_current_gene(Infection * infection);
 
 uint64_t get_immune_allele_count(Host * host);
 
-void gain_allele_specific_immunity(Host * host, Gene * gene);
-void update_allele_specific_immunity_loss_time(Host * host);
+void gain_immunity(Host * host, Gene * gene);
+void update_immunity_loss_time(Host * host);
 
-void gain_gene_specific_immunity(Host * host, Gene * gene);
-void update_gene_specific_immunity_loss_time(Host * host);
-
-void update_general_immunity_loss_time(Host * host);
-
-void lose_random_allele_specific_immunity(Host * host);
-void lose_gene_specific_immunity(Host * host);
-void lose_general_immunity(Host * host);
+void lose_random_immunity(Host * host);
 
 void update_host_infection_times(Host * host);
 void update_infection_times(Infection * infection);
@@ -282,34 +255,6 @@ void validate_and_load_parameters() {
 void initialize() {
     ENTER();
     
-    now = 0.0;
-    next_verification_time = 0.0;
-    next_checkpoint_time = 0.0;
-    
-    // Don't use the "new" keyword anywhere except here to create object managers.
-    // These object managers handle allocating/freeing memory for all other objects.
-    rng = new rng_t(RANDOM_SEED);
-    
-    strain_manager = new StrainManager();
-    gene_manager = new GeneManager();
-    population_manager = new PopulationManager();
-    host_manager = new HostManager();
-    infection_manager = new InfectionManager();
-    gene_immune_history_manager = new GeneImmuneHistoryManager();
-    allele_immune_history_manager = new AlleleImmuneHistoryManager();
-    locus_immunity_manager = new LocusImmunityManager();
-    
-    biting_queue = new BitingQueue();
-    immigration_queue = new ImmigrationQueue();
-    
-    immunity_loss_queue = new ImmunityLossQueue();
-    death_queue = new DeathQueue();
-    
-    transition_queue = new TransitionQueue();
-    mutation_queue = new MutationQueue();
-    recombination_queue = new RecombinationQueue();
-    clearance_queue = new ClearanceQueue();
-    
     initialize_gene_pool();
     initialize_populations();
     
@@ -329,7 +274,7 @@ void initialize_gene_pool() {
             }
         } while(get_gene_with_alleles(alleles) != NULL);
         
-        Gene * gene = gene_manager->create();
+        Gene * gene = gene_manager.create();
         gene->alleles = alleles;
     }
     
@@ -349,7 +294,7 @@ void initialize_populations() {
 void initialize_population(uint64_t order) {
     ENTER();
     
-    Population * pop = population_manager->create();
+    Population * pop = population_manager.create();
     pop->order = order;
     pop->transmission_count = 0;
     update_biting_time(pop, true);
@@ -390,7 +335,7 @@ void initialize_population_infections(Population * pop) {
 Host * create_host(Population * pop) {
     ENTER();
     
-    Host * host = host_manager->create();
+    Host * host = host_manager.create();
     host->population = pop;
     
     double lifetime;
@@ -405,28 +350,21 @@ Host * create_host(Population * pop) {
     }
     host->birth_time = now;
     host->death_time = host->birth_time + lifetime;
-    death_queue->add(host);
+    death_queue.add(host);
     
     host->completed_infection_count = 0;
-    host->immunity_loss_time = std::numeric_limits<double>::infinity();
-    immunity_loss_queue->add(host);
+    host->immunity_loss_time = INF;
+    immunity_loss_queue.add(host);
     
-    if(SELECTION_MODE == ALLELE_SPECIFIC_IMMUNITY) {
-        AlleleImmuneHistory * allele_immune_history = allele_immune_history_manager->create();
+    if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
+        AlleleImmuneHistory * immune_history = immune_history_manager.create();
         for(uint64_t i = 0; i < N_LOCI; i++) {
-            allele_immune_history->immunity_by_locus[i] = locus_immunity_manager->create();
+            immune_history->immunity_by_locus[i] = locus_immunity_manager.create();
         }
-        host->allele_immune_history = allele_immune_history;
+        host->immune_history = immune_history;
     }
     else {
-        host->allele_immune_history = NULL;
-    }
-    
-    if(SELECTION_MODE == GENE_SPECIFIC_IMMUNITY) {
-        host->gene_immune_history = gene_immune_history_manager->create();
-    }
-    else {
-        host->gene_immune_history = NULL;
+        host->immune_history = NULL;
     }
     
     pop->hosts.add(host);
@@ -446,38 +384,35 @@ void destroy_host(Host * host) {
         destroy_infection(infection);
     }
     
-    if(SELECTION_MODE == ALLELE_SPECIFIC_IMMUNITY) {
-        for(LocusImmunity * immunity : host->allele_immune_history->immunity_by_locus) {
-            locus_immunity_manager->destroy(immunity);
+    if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
+        for(LocusImmunity * immunity : host->immune_history->immunity_by_locus) {
+            locus_immunity_manager.destroy(immunity);
         }
-        allele_immune_history_manager->destroy(host->allele_immune_history);
-    }
-    else if(SELECTION_MODE == GENE_SPECIFIC_IMMUNITY) {
-        gene_immune_history_manager->destroy(host->gene_immune_history);
+        immune_history_manager.destroy(host->immune_history);
     }
     
     pop->hosts.remove(host);
-    death_queue->remove(host);
-    immunity_loss_queue->remove(host);
-    host_manager->destroy(host);
+    death_queue.remove(host);
+    immunity_loss_queue.remove(host);
+    host_manager.destroy(host);
     
     LEAVE();
 }
 
 void destroy_infection(Infection * infection) {
     ENTER();
-    transition_queue->remove(infection);
-    mutation_queue->remove(infection);
-    recombination_queue->remove(infection);
-    clearance_queue->remove(infection);
-    infection_manager->destroy(infection);
+    transition_queue.remove(infection);
+    mutation_queue.remove(infection);
+    recombination_queue.remove(infection);
+    clearance_queue.remove(infection);
+    infection_manager.destroy(infection);
     LEAVE();
 }
 
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles) {
     ENTER();
     
-    for(Gene * gene : gene_manager->objects()) {
+    for(Gene * gene : gene_manager.objects()) {
         assert(gene->alleles.size() == N_LOCI);
         if(gene->alleles == alleles) {
             LEAVE();
@@ -512,7 +447,7 @@ Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
     );
     auto itr = genes_strain_map.find(genes);
     if(itr == genes_strain_map.end()) {
-        strain = strain_manager->create();
+        strain = strain_manager.create();
         strain->genes_sorted = genes;
         genes_strain_map[genes] = strain;
     }
@@ -525,7 +460,7 @@ Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
 
 Gene * draw_random_gene() {
     ENTER();
-    Gene * gene = gene_manager->objects()[draw_uniform_index(gene_manager->size())];
+    Gene * gene = gene_manager.objects()[draw_uniform_index(gene_manager.size())];
     LEAVE();
     return gene;
 }
@@ -537,9 +472,9 @@ Gene * get_current_gene(Infection * infection) {
     return gene;
 }
 
-void gain_allele_specific_immunity(Host * host, Gene * gene) {
+void gain_immunity(Host * host, Gene * gene) {
     ENTER();
-    AlleleImmuneHistory * immune_history = host->allele_immune_history;
+    AlleleImmuneHistory * immune_history = host->immune_history;
     for(uint64_t i = 0; i < N_LOCI; i++) {
         LocusImmunity * immunity = immune_history->immunity_by_locus[i];
         auto itr = immunity->immunity_level_by_allele.find(gene->alleles[i]);
@@ -550,34 +485,15 @@ void gain_allele_specific_immunity(Host * host, Gene * gene) {
             immunity->immunity_level_by_allele[gene->alleles[i]]++;
         }
     }
-    update_allele_specific_immunity_loss_time(host);
+    update_immunity_loss_time(host);
     LEAVE();
 }
 
-void update_allele_specific_immunity_loss_time(Host * host) {
+void update_immunity_loss_time(Host * host) {
     ENTER();
     uint64_t immune_allele_count = get_immune_allele_count(host);
     host->immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * immune_allele_count);
-    immunity_loss_queue->update(host);
-    LEAVE();
-}
-
-void gain_gene_specific_immunity(Host * host, Gene * gene) {
-    ENTER();
-    GeneImmuneHistory * immune_history = host->gene_immune_history;
-    if(!immune_history->immune_genes.contains_object(gene)) {
-        immune_history->immune_genes.add(gene);
-        update_host_infection_times(host);
-        update_gene_specific_immunity_loss_time(host);
-    }
-    LEAVE();
-}
-
-void update_gene_specific_immunity_loss_time(Host * host) {
-    ENTER();
-    uint64_t immune_gene_count = host->gene_immune_history->immune_genes.size();
-    host->immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * immune_gene_count);
-    immunity_loss_queue->update(host);
+    immunity_loss_queue.update(host);
     LEAVE();
 }
 
@@ -586,10 +502,10 @@ void gain_general_immunity(Host * host, Gene * gene) {
     LEAVE();
 }
 
-void lose_random_allele_specific_immunity(Host * host) {
+void lose_random_immunity(Host * host) {
     ENTER();
     
-    AlleleImmuneHistory * immune_history = host->allele_immune_history;
+    AlleleImmuneHistory * immune_history = host->immune_history;
     uint64_t cur_index = 0;
     uint64_t index = draw_uniform_index(get_immune_allele_count(host));
     bool found = false;
@@ -613,14 +529,14 @@ void lose_random_allele_specific_immunity(Host * host) {
         }
     }
     assert(found);
-    update_allele_specific_immunity_loss_time(host);
+    update_immunity_loss_time(host);
     LEAVE();
 }
 
 uint64_t get_immune_allele_count(Host * host) {
     ENTER();
     uint64_t immune_allele_count = 0;
-    AlleleImmuneHistory * immune_history = host->allele_immune_history;
+    AlleleImmuneHistory * immune_history = host->immune_history;
     for(uint64_t i = 0; i < N_LOCI; i++) {
         LocusImmunity * immunity = immune_history->immunity_by_locus[i];
         immune_allele_count += immunity->immunity_level_by_allele.size();
@@ -629,27 +545,12 @@ uint64_t get_immune_allele_count(Host * host) {
     return immune_allele_count;
 }
 
-void lose_gene_specific_immunity(Host * host) {
-    ENTER();
-    
-    // Remove random gene from immune history
-    GeneImmuneHistory * immune_history = host->gene_immune_history;
-    IndexedSet<Gene> & immune_genes = immune_history->immune_genes;
-    assert(immune_genes.size() > 0);
-    immune_genes.remove_at_index(draw_uniform_index(immune_genes.size()));
-    
-    // Update immunity loss time
-    update_gene_specific_immunity_loss_time(host);
-    
-    LEAVE();
-}
-
 double get_specific_immunity_level(Host * host, Gene * gene) {
     ENTER();
     
     uint64_t immunity_count = 0;
     for(uint64_t i = 0; i < N_LOCI; i++) {
-        auto immunity_level_by_allele = host->allele_immune_history->immunity_by_locus[i]->immunity_level_by_allele; 
+        auto immunity_level_by_allele = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele; 
         auto itr = immunity_level_by_allele.find(gene->alleles[i]);
         if(itr != immunity_level_by_allele.end()) {
             immunity_count += std::min(itr->second, 1ULL);
@@ -676,7 +577,7 @@ uint64_t get_active_infection_count(Host * host) {
 void infect_host(Host * host, Strain * strain) {
     ENTER();
     
-    Infection * infection = infection_manager->create();
+    Infection * infection = infection_manager.create();
     infection->host = host;
     infection->strain = strain;
     
@@ -684,7 +585,7 @@ void infect_host(Host * host, Strain * strain) {
         infection->expression_order[i] = strain->genes_sorted[i];
     }
     std::shuffle(
-        infection->expression_order.begin(), infection->expression_order.end(), *rng
+        infection->expression_order.begin(), infection->expression_order.end(), rng
     );
     
     infection->active = false;
@@ -695,12 +596,15 @@ void infect_host(Host * host, Strain * strain) {
     else {
         infection->expression_index = -1;
         infection->transition_time = now + T_LIVER_STAGE;
-        transition_queue->add(infection);
+        transition_queue.add(infection);
     }
     
     update_mutation_time(infection, true);
     update_recombination_time(infection, true);
-    update_clearance_time(infection, true);
+    
+    if(SELECTION_MODE == GENERAL_IMMUNITY) {
+        update_clearance_time(infection, true);
+    }
     
     host->infections.insert(infection);
     
@@ -722,11 +626,8 @@ void perform_infection_transition(Infection * infection) {
         );
         Gene * gene = get_current_gene(infection);
         
-        if(SELECTION_MODE == ALLELE_SPECIFIC_IMMUNITY) {
-            gain_allele_specific_immunity(host, gene);
-        }
-        else if(SELECTION_MODE == GENE_SPECIFIC_IMMUNITY) {
-            gain_gene_specific_immunity(host, gene);
+        if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
+            gain_immunity(host, gene);
         }
         
         infection->expression_index++;
@@ -788,10 +689,10 @@ void update_transition_time(Infection * infection, bool initial) {
         infection->transition_time = draw_activation_time(infection);
     }
     if(initial) {
-        transition_queue->add(infection);
+        transition_queue.add(infection);
     }
     else {
-        transition_queue->update(infection);
+        transition_queue.update(infection);
     }
     LEAVE();
 }
@@ -814,7 +715,7 @@ double draw_deactivation_time(Infection * infection) {
     assert(infection->active);
     Host * host = infection->host;
     double rate;
-    if(SELECTION_MODE == ALLELE_SPECIFIC_IMMUNITY) {
+    if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
         Gene * active_gene = get_current_gene(infection);
         double immunity_level =  get_specific_immunity_level(host, active_gene);
         assert(immunity_level >= 0.0 && immunity_level <= 1.0);
@@ -835,10 +736,10 @@ void update_mutation_time(Infection * infection, bool initial) {
     ENTER();
     infection->mutation_time = draw_exponential_after_now(0.0);
     if(initial) {
-        mutation_queue->add(infection);
+        mutation_queue.add(infection);
     }
     else {
-        mutation_queue->update(infection);
+        mutation_queue.update(infection);
     }
     LEAVE();
 }
@@ -847,22 +748,31 @@ void update_recombination_time(Infection * infection, bool initial) {
     ENTER();
     infection->recombination_time = draw_exponential_after_now(0.0);
     if(initial) {
-        recombination_queue->add(infection);
+        recombination_queue.add(infection);
     }
     else {
-        recombination_queue->update(infection);
+        recombination_queue.update(infection);
     }
     LEAVE();
 }
 
 void update_clearance_time(Infection * infection, bool initial) {
     ENTER();
-    infection->clearance_time = draw_exponential_after_now(CLEARANCE_RATE);
+    
+    assert(SELECTION_MODE == GENERAL_IMMUNITY);
+    
+    // TODO: replace with Qixin's function based on vector of parameters
+    double rate = 0.0;
+    if(infection->active) {
+        rate = CLEARANCE_RATE;
+    }
+    
+    infection->clearance_time = draw_exponential_after_now(rate);
     if(initial) {
-        clearance_queue->add(infection);
+        clearance_queue.add(infection);
     }
     else {
-        clearance_queue->update(infection);
+        clearance_queue.update(infection);
     }
     LEAVE();
 }
@@ -895,7 +805,7 @@ void run() {
 
 void do_next_event() {
     ENTER();
-    double next_event_time = std::numeric_limits<double>::infinity();
+    double next_event_time = INF;
     EventType next_event_type = EventType::NONE;
     
     // Find the event type with the lowest-timed event (simple linear search)
@@ -903,7 +813,7 @@ void do_next_event() {
     // be worth it for simplicity and reduced memory usage.
     // If this section is a speed bottleneck, re-evaluate the choice.
     // It shouldn't come even close.
-    if(next_verification_time < next_event_time) {
+    if(VERIFICATION_ON && next_verification_time < next_event_time) {
         next_event_time = next_verification_time;
         next_event_type = EventType::VERIFICATION;
     }
@@ -911,60 +821,39 @@ void do_next_event() {
         next_event_time = next_checkpoint_time;
         next_event_type = EventType::CHECKPOINT;
     }
-    if(
-        biting_queue->size() > 0 &&
-        biting_queue->head()->next_biting_time < next_event_time
-    ) {
-        next_event_time = biting_queue->head()->next_biting_time;
+    if(biting_queue.next_time() < next_event_time) {
+        next_event_time = biting_queue.next_time();
         next_event_type = EventType::BITING; 
     }
-    if(
-        immigration_queue->size() > 0 &&
-        immigration_queue->head()->next_immigration_time < next_event_time
-    ) {
-        next_event_time = immigration_queue->head()->next_immigration_time;
+    if(immigration_queue.next_time() < next_event_time) {
+        next_event_time = immigration_queue.next_time();
         next_event_type = EventType::IMMIGRATION;
     }
-    if(
-        immunity_loss_queue->size() > 0 &&
-        immunity_loss_queue->head()->immunity_loss_time < next_event_time
-    ) {
-        next_event_time = immunity_loss_queue->head()->immunity_loss_time;
+    if(immunity_loss_queue.next_time() < next_event_time) {
+        next_event_time = immunity_loss_queue.next_time();
         next_event_type = EventType::IMMUNITY_LOSS; 
     }
-    if(
-        death_queue->size() > 0 &&
-        death_queue->head()->death_time < next_event_time
-    ) {
-        next_event_time = death_queue->head()->death_time;
+    if(death_queue.next_time() < next_event_time) {
+        next_event_time = death_queue.next_time();
         next_event_type = EventType::DEATH;
     }
-    if(
-        transition_queue->size() > 0 &&
-        transition_queue->head()->transition_time < next_event_time
-    ) {
-        next_event_time = transition_queue->head()->transition_time;
+    if(transition_queue.next_time() < next_event_time) {
+        next_event_time = transition_queue.next_time();
         next_event_type = EventType::TRANSITION;
     }
-    if(
-        mutation_queue->size() > 0 &&
-        mutation_queue->head()->mutation_time < next_event_time
-    ) {
-        next_event_time = mutation_queue->head()->mutation_time;
+    if(mutation_queue.next_time() < next_event_time) {
+        next_event_time = mutation_queue.next_time();
         next_event_type = EventType::MUTATION;
     }
-    if(
-        recombination_queue->size() > 0 &&
-        recombination_queue->head()->recombination_time < next_event_time
-    ) {
-        next_event_time = recombination_queue->head()->recombination_time;
+    if(recombination_queue.next_time() < next_event_time) {
+        next_event_time = recombination_queue.next_time();
         next_event_type = EventType::RECOMBINATION;
     }
     if(
-        clearance_queue->size() > 0 &&
-        clearance_queue->head()->clearance_time < next_event_time
+        SELECTION_MODE == GENERAL_IMMUNITY &&
+        clearance_queue.next_time() < next_event_time
     ) {
-        next_event_time = clearance_queue->head()->clearance_time;
+        next_event_time = clearance_queue.head()->clearance_time;
         next_event_type = EventType::CLEARANCE;
     }
     
@@ -1040,8 +929,8 @@ void do_checkpoint_event() {
 
 void do_biting_event() {
     ENTER();
-    assert(biting_queue->size() > 0);
-    Population * pop = biting_queue->head();
+    assert(biting_queue.size() > 0);
+    Population * pop = biting_queue.head();
     
     PRINT_DEBUG(1, "biting event pop: %llu\n", pop->id);
     
@@ -1054,8 +943,8 @@ void do_biting_event() {
 
 void do_immigration_event() {
     ENTER();
-    assert(immigration_queue->size() > 0);
-    Population * pop = immigration_queue->head();
+    assert(immigration_queue.size() > 0);
+    Population * pop = immigration_queue.head();
     
     PRINT_DEBUG(1, "immigration event pop: %llu\n", pop->id);
     
@@ -1068,20 +957,15 @@ void do_immigration_event() {
 
 void do_immunity_loss_event() {
     ENTER();
-    assert(immunity_loss_queue->size() > 0);
+    assert(immunity_loss_queue.size() > 0);
     
-    Host * host = immunity_loss_queue->head();
+    Host * host = immunity_loss_queue.head();
     
     switch(SELECTION_MODE) {
-        case ALLELE_SPECIFIC_IMMUNITY:
-            lose_random_allele_specific_immunity(host);
-            break;
-        case GENE_SPECIFIC_IMMUNITY:
-            lose_gene_specific_immunity(host);
+        case SPECIFIC_IMMUNITY:
+            lose_random_immunity(host);
             break;
         case GENERAL_IMMUNITY:
-            lose_general_immunity(host);
-            break;
         case NEUTRALITY:
             assert(false);
             break;
@@ -1091,9 +975,9 @@ void do_immunity_loss_event() {
 
 void do_death_event() {
     ENTER();
-    assert(death_queue->size() > 0);
+    assert(death_queue.size() > 0);
     
-    Host * host = death_queue->head();
+    Host * host = death_queue.head();
     Population * pop = host->population;
     destroy_host(host);
     Host * new_host = create_host(pop);
@@ -1103,9 +987,9 @@ void do_death_event() {
 
 void do_transition_event() {
     ENTER();
-    assert(transition_queue->size() > 0);
+    assert(transition_queue.size() > 0);
     
-    Infection * infection = transition_queue->head();
+    Infection * infection = transition_queue.head();
     perform_infection_transition(infection);
     LEAVE();
 }
@@ -1122,7 +1006,8 @@ void do_recombination_event() {
 
 void do_clearance_event() {
     ENTER();
-    Infection * infection = clearance_queue->head();
+    assert(SELECTION_MODE == GENERAL_IMMUNITY);
+    Infection * infection = clearance_queue.head();
     clear_infection(infection);
     LEAVE();
 }
@@ -1133,14 +1018,14 @@ void do_clearance_event() {
 void verify_simulation_state() {
     ENTER();
     
-    assert(biting_queue->verify_heap());
-    assert(immigration_queue->verify_heap());
-    assert(immunity_loss_queue->verify_heap());
-    assert(death_queue->verify_heap());
-    assert(transition_queue->verify_heap());
-    assert(mutation_queue->verify_heap());
-    assert(recombination_queue->verify_heap());
-    assert(clearance_queue->verify_heap());
+    assert(biting_queue.verify_heap());
+    assert(immigration_queue.verify_heap());
+    assert(immunity_loss_queue.verify_heap());
+    assert(death_queue.verify_heap());
+    assert(transition_queue.verify_heap());
+    assert(mutation_queue.verify_heap());
+    assert(recombination_queue.verify_heap());
+    assert(clearance_queue.verify_heap());
     
     LEAVE();
 }
@@ -1160,14 +1045,13 @@ void save_checkpoint() {
     sqlite3_open(CHECKPOINT_SAVE_FILENAME.c_str(), &db);
     sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
     
-    strain_manager->save_to_checkpoint(db);
-    gene_manager->save_to_checkpoint(db);
-    population_manager->save_to_checkpoint(db);
-    host_manager->save_to_checkpoint(db);
-    infection_manager->save_to_checkpoint(db);
-    gene_immune_history_manager->save_to_checkpoint(db);
-    allele_immune_history_manager->save_to_checkpoint(db);
-    locus_immunity_manager->save_to_checkpoint(db);
+    strain_manager.save_to_checkpoint(db);
+    gene_manager.save_to_checkpoint(db);
+    population_manager.save_to_checkpoint(db);
+    host_manager.save_to_checkpoint(db);
+    infection_manager.save_to_checkpoint(db);
+    immune_history_manager.save_to_checkpoint(db);
+    locus_immunity_manager.save_to_checkpoint(db);
     
     sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
     int result = sqlite3_close(db);
@@ -1192,7 +1076,7 @@ double draw_exponential_after_now(double lambda) {
     ENTER();
     double time;
     if(lambda == 0.0) {
-        time = std::numeric_limits<double>::infinity();
+        time = INF;
     }
     else {
         time = now + draw_exponential(lambda);
@@ -1204,19 +1088,19 @@ double draw_exponential_after_now(double lambda) {
 double draw_exponential(double lambda) {
     ENTER();
     LEAVE();
-    return std::exponential_distribution<>(lambda)(*rng); 
+    return std::exponential_distribution<>(lambda)(rng); 
 }
 
 uint64_t draw_uniform_index(uint64_t size) {
     ENTER();
     LEAVE();
-    return std::uniform_int_distribution<uint64_t>(0, size - 1)(*rng);
+    return std::uniform_int_distribution<uint64_t>(0, size - 1)(rng);
 }
 
 double draw_uniform_real(double min, double max) {
     ENTER();
     LEAVE();
-    return std::uniform_real_distribution<double>(min, max)(*rng);
+    return std::uniform_real_distribution<double>(min, max)(rng);
 }
 
 void update_biting_time(Population * pop, bool initial) {
@@ -1228,10 +1112,10 @@ void update_biting_time(Population * pop, bool initial) {
     );
     pop->next_biting_time = draw_exponential_after_now(biting_rate);
     if(initial) {
-        biting_queue->add(pop);
+        biting_queue.add(pop);
     }
     else {
-        biting_queue->update(pop);
+        biting_queue.update(pop);
     }
     LEAVE();
 }
@@ -1240,10 +1124,10 @@ void update_immigration_time(Population * pop, bool initial) {
     ENTER();
     pop->next_immigration_time = draw_exponential_after_now(IMMIGRATION_RATE[pop->order]);
     if(initial) {
-        immigration_queue->add(pop);
+        immigration_queue.add(pop);
     }
     else {
-        immigration_queue->update(pop);
+        immigration_queue.update(pop);
     }
     LEAVE();
 }

@@ -68,7 +68,6 @@
 		6428FDC81F75A5EE00902EBD /* HashPair.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HashPair.hpp; sourceTree = "<group>"; };
 		64AC44161F79E7D100176944 /* LocusImmunity.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LocusImmunity.hpp; sourceTree = "<group>"; };
 		64AC441A1F79F5C000176944 /* create_reflist_block_vector.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; path = create_reflist_block_vector.cpp.template; sourceTree = "<group>"; };
-		64AC441B1F7B1F4B00176944 /* GeneImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = GeneImmuneHistory.hpp; sourceTree = "<group>"; };
 		64AC441C1F7B1F6C00176944 /* AlleleImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistory.hpp; sourceTree = "<group>"; };
 		64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AlleleImmuneHistoryManager.cpp; sourceTree = "<group>"; };
 		64AC441E1F7B223C00176944 /* AlleleImmuneHistoryManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistoryManager.hpp; sourceTree = "<group>"; };
@@ -76,6 +75,7 @@
 		64AC44201F7B223C00176944 /* GeneImmuneHistoryManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GeneImmuneHistoryManager.hpp; sourceTree = "<group>"; };
 		64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LocusImmunityManager.cpp; sourceTree = "<group>"; };
 		64AC44221F7B223C00176944 /* LocusImmunityManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LocusImmunityManager.hpp; sourceTree = "<group>"; };
+		64F0B8431F7DACB8002156E4 /* GeneImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = GeneImmuneHistory.hpp; sourceTree = "<group>"; };
 		696C01E01F198B7F009403B6 /* varmodel2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = varmodel2; sourceTree = BUILT_PRODUCTS_DIR; };
 		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -114,7 +114,7 @@
 				6428FD9C1F75A55D00902EBD /* Population.hpp */,
 				6428FD991F75A55D00902EBD /* Host.hpp */,
 				6428FD9B1F75A55D00902EBD /* Infection.hpp */,
-				64AC441B1F7B1F4B00176944 /* GeneImmuneHistory.hpp */,
+				64F0B8431F7DACB8002156E4 /* GeneImmuneHistory.hpp */,
 				64AC441C1F7B1F6C00176944 /* AlleleImmuneHistory.hpp */,
 				64AC44161F79E7D100176944 /* LocusImmunity.hpp */,
 			);
@@ -214,7 +214,7 @@
 			buildConfigurationList = 696C01E71F198B7F009403B6 /* Build configuration list for PBXNativeTarget "varmodel2" */;
 			buildPhases = (
 				6428FD7F1F759A4900902EBD /* ShellScript */,
-				6428FD951F759FC700902EBD /* ShellScript */,
+				6428FD951F759FC700902EBD /* Run Script */,
 				696C01DC1F198B7F009403B6 /* Sources */,
 				696C01DD1F198B7F009403B6 /* Frameworks */,
 				6419D54D1F6EE0600052C98B /* CopyFiles */,
@@ -274,18 +274,19 @@
 			shellPath = /bin/sh;
 			shellScript = "${SRCROOT}/generate_managers.py";
 		};
-		6428FD951F759FC700902EBD /* ShellScript */ = {
+		6428FD951F759FC700902EBD /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
 			);
+			name = "Run Script";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/parameter-testcases/allele_specific_basic.py";
+			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/parameter-testcases/general_immunity_basic.py\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

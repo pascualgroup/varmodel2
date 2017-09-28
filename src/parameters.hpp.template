@@ -42,6 +42,8 @@ const double {T_BURNIN};
 
 // How often to verify the validity of all data structures
 
+const bool {VERIFICATION_ON};
+
 const double {VERIFICATION_PERIOD};
 
 
@@ -66,8 +68,7 @@ const double {CHECKPOINT_SAVE_PERIOD};
 /*** MODEL PARAMETERS ***/
 
 enum SelectionMode {{
-    ALLELE_SPECIFIC_IMMUNITY,
-    GENE_SPECIFIC_IMMUNITY,
+    SPECIFIC_IMMUNITY,
     GENERAL_IMMUNITY,
     NEUTRALITY
 }};

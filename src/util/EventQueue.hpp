@@ -81,6 +81,13 @@ public:
 		return true;
 	}
 	
+    double next_time() {
+        if(heap.size() == 0) {
+            return std::numeric_limits<double>::infinity();
+        }
+        return V(heap[0]);
+    }
+    
 	T * head()
 	{
 		if(heap.size() == 0) {
