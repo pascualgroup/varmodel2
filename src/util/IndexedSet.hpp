@@ -20,12 +20,18 @@ struct IndexedSet {
     
     void remove(T * obj) {
         size_t index = id_index_map[obj->id];
+        remove_at_index(index);
+    }
+    
+    T * remove_at_index(uint64_t index) {
+        T * obj = vec[index];
         id_index_map.erase(obj->id);
         if(index < vec.size() - 1) {
             vec[index] = vec.back();
             id_index_map[vec[index]->id] = index;
         }
         vec.pop_back();
+        return obj;
     }
     
     bool contains_id(uint64_t id) {

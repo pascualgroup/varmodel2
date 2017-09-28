@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <numeric>
 
 namespace varmodel {
 
@@ -61,7 +62,12 @@ std::vector<T> make_range(T size) {
     return make_range(0, size);
 }
 
-double add(std::vector<double> const & vec);
+
+template<typename T>
+T accumulate(std::vector<T> const & vec) {
+    return std::accumulate(vec.begin(), vec.end(), T());
+}
+
 std::vector<double> addCumulative(std::vector<double> const & vec);
 
 bool file_exists(std::string const & filename);

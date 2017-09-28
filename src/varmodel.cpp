@@ -171,6 +171,7 @@ double draw_uniform_real(double min, double max);
 #pragma mark \
 *** Printing/debugging helpers ***
 
+uint64_t same_time_count = 0;
 uint64_t call_depth = 0;
 
 #define ENTER() { \
@@ -242,7 +243,7 @@ void validate_and_load_parameters() {
     assert(T_LIVER_STAGE >= 0.0);
     
     if(USE_HOST_LIFETIME_PDF) {
-        assert(add(HOST_LIFETIME_PDF) > 0.0);
+        assert(accumulate(HOST_LIFETIME_PDF) > 0.0);
         for(auto value : HOST_LIFETIME_PDF) {
             assert(value >= 0.0);
         }
@@ -630,6 +631,16 @@ uint64_t get_immune_allele_count(Host * host) {
 
 void lose_gene_specific_immunity(Host * host) {
     ENTER();
+    
+    // Remove random gene from immune history
+    GeneImmuneHistory * immune_history = host->gene_immune_history;
+    IndexedSet<Gene> & immune_genes = immune_history->immune_genes;
+    assert(immune_genes.size() > 0);
+    immune_genes.remove_at_index(draw_uniform_index(immune_genes.size()));
+    
+    // Update immunity loss time
+    update_gene_specific_immunity_loss_time(host);
+    
     LEAVE();
 }
 
@@ -961,13 +972,20 @@ void do_next_event() {
     PRINT_DEBUG(0, "next_event_type: %d\n", next_event_type);
     
     // Execute the next event
-    if(next_event_time == 7.0) {
-        PRINT_DEBUG(0, "LIVER TRANSITION\n");
-        verify_simulation_state();
+    assert(next_event_time >= now);
+    
+    // If we get the same time a whole bunch of times in a row, we've introduced
+    // a bug where the same event is being reused over and over.
+    // We make the limit 2 * sum(N_INITIAL_INFECTIONS) to allow a bunch of events at
+    // t = T_LIVER_STAGE to be OK (along with an instantaneous activation)
+    if(next_event_time == now) {
+        same_time_count++;
     }
-    if(now > next_event_time) {
-        assert(now <= next_event_time);
+    else {
+        same_time_count = 0;
     }
+    assert(same_time_count <= 2 * accumulate(N_INITIAL_INFECTIONS));
+    
     now = next_event_time;
     switch(next_event_type) {
         case EventType::NONE:
@@ -1003,7 +1021,6 @@ void do_next_event() {
             do_clearance_event();
             break;
     }
-    verify_simulation_state();
     LEAVE();
 }
 
@@ -1026,7 +1043,7 @@ void do_biting_event() {
     assert(biting_queue->size() > 0);
     Population * pop = biting_queue->head();
     
-    printf("biting event pop: %llu\n", pop->id);
+    PRINT_DEBUG(1, "biting event pop: %llu\n", pop->id);
     
     // TODO: biting activity
     
@@ -1040,7 +1057,7 @@ void do_immigration_event() {
     assert(immigration_queue->size() > 0);
     Population * pop = immigration_queue->head();
     
-    printf("immigration event pop: %llu\n", pop->id);
+    PRINT_DEBUG(1, "immigration event pop: %llu\n", pop->id);
     
     // TODO: immigration activity
     
@@ -1080,7 +1097,7 @@ void do_death_event() {
     Population * pop = host->population;
     destroy_host(host);
     Host * new_host = create_host(pop);
-    printf("Created new host id %llu in population %llu\n", new_host->id, pop->id);
+    PRINT_DEBUG(1, "Created new host id %llu in population %llu\n", new_host->id, pop->id);
     LEAVE();
 }
 
