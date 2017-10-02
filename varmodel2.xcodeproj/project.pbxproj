@@ -286,7 +286,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/parameter-testcases/general_immunity_basic.py\n";
+			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/parameter-testcases/allele_specific_basic.py\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -98,6 +98,9 @@ const std::vector<uint64_t> {N_ALLELES};
 // Transmissibility of genes
 const double {GENE_TRANSMISSIBILITY}; 
 
+// Whether coinfection reduces transmissibility
+const bool {COINFECTION_REDUCES_TRANSMISSION};
+
 // Global immunity loss rate
 const double {IMMUNITY_LOSS_RATE};
 
@@ -110,14 +113,11 @@ const double {P_STRAIN_RECOMBINATION};
 // Duration of liver stage (pre-expression)
 const double {T_LIVER_STAGE};
 
-// Gene activation rate
-const double {ACTIVATION_RATE};
-
 // Gene deactivation rate when not immune or under neutrality
-const double {DEACTIVATION_RATE_NOT_IMMUNE};
+const double {TRANSITION_RATE_NOT_IMMUNE};
 
 // Gene deactivation rate when fully immune
-const double {DEACTIVATION_RATE_IMMUNE};
+const double {TRANSITION_RATE_IMMUNE};
 
 // Infection clearance rate
 const double {CLEARANCE_RATE};

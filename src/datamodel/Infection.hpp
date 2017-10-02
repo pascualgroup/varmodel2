@@ -22,7 +22,6 @@ struct Infection {
     Host * host;
     
     int64_t expression_index;
-    bool active;
     
     double transition_time;
     double mutation_time;
