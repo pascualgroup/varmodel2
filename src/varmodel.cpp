@@ -265,6 +265,13 @@ void validate_and_load_parameters() {
         }
     }
     
+    if(SELECTION_MODE == GENERAL_IMMUNITY) {
+        assert(CLEARANCE_PARAMS[0] > 0.0);
+        assert(CLEARANCE_PARAMS[1] > 0.0);
+        assert(CLEARANCE_PARAMS[2] > 0.0);
+        assert(CLEARANCE_PARAMS[3] > 0.0);
+    }
+    
     RETURN();
 }
 
@@ -767,9 +774,31 @@ void update_clearance_time(Infection * infection, bool initial) {
     assert(SELECTION_MODE == GENERAL_IMMUNITY);
     
     // TODO: replace with Qixin's function based on vector of parameters
-    double rate = 0.0;
-    if(infection->expression_index >= 0) {
-        rate = CLEARANCE_RATE;
+    double rate;
+    if(infection->expression_index == -1) {
+        rate = 0.0;
+    }
+    else {
+        Host * host = infection->host;
+        double a = CLEARANCE_PARAMS[0];
+        double b = CLEARANCE_PARAMS[1];
+        double c = CLEARANCE_PARAMS[2];
+        double d = CLEARANCE_PARAMS[3];
+         
+        if(host->completed_infection_count < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
+            rate = 1.0 / (a +
+                b * exp(
+                    -c * host->completed_infection_count
+                ) /
+                pow(
+                    d * host->completed_infection_count + 1.0,
+                    d
+                )
+            );
+        }
+        else {
+            rate = CLEARANCE_RATE_IMMUNE;
+        }
     }
     
     infection->clearance_time = draw_exponential_after_now(rate);

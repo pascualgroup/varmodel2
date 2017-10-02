@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 
 namespace varmodel {{
 
@@ -122,8 +123,14 @@ const double {TRANSITION_RATE_NOT_IMMUNE};
 // Gene deactivation rate when fully immune
 const double {TRANSITION_RATE_IMMUNE};
 
-// Infection clearance rate
-const double {CLEARANCE_RATE};
+// Number of infections to gain immunity under general immunity
+const uint64_t {N_INFECTIONS_FOR_GENERAL_IMMUNITY};
+
+// Clearance rate paramters (only used for general immunity)
+const std::array<double,4> {CLEARANCE_PARAMS};
+
+// Clearance rate when immune (only used for general immunity)
+const double {CLEARANCE_RATE_IMMUNE};
 
 // If true, use a discrete PDF for host lifetime distribution.
 // If false, draw host lifetimes from an exponential distribution with mean MEAN_HOST_LIFETIME.
