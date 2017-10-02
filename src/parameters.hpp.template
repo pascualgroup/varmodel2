@@ -96,8 +96,8 @@ const uint64_t {N_GENES_PER_STRAIN};
 // Number of loci
 const uint64_t {N_LOCI};
 
-// Number of alleles at each locus
-const std::vector<uint64_t> {N_ALLELES};
+// Number of alleles at each locus, before mutations occur
+const std::array<uint64_t,N_LOCI> {N_ALLELES_INITIAL};
 
 // Transmissibility of genes
 const double {GENE_TRANSMISSIBILITY}; 

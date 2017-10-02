@@ -30,6 +30,8 @@ double next_info_time = 0.0;
 
 uint64_t n_infections_cumulative = 0;
 
+std::array<uint64_t, N_LOCI> n_alleles = N_ALLELES_INITIAL;
+
 StrainManager strain_manager;
 std::unordered_map<
     std::array<Gene *, N_GENES_PER_STRAIN>,
@@ -92,6 +94,8 @@ Gene * draw_random_gene();
 Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
 
 Strain * recombine_strains(Strain * s1, Strain * s2);
+Strain * mutate_strain(Strain * strain);
+Gene * mutate_gene(Gene * gene);
 
 void destroy_infection(Infection * infection);
 
@@ -217,8 +221,8 @@ void validate_and_load_parameters() {
     assert(N_GENES_IN_POOL >= 1);
     assert(N_GENES_PER_STRAIN >= 1);
     assert(N_LOCI >= 1);
-    assert(N_ALLELES.size() == N_LOCI);
-    for(auto value : N_ALLELES) {
+    assert(N_ALLELES_INITIAL.size() == N_LOCI);
+    for(auto value : N_ALLELES_INITIAL) {
         assert(value >= 1);
     }
     
@@ -293,7 +297,7 @@ void initialize_gene_pool() {
         std::array<uint64_t, N_LOCI> alleles;
         do {
             for(uint64_t j = 0; j < N_LOCI; j++) {
-                alleles[j] = draw_uniform_index(N_ALLELES[j]);
+                alleles[j] = draw_uniform_index(n_alleles[j]);
             }
         } while(get_gene_with_alleles(alleles) != NULL);
         
@@ -501,6 +505,24 @@ Strain * recombine_strains(Strain * s1, Strain * s2) {
         }
     }
     RETURN(get_strain_with_genes(daughter_genes));
+}
+
+Strain * mutate_strain(Strain * strain) {
+    BEGIN();
+    uint64_t index = draw_uniform_index(N_GENES_PER_STRAIN);
+    std::array<Gene *, N_GENES_PER_STRAIN> genes = strain->genes_sorted;
+    genes[index] = mutate_gene(genes[index]);
+    RETURN(get_strain_with_genes(genes));
+}
+
+Gene * mutate_gene(Gene * gene) {
+    BEGIN();
+    Gene * new_gene = gene_manager.create();
+    new_gene->alleles = gene->alleles;
+    uint64_t locus = draw_uniform_index(N_LOCI); 
+    new_gene->alleles[locus] = n_alleles[locus];
+    n_alleles[locus]++;
+    RETURN(new_gene);
 }
 
 Gene * draw_random_gene() {
@@ -1152,11 +1174,26 @@ void do_transition_event() {
 
 void do_mutation_event() {
     BEGIN();
+    assert(mutation_queue.size() > 0);
+    
+    Infection * infection = mutation_queue.head();
+    infection->strain = mutate_strain(infection->strain);
+    
+    update_mutation_time(infection, false);
+    update_transition_time(infection, false);
+    update_immunity_loss_time(infection->host);
+    
     RETURN();
 }
 
 void do_recombination_event() {
     BEGIN();
+    assert(recombination_queue.size() > 0);
+    
+    Infection * infection = recombination_queue.head();
+    
+    
+    
     RETURN();
 }
 
