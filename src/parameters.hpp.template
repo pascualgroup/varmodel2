@@ -156,6 +156,9 @@ const std::vector<double> {BITING_RATE_MEAN};
 const std::vector<double> {BITING_RATE_RELATIVE_AMPLITUDE};
 const std::vector<double> {BITING_RATE_PEAK_PHASE};
 
+// Whether or not to enable immigration
+const bool {IMMIGRATION_ON};
+
 // Immigration rate, in number of random infection events per unit time (per population, not per capita).
 const std::vector<double> {IMMIGRATION_RATE};
 

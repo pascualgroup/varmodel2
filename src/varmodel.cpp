@@ -258,9 +258,11 @@ void validate_and_load_parameters() {
         assert(value >= 0.0 && value <= 1.0);
     }
     
-    assert(IMMIGRATION_RATE.size() == N_POPULATIONS);
-    for(auto value : IMMIGRATION_RATE) {
-        assert(value >= 0.0);
+    assert(!IMMIGRATION_ON || IMMIGRATION_RATE.size() == N_POPULATIONS);
+    if(IMMIGRATION_ON) {
+        for(auto value : IMMIGRATION_RATE) {
+            assert(value >= 0.0);
+        }
     }
     
     RETURN();
@@ -312,7 +314,10 @@ void initialize_population(uint64_t order) {
     pop->order = order;
     pop->transmission_count = 0;
     update_biting_time(pop, true);
-    update_immigration_time(pop, true);
+    
+    if(IMMIGRATION_ON) {
+        update_immigration_time(pop, true);
+    }
     
     initialize_population_hosts(pop);
     initialize_population_infections(pop);
@@ -1059,12 +1064,18 @@ double get_transmission_probability(Infection * infection) {
 
 void do_immigration_event() {
     BEGIN();
+    assert(IMMIGRATION_ON);
     assert(immigration_queue.size() > 0);
     Population * pop = immigration_queue.head();
     
     PRINT_DEBUG(1, "immigration event pop: %llu\n", pop->id);
     
-    // TODO: immigration activity
+    Strain * strain = generate_random_strain();
+    Host * host = pop->hosts.object_at_index(
+        draw_uniform_index(pop->hosts.size())
+    );
+     
+    infect_host(host, strain);
     
     // Update immigration event time
     update_immigration_time(pop, false);
