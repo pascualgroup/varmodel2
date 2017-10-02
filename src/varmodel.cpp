@@ -40,6 +40,11 @@ std::unordered_map<
 > genes_strain_map;
 
 GeneManager gene_manager;
+std::unordered_map<
+    std::array<uint64_t, N_LOCI>,
+    Gene *,
+    HashArray<uint64_t, N_LOCI>
+> alleles_genes_map;
 
 PopulationManager population_manager;
 HostManager host_manager;
@@ -88,6 +93,7 @@ void initialize_population_infections(Population * pop);
 void destroy_host(Host * host);
 Host * create_host(Population * pop);
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
+Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional);
 Strain * generate_random_strain();
 Strain * create_strain(std::vector<Gene *> const & genes);
 Gene * draw_random_gene();
@@ -96,6 +102,8 @@ Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
 Strain * recombine_strains(Strain * s1, Strain * s2);
 Strain * mutate_strain(Strain * strain);
 Gene * mutate_gene(Gene * gene);
+Strain * recombine_strain(Strain * strain);
+double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint);
 
 void destroy_infection(Infection * infection);
 
@@ -154,6 +162,7 @@ void update_immigration_time(Population * pop, bool initial);
 double draw_exponential_after_now(double lambda);
 double draw_exponential(double lambda);
 uint64_t draw_uniform_index(uint64_t size);
+uint64_t draw_uniform_index_except(uint64_t size, uint64_t except_index);
 double draw_uniform_real(double min, double max);
 bool draw_bernoulli(double p);
 
@@ -185,7 +194,7 @@ uint64_t call_depth = 0;
 }
 
 #define PRINT_DEBUG(level, ...) { \
-    if(level >= PRINT_DEBUG_LEVEL) { \
+    if(level <= PRINT_DEBUG_LEVEL) { \
         for(uint64_t i = 0; i <= call_depth; i++) { \
             printf(" "); \
         } \
@@ -230,7 +239,6 @@ void validate_and_load_parameters() {
     assert(IMMUNITY_LOSS_RATE >= 0.0);
     
     assert(P_MUTATION >= 0.0 && P_MUTATION <= 1.0);
-    assert(P_STRAIN_RECOMBINATION >= 0.0 && P_STRAIN_RECOMBINATION <= 1.0);
     assert(T_LIVER_STAGE >= 0.0);
     
     if(USE_HOST_LIFETIME_PDF) {
@@ -301,8 +309,7 @@ void initialize_gene_pool() {
             }
         } while(get_gene_with_alleles(alleles) != NULL);
         
-        Gene * gene = gene_manager.create();
-        gene->alleles = alleles;
+        Gene * gene = create_gene(alleles, true);
     }
     
     RETURN();
@@ -440,14 +447,19 @@ void destroy_infection(Infection * infection) {
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles) {
     BEGIN();
     
-    for(Gene * gene : gene_manager.objects()) {
-        assert(gene->alleles.size() == N_LOCI);
-        if(gene->alleles == alleles) {
-            RETURN(gene);
-        }
+    auto itr = alleles_genes_map.find(alleles);
+    if(itr == alleles_genes_map.end()) {
+        RETURN(nullptr);
     }
-    
-    RETURN(nullptr);
+    RETURN(itr->second);
+}
+
+Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional) {
+    BEGIN();
+    Gene * gene = gene_manager.create();
+    gene->alleles = alleles;
+    gene->is_functional = is_functional;
+    RETURN(gene);
 }
 
 Strain * generate_random_strain() {
@@ -507,6 +519,27 @@ Strain * recombine_strains(Strain * s1, Strain * s2) {
     RETURN(get_strain_with_genes(daughter_genes));
 }
 
+double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint) {
+    BEGIN();
+    
+    double p_div = 0;
+    double child_div = 0;
+    double rho = 0.8; //recombination tolerance;
+    double avg_mutation = 5; //average number of mutations per epitope
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        if(gene1->alleles[i] != gene2->alleles[i]) {
+            p_div += 1;
+            if(i < breakpoint) {
+                child_div += 1;
+            }
+        }
+    }
+    double rho_power = child_div * avg_mutation * (p_div - child_div)* avg_mutation / (p_div * avg_mutation - 1);
+    double surv_prob = pow(rho, rho_power);
+    
+    RETURN(surv_prob);
+}
+
 Strain * mutate_strain(Strain * strain) {
     BEGIN();
     uint64_t index = draw_uniform_index(N_GENES_PER_STRAIN);
@@ -517,12 +550,74 @@ Strain * mutate_strain(Strain * strain) {
 
 Gene * mutate_gene(Gene * gene) {
     BEGIN();
-    Gene * new_gene = gene_manager.create();
-    new_gene->alleles = gene->alleles;
+    auto alleles = gene->alleles;
     uint64_t locus = draw_uniform_index(N_LOCI); 
-    new_gene->alleles[locus] = n_alleles[locus];
+    alleles[locus] = n_alleles[locus];
     n_alleles[locus]++;
-    RETURN(new_gene);
+    RETURN(create_gene(alleles, gene->is_functional));
+}
+
+Strain * recombine_strain(Strain * strain) {
+    uint64_t i1 = draw_uniform_index(N_GENES_PER_STRAIN);
+    uint64_t i2 = draw_uniform_index_except(N_GENES_PER_STRAIN, i1);
+    
+    Gene * src_gene1 = strain->genes_sorted[i1];
+    Gene * src_gene2 = strain->genes_sorted[i2];
+    
+    uint64_t breakpoint = draw_uniform_index(N_LOCI + 1);
+    Gene * new_gene1 = src_gene1;
+    Gene * new_gene2 = src_gene2;
+    if(breakpoint == 0 || breakpoint == N_LOCI) {
+        new_gene1 = src_gene1;
+        new_gene2 = src_gene2;
+    }
+    else {
+        std::array<uint64_t, N_LOCI> rec_alleles1;
+        std::array<uint64_t, N_LOCI> rec_alleles2;
+        
+        // Perform recombination to get new alleles
+        for(uint64_t i = 0; i < N_LOCI; i++) {
+            if(i < breakpoint) {
+                rec_alleles1[i] = src_gene1->alleles[i];
+                rec_alleles2[i] = src_gene2->alleles[i];
+            }
+            else {
+                rec_alleles1[i] = src_gene2->alleles[i];
+                rec_alleles2[i] = src_gene1->alleles[i];
+            }
+        }
+        
+        double similarity = get_gene_similarity(src_gene1, src_gene2, breakpoint);
+        
+        // Find or create genes with the recombined alleles;
+        // is_functional with probability [similarity]
+        Gene * rec_gene1 = get_gene_with_alleles(rec_alleles1);
+        if(rec_gene1 == NULL) {
+            rec_gene1 = gene_manager.create();
+            rec_gene1->alleles = rec_alleles1;
+            rec_gene1->is_functional = draw_bernoulli(similarity);
+        }
+        Gene * rec_gene2 = get_gene_with_alleles(rec_alleles2);
+        if(new_gene2 == NULL) {
+            rec_gene2 = gene_manager.create();
+            rec_gene2->alleles = rec_alleles2;
+            rec_gene2->is_functional = draw_bernoulli(similarity);
+        }
+        
+        // Use the recombined genes only if they're functional
+        if(rec_gene1->is_functional) {
+            new_gene1 = rec_gene1;
+        }
+        if(rec_gene2->is_functional) {
+            new_gene2 = rec_gene2;
+        }
+    }
+    
+    std::array<Gene *, N_GENES_PER_STRAIN> new_genes = strain->genes_sorted;
+    new_genes[i1] = new_gene1;
+    new_genes[i2] = new_gene2;
+    
+    return get_strain_with_genes(new_genes);
 }
 
 Gene * draw_random_gene() {
@@ -1191,8 +1286,11 @@ void do_recombination_event() {
     assert(recombination_queue.size() > 0);
     
     Infection * infection = recombination_queue.head();
+    infection->strain = recombine_strain(infection->strain);
     
-    
+    update_recombination_time(infection, false);
+    update_transition_time(infection, false);
+    update_immunity_loss_time(infection->host);
     
     RETURN();
 }
@@ -1285,6 +1383,15 @@ double draw_exponential(double lambda) {
 uint64_t draw_uniform_index(uint64_t size) {
     BEGIN();
     RETURN(std::uniform_int_distribution<uint64_t>(0, size - 1)(rng));
+}
+
+uint64_t draw_uniform_index_except(uint64_t size, uint64_t except_index) {
+    BEGIN();
+    uint64_t index = draw_uniform_index(size - 1);
+    if(index >= except_index) {
+        index++;
+    }
+    return(index);
 }
 
 double draw_uniform_real(double min, double max) {

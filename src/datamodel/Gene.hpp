@@ -11,6 +11,7 @@ struct Gene {
     
     uint64_t const id;
     
+    bool is_functional;
     std::array<uint64_t, N_LOCI> alleles;
 };
 
