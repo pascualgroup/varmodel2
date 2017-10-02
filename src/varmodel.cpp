@@ -26,6 +26,9 @@ rng_t rng(RANDOM_SEED);
 double now = 0.0;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
+double next_info_time = 0.0;
+
+uint64_t n_infections_cumulative = 0;
 
 StrainManager strain_manager;
 std::unordered_map<
@@ -121,6 +124,7 @@ void update_clearance_time(Infection * infection, bool initial);
 
 void do_next_event(); 
 
+void do_info_event();
 void do_verification_event();
 void do_checkpoint_event();
 
@@ -203,7 +207,8 @@ void validate_and_load_parameters() {
     
     assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
     
-    assert(VERIFICATION_PERIOD >= 0.0);
+    assert(PRINT_INFO_PERIOD > 0.0);
+    assert(!VERIFICATION_ON || VERIFICATION_PERIOD > 0.0);
     
     assert(RANDOM_SEED > 0);
     assert(T_YEAR > 0.0);
@@ -630,6 +635,8 @@ void infect_host(Host * host, Strain * strain) {
     
     host->infections.insert(infection);
     
+    n_infections_cumulative++;
+    
     RETURN();
 }
 
@@ -776,6 +783,7 @@ void update_clearance_time(Infection * infection, bool initial) {
 
 enum class EventType {
     NONE,
+    PRINT_INFO,
     VERIFICATION,
     CHECKPOINT,
     BITING,
@@ -806,6 +814,10 @@ void do_next_event() {
     // be worth it for simplicity and reduced memory usage.
     // If this section is a speed bottleneck, re-evaluate the choice.
     // It shouldn't come even close.
+    if(next_info_time < next_event_time) {
+        next_event_time = next_info_time;
+        next_event_type = EventType::PRINT_INFO;
+    }
     if(VERIFICATION_ON && next_verification_time < next_event_time) {
         next_event_time = next_verification_time;
         next_event_type = EventType::VERIFICATION;
@@ -872,6 +884,8 @@ void do_next_event() {
     switch(next_event_type) {
         case EventType::NONE:
             break;
+        case EventType::PRINT_INFO:
+            do_info_event();
         case EventType::VERIFICATION:
             do_verification_event();
             break;
@@ -903,6 +917,29 @@ void do_next_event() {
             do_clearance_event();
             break;
     }
+    RETURN();
+}
+
+void do_info_event() {
+    BEGIN();
+    
+    uint64_t n_infected = 0;
+    uint64_t n_infections = 0;
+    
+    for(Population * pop : population_manager.objects()) {
+        for(Host * host : pop->hosts.as_vector()) {
+            if(host->infections.size() > 0) {
+                n_infected++;
+            }
+            n_infections += host->infections.size();
+        }
+    }
+    
+    printf("Summary at t = %f:\n", now);
+    printf("                 n_infected: %llu\n", n_infected);
+    printf("               n_infections: %llu\n", n_infections);
+    printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
+    next_info_time += PRINT_INFO_PERIOD;
     RETURN();
 }
 

@@ -13,6 +13,9 @@ const int64_t {PRINT_DEBUG_LEVEL};
 
 /*** OUTPUT SETTINGS ***/
 
+// How often to print summary info about the simulation
+const double {PRINT_INFO_PERIOD};
+
 // Path to database output file for sampled data, absolute or relative to the working directory the program is executed in.
 const std::string {SAMPLE_DB_FILENAME};
 
