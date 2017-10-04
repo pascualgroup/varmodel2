@@ -97,12 +97,14 @@ Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functio
 Strain * generate_random_strain();
 Strain * create_strain(std::vector<Gene *> const & genes);
 Gene * draw_random_gene();
+std::array<uint64_t, N_LOCI> recombine_alleles(std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint);
+bool contains_different_genes(Strain * strain);
 Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
 
 Strain * recombine_strains(Strain * s1, Strain * s2);
 Strain * mutate_strain(Strain * strain);
 Gene * mutate_gene(Gene * gene);
-Strain * recombine_strain(Strain * strain);
+void recombine_infection(Infection * infection);
 double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint);
 
 void destroy_infection(Infection * infection);
@@ -228,7 +230,7 @@ void validate_and_load_parameters() {
     assert(T_END > 0.0);
     
     assert(N_GENES_IN_POOL >= 1);
-    assert(N_GENES_PER_STRAIN >= 1);
+    assert(N_GENES_PER_STRAIN >= 2);
     assert(N_LOCI >= 1);
     assert(N_ALLELES_INITIAL.size() == N_LOCI);
     for(auto value : N_ALLELES_INITIAL) {
@@ -240,6 +242,9 @@ void validate_and_load_parameters() {
     
     assert(P_MUTATION >= 0.0 && P_MUTATION <= 1.0);
     assert(T_LIVER_STAGE >= 0.0);
+    
+    assert(P_ECTOPIC_RECOMBINATION_IS_CONVERSION >= 0.0 && P_ECTOPIC_RECOMBINATION_IS_CONVERSION <= 1.0);
+    
     
     if(USE_HOST_LIFETIME_PDF) {
         assert(accumulate(HOST_LIFETIME_PDF) > 0.0);
@@ -453,8 +458,20 @@ Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles) {
     RETURN(itr->second);
 }
 
+Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional) {
+    BEGIN();
+    Gene * gene = get_gene_with_alleles(alleles);
+    if(gene == nullptr) {
+        gene = gene_manager.create();
+        gene->alleles = alleles;
+        gene->is_functional = is_functional;
+    }
+    RETURN(gene);
+}
+
 Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional) {
     BEGIN();
+    assert(get_gene_with_alleles(alleles) == nullptr);
     Gene * gene = gene_manager.create();
     gene->alleles = alleles;
     gene->is_functional = is_functional;
@@ -556,67 +573,103 @@ Gene * mutate_gene(Gene * gene) {
     RETURN(create_gene(alleles, gene->is_functional));
 }
 
-Strain * recombine_strain(Strain * strain) {
-    uint64_t i1 = draw_uniform_index(N_GENES_PER_STRAIN);
-    uint64_t i2 = draw_uniform_index_except(N_GENES_PER_STRAIN, i1);
+void recombine_infection(Infection * infection) {
+    BEGIN();
     
-    Gene * src_gene1 = strain->genes_sorted[i1];
-    Gene * src_gene2 = strain->genes_sorted[i2];
-    
-    uint64_t breakpoint = draw_uniform_index(N_LOCI + 1);
-    Gene * new_gene1 = src_gene1;
-    Gene * new_gene2 = src_gene2;
-    if(breakpoint == 0 || breakpoint == N_LOCI) {
-        new_gene1 = src_gene1;
-        new_gene2 = src_gene2;
+    if(N_GENES_PER_STRAIN == 1) {
+        RETURN();
     }
+    
+    Gene * new_gene_1;
+    Gene * new_gene_2;
+    
+    // Choose random expression order indices
+    uint64_t exp_index_1 = draw_uniform_index(N_GENES_PER_STRAIN);
+    uint64_t exp_index_2 = draw_uniform_index_except(N_GENES_PER_STRAIN, exp_index_1);
+    Gene * src_gene_1 = infection->expression_order[exp_index_1];
+    Gene * src_gene_2 = infection->expression_order[exp_index_2];
+    
+    if(src_gene_1 == src_gene_2) {
+        RETURN();
+    }
+    
+    bool is_conversion = draw_bernoulli(P_ECTOPIC_RECOMBINATION_IS_CONVERSION);
+    uint64_t breakpoint = draw_uniform_index(N_LOCI);
+    
+    // If breakpoint == 0, very little to do
+    if(breakpoint == 0) {
+        if(is_conversion) {
+            new_gene_1 = src_gene_1;
+            new_gene_2 = src_gene_1;
+        }
+        else {
+            new_gene_1 = src_gene_1;
+            new_gene_2 = src_gene_2;
+        }
+    }
+    // Otherwise, recombine the genes to produce one (under conversion) or two (if normal recombination) new genes
     else {
-        std::array<uint64_t, N_LOCI> rec_alleles1;
-        std::array<uint64_t, N_LOCI> rec_alleles2;
+        double similarity = get_gene_similarity(src_gene_1, src_gene_2, breakpoint);
         
-        // Perform recombination to get new alleles
-        for(uint64_t i = 0; i < N_LOCI; i++) {
-            if(i < breakpoint) {
-                rec_alleles1[i] = src_gene1->alleles[i];
-                rec_alleles2[i] = src_gene2->alleles[i];
-            }
-            else {
-                rec_alleles1[i] = src_gene2->alleles[i];
-                rec_alleles2[i] = src_gene1->alleles[i];
-            }
-        }
+        auto rec_alleles_1 = recombine_alleles(src_gene_1->alleles, src_gene_2->alleles, breakpoint);
+        Gene * rec_gene_1 = get_or_create_gene(rec_alleles_1, draw_bernoulli(similarity));
+        new_gene_1 = rec_gene_1->is_functional ? rec_gene_1 : src_gene_1;
         
-        double similarity = get_gene_similarity(src_gene1, src_gene2, breakpoint);
-        
-        // Find or create genes with the recombined alleles;
-        // is_functional with probability [similarity]
-        Gene * rec_gene1 = get_gene_with_alleles(rec_alleles1);
-        if(rec_gene1 == NULL) {
-            rec_gene1 = gene_manager.create();
-            rec_gene1->alleles = rec_alleles1;
-            rec_gene1->is_functional = draw_bernoulli(similarity);
+        // Under conversion, the second gene remains unchanged
+        if(is_conversion) {
+            new_gene_2 = src_gene_2;
         }
-        Gene * rec_gene2 = get_gene_with_alleles(rec_alleles2);
-        if(new_gene2 == NULL) {
-            rec_gene2 = gene_manager.create();
-            rec_gene2->alleles = rec_alleles2;
-            rec_gene2->is_functional = draw_bernoulli(similarity);
-        }
-        
-        // Use the recombined genes only if they're functional
-        if(rec_gene1->is_functional) {
-            new_gene1 = rec_gene1;
-        }
-        if(rec_gene2->is_functional) {
-            new_gene2 = rec_gene2;
+        // Under normal combination, both genes have material swapped
+        else {
+            auto rec_alleles_2 = recombine_alleles(src_gene_2->alleles, src_gene_1->alleles, breakpoint);
+            Gene * rec_gene_2 = get_or_create_gene(rec_alleles_2, draw_bernoulli(similarity));
+            new_gene_2 = rec_gene_2->is_functional ? rec_gene_2 : src_gene_2;
         }
     }
     
-    std::array<Gene *, N_GENES_PER_STRAIN> new_genes = strain->genes_sorted;
-    new_genes[i1] = new_gene1;
-    new_genes[i2] = new_gene2;
+    // If nothing has changed, nothing to do
+    if(new_gene_1 == src_gene_1 && new_gene_2 == src_gene_2) {
+        RETURN();
+    }
     
-    return get_strain_with_genes(new_genes);
+    // Update expression order and strain
+    std::array<Gene *, N_GENES_PER_STRAIN> new_genes = infection->strain->genes_sorted;
+    if(new_gene_1 != src_gene_1) {
+        infection->expression_order[exp_index_1] = new_gene_1;
+        replace_first(new_genes, src_gene_1, new_gene_1);
+    }
+    if(new_gene_2 != src_gene_2) {
+        infection->expression_order[exp_index_2] = new_gene_2;
+        replace_first(new_genes, src_gene_2, new_gene_2);
+    }
+    infection->strain = get_strain_with_genes(new_genes);
+    
+    RETURN();
+}
+
+std::array<uint64_t, N_LOCI> recombine_alleles(
+    std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint
+) {
+    std::array<uint64_t, N_LOCI> arc;
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        if(i < breakpoint) {
+            arc[i] = a1[i];
+        }
+        else {
+            arc[i] = a2[i];
+        }
+    }
+    return arc;
+}
+
+bool contains_different_genes(Strain * strain) {
+    BEGIN();
+    for(uint64_t i = 1; i < N_GENES_PER_STRAIN; i++) {
+        if(strain->genes_sorted[i] != strain->genes_sorted[0]) {
+            RETURN(true);
+        }
+    }
+    RETURN(false);
 }
 
 Gene * draw_random_gene() {
@@ -1274,7 +1327,7 @@ void do_recombination_event() {
     assert(recombination_queue.size() > 0);
     
     Infection * infection = recombination_queue.head();
-    infection->strain = recombine_strain(infection->strain);
+    recombine_infection(infection);
     
     update_recombination_time(infection, false);
     update_transition_time(infection, false);

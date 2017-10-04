@@ -9,6 +9,16 @@
 
 namespace varmodel {
 
+template<typename V, typename T>
+void replace_first(V & vec, T e1, T e2) {
+    for(size_t i = 0; i < vec.size(); i++) {
+        if(vec[i] == e1) {
+            vec[i] = e2;
+            return;
+        }
+    }
+}
+
 template<typename T>
 struct HashVector
 {

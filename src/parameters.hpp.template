@@ -111,6 +111,9 @@ const double {IMMUNITY_LOSS_RATE};
 // Probability per gene of a mutation when a strain is picked up.
 const double {P_MUTATION};
 
+// Probability that an ectopic recombination is a conversion
+const bool {P_ECTOPIC_RECOMBINATION_IS_CONVERSION};
+
 // Duration of liver stage (pre-expression)
 const double {T_LIVER_STAGE};
 
