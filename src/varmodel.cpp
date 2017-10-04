@@ -308,8 +308,7 @@ void initialize_gene_pool() {
                 alleles[j] = draw_uniform_index(n_alleles[j]);
             }
         } while(get_gene_with_alleles(alleles) != NULL);
-        
-        Gene * gene = create_gene(alleles, true);
+        create_gene(alleles, true);
     }
     
     RETURN();
@@ -1163,30 +1162,19 @@ void transmit(Host * src_host, Host * dst_host) {
         }
         
         // Form set of strains to transmit: some recombinants; some unmodified 
-        std::vector<Strain *> strains_to_transmit;
-        strains_to_transmit.reserve(src_strains.size());
+        std::vector<Strain *> strains_to_transmit(src_strains.size());
         
-        // Rule of combinations:
-        // P(strain is recombinant): 1.0 - P(same strain chosen)
-        // = 1.0 - 1/n
-        double p_recombinant;
-        if(src_strains.size() == 0) {
-            p_recombinant = 0.0;
-        }
-        else {
-            p_recombinant = 1.0 - 1.0 / src_strains.size();
-        }
+        // Produce a set of strains of the same size as src_strains
         for(uint64_t i = 0; i < src_strains.size(); i++) {
-            if(draw_bernoulli(p_recombinant)) {
-                // Combine two random strains
-                uint64_t i1 = draw_uniform_index(src_strains.size());
-                uint64_t i2 = draw_uniform_index(src_strains.size());
-                strains_to_transmit.push_back(
-                    recombine_strains(src_strains[i1], src_strains[i2])
-                );
+            Strain * strain1 = src_strains[draw_uniform_index(src_strains.size())];
+            Strain * strain2 = src_strains[draw_uniform_index(src_strains.size())];
+            
+            // If they're the same, use them unchanged. Otherwise, recombine.
+            if(strain1 == strain2) {
+                strains_to_transmit[i] = strain1;
             }
             else {
-                strains_to_transmit.push_back(src_strains[i]);
+                strains_to_transmit[i] = recombine_strains(strain1, strain2);
             }
         }
         
