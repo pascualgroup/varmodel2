@@ -14,6 +14,8 @@
 #include "parameters.hpp"
 #include "EventQueue.hpp"
 
+#include <sstream>
+
 namespace varmodel {
 
 #pragma mark \
@@ -81,6 +83,12 @@ EventQueue<Infection, get_clearance_time> clearance_queue;
 
 #pragma mark \
 *** Helper function declarations ***
+
+void save_global_state_to_checkpoint(sqlite3 * db);
+void load_global_state_from_checkpoint(sqlite3 * db);
+
+std::string get_rng_as_string();
+void set_rng_from_string(std::string const & rng_str);
 
 void initialize_gene_pool();
 
@@ -201,6 +209,7 @@ uint64_t call_depth = 0;
             printf(" "); \
         } \
         printf(__VA_ARGS__); \
+        printf("\n"); \
     } \
 }
 
@@ -650,6 +659,7 @@ void recombine_infection(Infection * infection) {
 std::array<uint64_t, N_LOCI> recombine_alleles(
     std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint
 ) {
+    BEGIN();
     std::array<uint64_t, N_LOCI> arc;
     for(uint64_t i = 0; i < N_LOCI; i++) {
         if(i < breakpoint) {
@@ -659,7 +669,7 @@ std::array<uint64_t, N_LOCI> recombine_alleles(
             arc[i] = a2[i];
         }
     }
-    return arc;
+    RETURN(arc);
 }
 
 bool contains_different_genes(Strain * strain) {
@@ -1377,6 +1387,8 @@ void save_checkpoint() {
     sqlite3_open(CHECKPOINT_SAVE_FILENAME.c_str(), &db);
     sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
     
+    save_global_state_to_checkpoint(db);
+    
     strain_manager.save_to_checkpoint(db);
     gene_manager.save_to_checkpoint(db);
     population_manager.save_to_checkpoint(db);
@@ -1386,8 +1398,7 @@ void save_checkpoint() {
     locus_immunity_manager.save_to_checkpoint(db);
     
     sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
-    int result = sqlite3_close(db);
-    assert(result == SQLITE_OK);
+    sqlite3_close(db);
     
     if(file_exists(old_checkpoint_filename)) {
         assert(!unlink(old_checkpoint_filename.c_str()));
@@ -1397,7 +1408,93 @@ void save_checkpoint() {
 
 void load_checkpoint() {
     BEGIN();
+    
+    assert(file_exists(CHECKPOINT_LOAD_FILENAME));
+    
+    sqlite3 * db;
+    sqlite3_open(CHECKPOINT_LOAD_FILENAME.c_str(), &db);
+    
+    load_global_state_from_checkpoint(db);
+    
+    // Load all objects, minus references to other objects
+    strain_manager.load_from_checkpoint(db);
+    gene_manager.load_from_checkpoint(db);
+    population_manager.load_from_checkpoint(db);
+    host_manager.load_from_checkpoint(db);
+    infection_manager.load_from_checkpoint(db);
+    immune_history_manager.load_from_checkpoint(db);
+    locus_immunity_manager.load_from_checkpoint(db);
+    
+    // Resolve references to other objects
+    strain_manager.load_from_checkpoint(db);
+    gene_manager.load_from_checkpoint(db);
+    population_manager.load_from_checkpoint(db);
+    host_manager.load_from_checkpoint(db);
+    infection_manager.load_from_checkpoint(db);
+    immune_history_manager.load_from_checkpoint(db);
+    locus_immunity_manager.load_from_checkpoint(db);
+    
+    sqlite3_close(db);
+    
     RETURN();
+}
+
+void save_global_state_to_checkpoint(sqlite3 * db) {
+    sqlite3_exec(db,
+        "CREATE TABLE global_state ("
+            "rng TEXT, "
+            "now REAL, "
+            "next_verification_time REAL, "
+            "next_checkpoint_time REAL, "
+            "next_info_time REAL, "
+            "n_infections_cumulative INTEGER"
+        ");",
+        NULL, NULL, NULL
+    );
+    
+    sqlite3_stmt * stmt;
+    sqlite3_prepare_v2(db, "INSERT INTO global_state VALUES (?,?,?,?,?,?);", -1, &stmt, NULL);
+    std::string rng_str = get_rng_as_string();
+    sqlite3_bind_text(stmt, 1, rng_str.c_str(), (int)(rng_str.size() + 1), SQLITE_STATIC);
+    sqlite3_bind_double(stmt, 2, now);
+    sqlite3_bind_double(stmt, 3, next_verification_time);
+    sqlite3_bind_double(stmt, 4, next_checkpoint_time);
+    sqlite3_bind_double(stmt, 5, next_info_time);
+    sqlite3_bind_int64(stmt, 6, n_infections_cumulative);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
+
+void load_global_state_from_checkpoint(sqlite3 * db) {
+    sqlite3_stmt * stmt;
+    sqlite3_prepare_v2(db, "SELECT * FROM global_state LIMIT 1;", -1, &stmt, NULL);
+    sqlite3_step(stmt);
+    
+    // Load rng from string representation
+    std::string rng_str = (const char *)sqlite3_column_text(stmt, 0);
+    PRINT_DEBUG(1, "rng read: %s", rng_str.c_str());
+    set_rng_from_string(rng_str);
+    assert(rng_str == get_rng_as_string());
+    
+    now = sqlite3_column_double(stmt, 1);
+    next_verification_time = sqlite3_column_double(stmt, 2);
+    next_checkpoint_time = sqlite3_column_double(stmt, 3);
+    next_info_time = sqlite3_column_double(stmt, 4);
+    n_infections_cumulative = sqlite3_column_int(stmt, 5);
+    
+    sqlite3_finalize(stmt);
+}
+
+std::string get_rng_as_string() {
+    std::stringstream ss;
+    ss << rng;
+    return ss.str();
+}
+
+void set_rng_from_string(std::string const & rng_str) {
+    std::stringstream ss;
+    ss << rng_str;
+    ss >> rng;
 }
 
 
@@ -1475,4 +1572,3 @@ void update_immigration_time(Population * pop, bool initial) {
 }
 
 } // namespace varmodel
-

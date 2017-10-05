@@ -17,7 +17,6 @@
 		6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */; };
 		6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBF1F75A57F00902EBD /* StrainManager.cpp */; };
 		64AC44231F7B223C00176944 /* AlleleImmuneHistoryManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */; };
-		64AC44241F7B223C00176944 /* GeneImmuneHistoryManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64AC441F1F7B223C00176944 /* GeneImmuneHistoryManager.cpp */; };
 		64AC44251F7B223C00176944 /* LocusImmunityManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */; };
 		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
 /* End PBXBuildFile section */
@@ -71,8 +70,6 @@
 		64AC441C1F7B1F6C00176944 /* AlleleImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistory.hpp; sourceTree = "<group>"; };
 		64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AlleleImmuneHistoryManager.cpp; sourceTree = "<group>"; };
 		64AC441E1F7B223C00176944 /* AlleleImmuneHistoryManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistoryManager.hpp; sourceTree = "<group>"; };
-		64AC441F1F7B223C00176944 /* GeneImmuneHistoryManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GeneImmuneHistoryManager.cpp; sourceTree = "<group>"; };
-		64AC44201F7B223C00176944 /* GeneImmuneHistoryManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GeneImmuneHistoryManager.hpp; sourceTree = "<group>"; };
 		64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LocusImmunityManager.cpp; sourceTree = "<group>"; };
 		64AC44221F7B223C00176944 /* LocusImmunityManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LocusImmunityManager.hpp; sourceTree = "<group>"; };
 		64F0B8431F7DACB8002156E4 /* GeneImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = GeneImmuneHistory.hpp; sourceTree = "<group>"; };
@@ -160,22 +157,20 @@
 		6428FDB41F75A57F00902EBD /* managers */ = {
 			isa = PBXGroup;
 			children = (
+				6428FDC01F75A57F00902EBD /* StrainManager.hpp */,
+				6428FDBF1F75A57F00902EBD /* StrainManager.cpp */,
 				6428FDB61F75A57F00902EBD /* GeneManager.hpp */,
 				6428FDB51F75A57F00902EBD /* GeneManager.cpp */,
+				6428FDBE1F75A57F00902EBD /* PopulationManager.hpp */,
+				6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */,
 				6428FDB81F75A57F00902EBD /* HostManager.hpp */,
 				6428FDB71F75A57F00902EBD /* HostManager.cpp */,
-				64AC44201F7B223C00176944 /* GeneImmuneHistoryManager.hpp */,
-				64AC441F1F7B223C00176944 /* GeneImmuneHistoryManager.cpp */,
+				6428FDBC1F75A57F00902EBD /* InfectionManager.hpp */,
+				6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */,
 				64AC441E1F7B223C00176944 /* AlleleImmuneHistoryManager.hpp */,
 				64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */,
-				64AC44221F7B223C00176944 /* LocusImmunityManager.hpp */,
 				64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */,
-				6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */,
-				6428FDBC1F75A57F00902EBD /* InfectionManager.hpp */,
-				6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */,
-				6428FDBE1F75A57F00902EBD /* PopulationManager.hpp */,
-				6428FDBF1F75A57F00902EBD /* StrainManager.cpp */,
-				6428FDC01F75A57F00902EBD /* StrainManager.hpp */,
+				64AC44221F7B223C00176944 /* LocusImmunityManager.hpp */,
 			);
 			path = managers;
 			sourceTree = "<group>";
@@ -296,7 +291,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				6428FDB01F75A55D00902EBD /* random.cpp in Sources */,
-				64AC44241F7B223C00176944 /* GeneImmuneHistoryManager.cpp in Sources */,
 				6428FDC21F75A57F00902EBD /* GeneManager.cpp in Sources */,
 				6428FDAF1F75A55D00902EBD /* main.cpp in Sources */,
 				6428FDB11F75A55D00902EBD /* util.cpp in Sources */,

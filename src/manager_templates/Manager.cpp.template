@@ -47,7 +47,7 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
     sqlite3_finalize(stmt);
 }}
 
-{resolve_relationships_signature} {{
+{resolve_references_signature} {{
     
 }}
 

@@ -191,8 +191,8 @@ create_vector_block_format = get_template('create_vector_block.cpp.template')
 create_matrix_block_format = get_template('create_matrix_block.cpp.template')
 create_map_block_format = get_template('create_map_block.cpp.template')
 
-resolve_relationships_signature_format = \
-    'void {prefix}resolve_relationships(sqlite3 * db{ref_manager_args})'
+resolve_references_signature_format = \
+    'void {prefix}resolve_references(sqlite3 * db{ref_manager_args})'
 
 def generate_manager(object_type, dst_dir):
     src_filename = os.path.join(script_dir, 'src', 'datamodel', '{}.hpp'.format(object_type))
@@ -228,8 +228,8 @@ def generate_manager(object_type, dst_dir):
         return ', ' + ', '.join(['{}Manager * {}_manager'.format(c[1], c[2]) for c in ref_cols])
     
     def format_manager_header():
-        def format_resolve_relationships_signature():
-            return resolve_relationships_signature_format.format(
+        def format_resolve_references_signature():
+            return resolve_references_signature_format.format(
                 prefix = '',
                 ref_manager_args = format_manager_args()
             )
@@ -238,7 +238,7 @@ def generate_manager(object_type, dst_dir):
             object_type = object_type,
             manager_type = manager_type,
             forward_declarations = format_forward_declarations(),
-            resolve_relationships_signature = format_resolve_relationships_signature()
+            resolve_references_signature = format_resolve_references_signature()
         )
     
     manager_header_filename = os.path.join(dst_dir, manager_type + '.hpp')
@@ -279,8 +279,8 @@ def generate_manager(object_type, dst_dir):
                 for c in ref_cols
             ])
         
-        def format_resolve_relationships_signature():
-            return resolve_relationships_signature_format.format(
+        def format_resolve_references_signature():
+            return resolve_references_signature_format.format(
                 prefix = manager_type + '::',
                 ref_manager_args = format_manager_args(),
             )
@@ -411,7 +411,7 @@ def generate_manager(object_type, dst_dir):
             manager_type = manager_type,
             manager_includes = format_manager_includes(),
             object_includes = format_object_includes(),
-            resolve_relationships_signature = format_resolve_relationships_signature(),
+            resolve_references_signature = format_resolve_references_signature(),
             load_column_statements = format_load_column_statements(),
             sql_create_columns = format_sql_create_columns(),
             sql_insert_qmarks = format_sql_insert_qmarks(),

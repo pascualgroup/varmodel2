@@ -25,7 +25,7 @@ struct {manager_type} {{
     
     // Checkpointing methods
     void load_from_checkpoint(sqlite3 * db);
-    {resolve_relationships_signature};
+    {resolve_references_signature};
     void save_to_checkpoint(sqlite3 * db);
 }};
 
