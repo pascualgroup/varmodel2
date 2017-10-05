@@ -124,8 +124,8 @@
 				6428FDA01F75A55D00902EBD /* create_reflist_block_IndexedSet.cpp.template */,
 				64AC441A1F79F5C000176944 /* create_reflist_block_vector.cpp.template */,
 				6428FDA21F75A55D00902EBD /* create_vector_block.cpp.template */,
-				6428FDA31F75A55D00902EBD /* Manager.cpp.template */,
 				6428FDA41F75A55D00902EBD /* Manager.hpp.template */,
+				6428FDA31F75A55D00902EBD /* Manager.cpp.template */,
 			);
 			path = manager_templates;
 			sourceTree = "<group>";
@@ -136,8 +136,8 @@
 				6428FDA71F75A55D00902EBD /* EventQueue.hpp */,
 				6428FDA81F75A55D00902EBD /* IndexedSet.hpp */,
 				6428FDC81F75A5EE00902EBD /* HashPair.hpp */,
-				6428FDA91F75A55D00902EBD /* random.cpp */,
 				6428FDAA1F75A55D00902EBD /* random.hpp */,
+				6428FDA91F75A55D00902EBD /* random.cpp */,
 				6428FDAC1F75A55D00902EBD /* util.hpp */,
 				6428FDAB1F75A55D00902EBD /* util.cpp */,
 			);
@@ -169,8 +169,8 @@
 				6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */,
 				64AC441E1F7B223C00176944 /* AlleleImmuneHistoryManager.hpp */,
 				64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */,
-				64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */,
 				64AC44221F7B223C00176944 /* LocusImmunityManager.hpp */,
+				64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */,
 			);
 			path = managers;
 			sourceTree = "<group>";

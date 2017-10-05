@@ -89,37 +89,14 @@ def load_parameters_json(params_filename):
     with open(params_filename) as f:
         return json.load(f)
 
-def format_value(varname, value):
-    '''Formats a parameter value for substitution into a template.
-    
-    The Python type is used to format the value for C++.
-    '''
-    if isinstance(value, list):
-        values = [format_value(varname, val) for val in value]
-        values_formatted = '{{{}}}'.format(', '.join(values))
-        return values_formatted
-    elif value is False:
-        return 'false'
-    elif value is True:
-        return 'true'
-    elif isinstance(value, int):
-        return str(value)
-    elif isinstance(value, float):
-        return json.dumps(value) # It's possible this will break in weird situations
-    elif isinstance(value, basestring):
-        return '"{}"'.format(value)
-    print('Error: invalid type {} for value {} for parameter {}'.format(type(value), value, varname))
-    sys.exit(1)
-
 
 ### DATABASE MANAGER GENERATION FUNCTIONS ###
 
 def parse_type(object_type, input_filename):
     columns = []
     vectors = []
-    matrices = []
     maps = []
-    reflists_IM = []
+    reflists_IndexedSet = []
     reflists_vector = []
     
     with open(input_filename) as input_file:
@@ -136,13 +113,9 @@ def parse_type(object_type, input_filename):
                 if tokens[0] == '};':
                     state = 'END'
                 elif len(tokens) == 2:
-                    if tokens[0] == 'uint64_t' or tokens[0] == 'int64_t' or tokens[0] == 'double':
+                    if tokens[0] == 'uint64_t' or tokens[0] == 'int64_t' or tokens[0] == 'double' or tokens[0] == 'bool':
                         if tokens[1].endswith(';'):
                             columns.append(('FIELD', tokens[0], tokens[1][:-1]))
-                    elif tokens[0].startswith('std::vector<std::vector<') and tokens[0].endswith('>>'):
-                        if tokens[1].endswith(';'):
-                            field_type = tokens[0][len('std::vector<std::vector<'):-2]
-                            matrices.append((field_type, tokens[1][:-1]))
                     elif tokens[0].startswith('std::vector<') and tokens[0].endswith('>'):
                         if tokens[1].endswith(';'):
                             field_type = tokens[0][len('std::vector<'):-1]
@@ -155,7 +128,7 @@ def parse_type(object_type, input_filename):
                         and tokens[0][len('IndexedSet')] == '<' and tokens[0][-1] == '>' \
                         and tokens[1].endswith(';'):
                             map_object_type = tokens[0][len('IndexedSet')+1:-1]
-                            reflists_IM.append((map_object_type, tokens[1][:-1]))
+                            reflists_IndexedSet.append((map_object_type, tokens[1][:-1]))
                 elif len(tokens) == 3:
                     if tokens[0].startswith('std::array<') and tokens[0].endswith(',') and tokens[1].endswith('>'):
                         if tokens[2].endswith(';'):
@@ -177,7 +150,7 @@ def parse_type(object_type, input_filename):
                         vec_object_type = tokens[0][len('std::array<'):]
                         reflists_vector.append((vec_object_type, tokens[3][:-1]))
     
-    return columns, vectors, matrices, maps, reflists_IM, reflists_vector
+    return columns, vectors, maps, reflists_IndexedSet, reflists_vector
 
 def get_template(filename):
     with open(os.path.join(script_dir, 'src', 'manager_templates', filename)) as f:
@@ -188,8 +161,9 @@ manager_implementation_format = get_template('Manager.cpp.template')
 create_reflist_block_IndexedSet_format = get_template('create_reflist_block_IndexedSet.cpp.template')
 create_reflist_block_vector_format = get_template('create_reflist_block_vector.cpp.template')
 create_vector_block_format = get_template('create_vector_block.cpp.template')
-create_matrix_block_format = get_template('create_matrix_block.cpp.template')
+load_vector_block_format = get_template('load_vector_block.cpp.template')
 create_map_block_format = get_template('create_map_block.cpp.template')
+load_map_block_format = get_template('load_map_block.cpp.template')
 
 resolve_references_signature_format = \
     'void {prefix}resolve_references(sqlite3 * db{ref_manager_args})'
@@ -200,21 +174,18 @@ def generate_manager(object_type, dst_dir):
     manager_type = object_type + 'Manager'
     print('Generating {}...'.format(manager_type))
     
-    columns, vectors, matrices, maps, reflists_IM, reflists_vector = parse_type(object_type, src_filename)
+    columns, vectors, maps, reflists_IndexedSet, reflists_vector = parse_type(object_type, src_filename)
     
-    ref_cols = [c for c in columns if c[0] == 'REF']
-    ref_vars = [c[2] for c in columns if c[0] == 'REF']
-    reflist_vars = [rl[1] for rl in reflists_IM + reflists_vector]
+    ref_vars = [(c[1], c[2]) for c in columns if c[0] == 'REF'] + \
+        reflists_IndexedSet + reflists_vector
     
     print('Vector variables: {}'.format(json.dumps(vectors)))
-    print('Matrix variables: {}'.format(json.dumps(matrices)))
     print('Map variables: {}'.format(json.dumps(maps)))
     print('Reference variables: {}'.format(json.dumps(ref_vars)))
-    print('Reference lists: {}'.format(json.dumps(reflist_vars)))
     
     def format_forward_declarations():
         return '\n'.join([
-            'struct {}Manager;'.format(c[1]) for c in ref_cols
+            'struct {}Manager;'.format(c[0]) for c in ref_vars
         ])
     
     def format_table_name_args(vars):
@@ -223,9 +194,9 @@ def generate_manager(object_type, dst_dir):
         return ', ' + ', '.join(['char const * const {}_table_name'.format(var) for var in vars])
     
     def format_manager_args():
-        if len(ref_cols) == 0:
+        if len(ref_vars) == 0:
             return ''
-        return ', ' + ', '.join(['{}Manager * {}_manager'.format(c[1], c[2]) for c in ref_cols])
+        return ', ' + ', '.join(['{}Manager & {}_manager'.format(c[0], c[1]) for c in ref_vars])
     
     def format_manager_header():
         def format_resolve_references_signature():
@@ -246,7 +217,7 @@ def generate_manager(object_type, dst_dir):
         header_file.write(format_manager_header())
     
     def sqlite_type_for_type(type_str):
-        if type_str.startswith('uint') or type_str.startswith('int'):
+        if type_str.startswith('uint') or type_str.startswith('int') or type_str == 'bool':
             return 'int64'
         elif type_str == 'double':
             return 'double'
@@ -267,16 +238,13 @@ def generate_manager(object_type, dst_dir):
         def format_manager_includes():
             return '\n'.join([
                 '#include "{}Manager.hpp"'.format(c[0])
-                for c in reflists_IM + reflists_vector
+                for c in ref_vars
             ])
         
         def format_object_includes():
             return '\n'.join([
                 '#include "{}.hpp"'.format(c[0])
-                for c in reflists_IM + reflists_vector
-            ] + [
-                '#include "{}.hpp"'.format(c[1])
-                for c in ref_cols
+                for c in ref_vars
             ])
         
         def format_resolve_references_signature():
@@ -286,16 +254,38 @@ def generate_manager(object_type, dst_dir):
             )
         
         def format_load_column_statements():
+            def format_rhs(col_info, index):
+                if col_info[0] == 'FIELD':
+                    return 'sqlite3_column_{sqlite_type}(stmt, {index})'.format(
+                        name = col_info[2],
+                        sqlite_type = sqlite_type_for_type(col_info[1]),
+                        index = index
+                    )
+                else:
+                    return 'NULL'
+            
             def format_load_column_statement(col_info, index):
-                return 'obj->{name} = sqlite3_column_{sqlite_type}(stmt, {index});'.format(
+                return 'obj->{name} = {rhs};'.format(
                     name = col_info[2],
                     sqlite_type = sqlite_type_for_type(col_info[1]),
+                    index = index,
+                    rhs = format_rhs(col_info, index)
+                )
+            
+            return '\n            '.join([
+                format_load_column_statement(col_info, index + 1) for index, col_info in enumerate(columns)
+            ])
+        
+        def format_load_reference_column_statements():
+            def format_load_reference_column_statement(col_info, index):
+                return 'if(sqlite3_column_type(stmt, {index}) != SQLITE_NULL) {{ obj->{name} = {name}_manager.object_for_id(sqlite3_column_int64(stmt, {index})); }}'.format(
+                    name = col_info[2],
                     index = index
                 )
             
-            return '\n        '.join([
-                format_load_column_statement(col_info, index + 1) for index, col_info in enumerate(columns)
-                if col_info[0] == 'FIELD'
+            return '\n            '.join([
+                format_load_reference_column_statement(col_info, index + 1) for index, col_info in enumerate(columns)
+                if col_info[0] == 'REF'
             ])
         
         def format_sql_create_columns():
@@ -332,7 +322,7 @@ def generate_manager(object_type, dst_dir):
                         name = col_info[2]
                     )
             
-            return '\n        '.join([
+            return '\n            '.join([
                 format_bind_column_statement(col_info, index + 2) for index, col_info in enumerate(columns)
             ])
         
@@ -346,7 +336,7 @@ def generate_manager(object_type, dst_dir):
                 )
             
             return '\n        '.join([
-                create_reflist_block(reflist_spec) for reflist_spec in reflists_IM
+                create_reflist_block(reflist_spec) for reflist_spec in reflists_IndexedSet
             ])
         
         def format_create_reflist_blocks_vector():
@@ -376,18 +366,18 @@ def generate_manager(object_type, dst_dir):
                 create_vector_block(spec) for spec in vectors
             ])
         
-        def format_create_matrix_blocks():
-            def create_matrix_block(spec):
-                value_type, matrix_var = spec
-                return create_matrix_block_format.format(
+        def format_load_vector_blocks():
+            def load_vector_block(spec):
+                value_type, vector_var = spec
+                return load_vector_block_format.format(
                     object_type = object_type,
                     sql_type = sql_type_for_type(value_type),
-                    matrix_var = matrix_var,
+                    vector_var = vector_var,
                     sqlite3_bind_type = sqlite_type_for_type(value_type)
                 )
             
             return '\n        '.join([
-                create_matrix_block(spec) for spec in matrices
+                load_vector_block(spec) for spec in vectors
             ])
         
         def format_create_map_blocks():
@@ -406,6 +396,25 @@ def generate_manager(object_type, dst_dir):
                 create_map_block(spec) for spec in maps
             ])
         
+        def format_load_map_blocks():
+            def load_map_block(spec):
+                key_type, value_type, map_var = spec
+                return load_map_block_format.format(
+                    object_type = object_type,
+                    sql_key_type = sql_type_for_type(key_type),
+                    sql_value_type = sql_type_for_type(value_type),
+                    map_var = map_var,
+                    sqlite3_bind_key_type = sqlite_type_for_type(key_type),
+                    sqlite3_bind_value_type = sqlite_type_for_type(value_type)
+                )
+            
+            return '\n        '.join([
+                load_map_block(spec) for spec in maps
+            ])
+        
+        print(columns)
+        print(format_load_column_statements())
+        
         return manager_implementation_format.format(
             object_type = object_type,
             manager_type = manager_type,
@@ -413,12 +422,14 @@ def generate_manager(object_type, dst_dir):
             object_includes = format_object_includes(),
             resolve_references_signature = format_resolve_references_signature(),
             load_column_statements = format_load_column_statements(),
+            load_reference_column_statements = format_load_reference_column_statements(),
             sql_create_columns = format_sql_create_columns(),
             sql_insert_qmarks = format_sql_insert_qmarks(),
             bind_column_statements = format_bind_column_statements(),
             create_vector_blocks = format_create_vector_blocks(),
-            create_matrix_blocks = format_create_matrix_blocks(),
+            load_vector_blocks = format_load_vector_blocks(),
             create_map_blocks = format_create_map_blocks(),
+            load_map_blocks = format_load_map_blocks(),
             create_reflist_blocks_IndexedSet = format_create_reflist_blocks_IndexedSet(),
             create_reflist_blocks_vector = format_create_reflist_blocks_vector()
         )

@@ -23,7 +23,7 @@ namespace varmodel {
 
 double INF = std::numeric_limits<double>::infinity();
 
-rng_t rng(RANDOM_SEED);
+std::mt19937_64 rng(RANDOM_SEED);
 
 double now = 0.0;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
@@ -1426,13 +1426,13 @@ void load_checkpoint() {
     locus_immunity_manager.load_from_checkpoint(db);
     
     // Resolve references to other objects
-    strain_manager.load_from_checkpoint(db);
-    gene_manager.load_from_checkpoint(db);
-    population_manager.load_from_checkpoint(db);
-    host_manager.load_from_checkpoint(db);
-    infection_manager.load_from_checkpoint(db);
-    immune_history_manager.load_from_checkpoint(db);
-    locus_immunity_manager.load_from_checkpoint(db);
+    strain_manager.resolve_references(db, gene_manager);
+    // gene_manager.resolve_references(db); // Does nothing unless referenes are added to Gene
+    population_manager.resolve_references(db, host_manager);
+    host_manager.resolve_references(db, population_manager, immune_history_manager, infection_manager);
+    infection_manager.resolve_references(db, strain_manager, host_manager, gene_manager);
+    immune_history_manager.resolve_references(db, locus_immunity_manager);
+    // locus_immunity_manager.resolve_references(db); // Does nothing unless referenes are added to LocusImmunity
     
     sqlite3_close(db);
     
