@@ -94,16 +94,16 @@ def load_parameters_json(params_filename):
 
 def parse_type(object_type, input_filename):
     columns = []
-    vectors = []
+    arrays = []
     maps = []
     reflists_IndexedSet = []
-    reflists_vector = []
+    reflists_array = []
+    reflists_unordered_set = []
     
     with open(input_filename) as input_file:
         state = 'START'
         for line in input_file:
             tokens = line.strip().split('//')[0].split()
-            print(tokens, state)
             if len(tokens) == 0:
                 continue
             if state == 'START':
@@ -116,10 +116,6 @@ def parse_type(object_type, input_filename):
                     if tokens[0] == 'uint64_t' or tokens[0] == 'int64_t' or tokens[0] == 'double' or tokens[0] == 'bool':
                         if tokens[1].endswith(';'):
                             columns.append(('FIELD', tokens[0], tokens[1][:-1]))
-                    elif tokens[0].startswith('std::vector<') and tokens[0].endswith('>'):
-                        if tokens[1].endswith(';'):
-                            field_type = tokens[0][len('std::vector<'):-1]
-                            vectors.append((field_type, tokens[1][:-1]))
                     elif tokens[0].startswith('std::unordered_map<') and tokens[0].endswith('>'):
                         if tokens[1].endswith(';'):
                             key_type, value_type = tokens[0][len('std::unordered_map<'):-1].split(',')
@@ -133,24 +129,20 @@ def parse_type(object_type, input_filename):
                     if tokens[0].startswith('std::array<') and tokens[0].endswith(',') and tokens[1].endswith('>'):
                         if tokens[2].endswith(';'):
                             field_type = tokens[0][len('std::array<'):-1]
-                            vectors.append((field_type, tokens[2][:-1]))
+                            arrays.append((field_type, tokens[2][:-1]))
                     elif tokens[1] == '*' and tokens[2].endswith(';'):
                         columns.append(('REF', tokens[0], tokens[2][:-1]))
                     elif tokens[0].startswith('std::unordered_set<') \
                         and tokens[1] == '*>' and tokens[2].endswith(';'):
                         set_object_type = tokens[0][len('std::unordered_set<'):]
-                        reflists_vector.append((set_object_type, tokens[2][:-1]))
-                    elif tokens[0].startswith('std::vector<') \
-                        and tokens[1] == '*>' and tokens[2].endswith(';'):
-                        vec_object_type = tokens[0][len('std::vector<'):]
-                        reflists_vector.append((vec_object_type, tokens[2][:-1]))
+                        reflists_unordered_set.append((set_object_type, tokens[2][:-1]))
                 elif len(tokens) == 4:
                     if tokens[0].startswith('std::array<') \
                         and tokens[1] == '*,' and tokens[2].endswith('>') and tokens[3].endswith(';'):
                         vec_object_type = tokens[0][len('std::array<'):]
-                        reflists_vector.append((vec_object_type, tokens[3][:-1]))
+                        reflists_array.append((vec_object_type, tokens[3][:-1]))
     
-    return columns, vectors, maps, reflists_IndexedSet, reflists_vector
+    return columns, arrays, maps, reflists_array, reflists_unordered_set, reflists_IndexedSet
 
 def get_template(filename):
     with open(os.path.join(script_dir, 'src', 'manager_templates', filename)) as f:
@@ -158,12 +150,21 @@ def get_template(filename):
 
 manager_header_format = get_template('Manager.hpp.template')
 manager_implementation_format = get_template('Manager.cpp.template')
-create_reflist_block_IndexedSet_format = get_template('create_reflist_block_IndexedSet.cpp.template')
-create_reflist_block_vector_format = get_template('create_reflist_block_vector.cpp.template')
-create_vector_block_format = get_template('create_vector_block.cpp.template')
-load_vector_block_format = get_template('load_vector_block.cpp.template')
+
+create_array_block_format = get_template('create_array_block.cpp.template')
+load_array_block_format = get_template('load_array_block.cpp.template')
+
 create_map_block_format = get_template('create_map_block.cpp.template')
 load_map_block_format = get_template('load_map_block.cpp.template')
+
+create_reflist_block_array_format = get_template('create_reflist_block_array.cpp.template')
+load_reflist_block_array_format = get_template('load_reflist_block_array.cpp.template')
+
+create_reflist_block_unordered_set_format = get_template('create_reflist_block_unordered_set.cpp.template')
+load_reflist_block_unordered_set_format = get_template('load_reflist_block_unordered_set.cpp.template')
+
+create_reflist_block_IndexedSet_format = get_template('create_reflist_block_IndexedSet.cpp.template')
+load_reflist_block_IndexedSet_format = get_template('load_reflist_block_IndexedSet.cpp.template')
 
 resolve_references_signature_format = \
     'void {prefix}resolve_references(sqlite3 * db{ref_manager_args})'
@@ -174,14 +175,15 @@ def generate_manager(object_type, dst_dir):
     manager_type = object_type + 'Manager'
     print('Generating {}...'.format(manager_type))
     
-    columns, vectors, maps, reflists_IndexedSet, reflists_vector = parse_type(object_type, src_filename)
+    columns, arrays, maps, reflists_array, reflists_unordered_set, reflists_IndexedSet = parse_type(object_type, src_filename)
     
     ref_vars = [(c[1], c[2]) for c in columns if c[0] == 'REF'] + \
-        reflists_IndexedSet + reflists_vector
+        reflists_array + reflists_unordered_set + reflists_IndexedSet
     
-    print('Vector variables: {}'.format(json.dumps(vectors)))
-    print('Map variables: {}'.format(json.dumps(maps)))
-    print('Reference variables: {}'.format(json.dumps(ref_vars)))
+#     print('columns: {}'.format(json.dumps(columns)))
+#     print('arrays: {}'.format(json.dumps(arrays)))
+#     print('maps: {}'.format(json.dumps(maps)))
+#     print('ref_vars: {}'.format(json.dumps(ref_vars)))
     
     def format_forward_declarations():
         return '\n'.join([
@@ -326,6 +328,32 @@ def generate_manager(object_type, dst_dir):
                 format_bind_column_statement(col_info, index + 2) for index, col_info in enumerate(columns)
             ])
         
+        def format_create_reflist_blocks_array():
+            def create_reflist_block(reflist_spec):
+                ref_type, reflist_var = reflist_spec
+                return create_reflist_block_array_format.format(
+                    object_type = object_type,
+                    ref_type = ref_type,
+                    reflist_var = reflist_var
+                )
+            
+            return '\n        '.join([
+                create_reflist_block(reflist_spec) for reflist_spec in reflists_array
+            ])
+        
+        def format_create_reflist_blocks_unordered_set():
+            def create_reflist_block(reflist_spec):
+                ref_type, reflist_var = reflist_spec
+                return create_reflist_block_unordered_set_format.format(
+                    object_type = object_type,
+                    ref_type = ref_type,
+                    reflist_var = reflist_var
+                )
+            
+            return '\n        '.join([
+                create_reflist_block(reflist_spec) for reflist_spec in reflists_unordered_set
+            ])
+        
         def format_create_reflist_blocks_IndexedSet():
             def create_reflist_block(reflist_spec):
                 ref_type, reflist_var = reflist_spec
@@ -339,45 +367,71 @@ def generate_manager(object_type, dst_dir):
                 create_reflist_block(reflist_spec) for reflist_spec in reflists_IndexedSet
             ])
         
-        def format_create_reflist_blocks_vector():
-            def create_reflist_block(reflist_spec):
+        def format_load_reflist_blocks_array():
+            def format_load_reflist_block(reflist_spec):
                 ref_type, reflist_var = reflist_spec
-                return create_reflist_block_vector_format.format(
+                return load_reflist_block_array_format.format(
                     object_type = object_type,
                     ref_type = ref_type,
                     reflist_var = reflist_var
                 )
             
             return '\n        '.join([
-                create_reflist_block(reflist_spec) for reflist_spec in reflists_vector
+                format_load_reflist_block(reflist_spec) for reflist_spec in reflists_array
             ])
         
-        def format_create_vector_blocks():
-            def create_vector_block(spec):
-                value_type, vector_var = spec
-                return create_vector_block_format.format(
+        def format_load_reflist_blocks_unordered_set():
+            def format_load_reflist_block(reflist_spec):
+                ref_type, reflist_var = reflist_spec
+                return load_reflist_block_unordered_set_format.format(
+                    object_type = object_type,
+                    ref_type = ref_type,
+                    reflist_var = reflist_var
+                )
+            
+            return '\n        '.join([
+                format_load_reflist_block(reflist_spec) for reflist_spec in reflists_unordered_set
+            ])
+        
+        def format_load_reflist_blocks_IndexedSet():
+            def format_load_reflist_block(reflist_spec):
+                ref_type, reflist_var = reflist_spec
+                return load_reflist_block_IndexedSet_format.format(
+                    object_type = object_type,
+                    ref_type = ref_type,
+                    reflist_var = reflist_var
+                )
+            
+            return '\n        '.join([
+                format_load_reflist_block(reflist_spec) for reflist_spec in reflists_IndexedSet
+            ])
+        
+        def format_create_array_blocks():
+            def create_array_block(spec):
+                value_type, array_var = spec
+                return create_array_block_format.format(
                     object_type = object_type,
                     sql_type = sql_type_for_type(value_type),
-                    vector_var = vector_var,
+                    array_var = array_var,
                     sqlite3_bind_type = sqlite_type_for_type(value_type)
                 )
             
             return '\n        '.join([
-                create_vector_block(spec) for spec in vectors
+                create_array_block(spec) for spec in arrays
             ])
         
-        def format_load_vector_blocks():
-            def load_vector_block(spec):
-                value_type, vector_var = spec
-                return load_vector_block_format.format(
+        def format_load_array_blocks():
+            def load_array_block(spec):
+                value_type, array_var = spec
+                return load_array_block_format.format(
                     object_type = object_type,
                     sql_type = sql_type_for_type(value_type),
-                    vector_var = vector_var,
+                    array_var = array_var,
                     sqlite3_bind_type = sqlite_type_for_type(value_type)
                 )
             
             return '\n        '.join([
-                load_vector_block(spec) for spec in vectors
+                load_array_block(spec) for spec in arrays
             ])
         
         def format_create_map_blocks():
@@ -412,9 +466,6 @@ def generate_manager(object_type, dst_dir):
                 load_map_block(spec) for spec in maps
             ])
         
-        print(columns)
-        print(format_load_column_statements())
-        
         return manager_implementation_format.format(
             object_type = object_type,
             manager_type = manager_type,
@@ -426,12 +477,16 @@ def generate_manager(object_type, dst_dir):
             sql_create_columns = format_sql_create_columns(),
             sql_insert_qmarks = format_sql_insert_qmarks(),
             bind_column_statements = format_bind_column_statements(),
-            create_vector_blocks = format_create_vector_blocks(),
-            load_vector_blocks = format_load_vector_blocks(),
+            create_array_blocks = format_create_array_blocks(),
+            load_array_blocks = format_load_array_blocks(),
             create_map_blocks = format_create_map_blocks(),
             load_map_blocks = format_load_map_blocks(),
+            create_reflist_blocks_array = format_create_reflist_blocks_array(),
+            create_reflist_blocks_unordered_set = format_create_reflist_blocks_unordered_set(),
             create_reflist_blocks_IndexedSet = format_create_reflist_blocks_IndexedSet(),
-            create_reflist_blocks_vector = format_create_reflist_blocks_vector()
+            load_reflist_blocks_array = format_load_reflist_blocks_array(),
+            load_reflist_blocks_unordered_set = format_load_reflist_blocks_unordered_set(),
+            load_reflist_blocks_IndexedSet = format_load_reflist_blocks_IndexedSet()
         )
     
     manager_implementation_filename = os.path.join(dst_dir, manager_type + '.cpp')

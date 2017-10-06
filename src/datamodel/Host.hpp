@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <sqlite3.h>
-#include <vector>
 #include <unordered_set>
 
 namespace varmodel {

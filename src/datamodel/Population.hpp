@@ -2,7 +2,6 @@
 #define Population_hpp
 
 #include <sqlite3.h>
-#include <vector>
 #include "Host.hpp"
 #include "IndexedSet.hpp"
 

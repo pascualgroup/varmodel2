@@ -49,8 +49,8 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
         sqlite3_finalize(stmt);
     }}
     
-    // Load vectors from vector tables
-    {load_vector_blocks}
+    // Load arrays from array tables
+    {load_array_blocks}
     
     // Load maps from map tables
     {load_map_blocks}
@@ -70,7 +70,11 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
         }}
     }}
     
+    // Load reference lists (std::array)
+    {load_reflist_blocks_array}
     
+    // Load reference lists (std::unordered_set)
+    {load_reflist_blocks_unordered_set}
 }}
 
 void {manager_type}::save_to_checkpoint(sqlite3 * db) {{
@@ -90,17 +94,20 @@ void {manager_type}::save_to_checkpoint(sqlite3 * db) {{
         sqlite3_finalize(stmt);
     }}
     
-    // Create and save vector-valued fields into separate tables
-    {create_vector_blocks}
+    // Create and save array-valued fields into separate tables
+    {create_array_blocks}
     
     // Create and save map-valued fields into separate tables
     {create_map_blocks}
     
+    // Create and save std::array references into separate tables
+    {create_reflist_blocks_array}
+    
+    // Create and save std::unordered_set references into separate tables
+    {create_reflist_blocks_unordered_set}
+    
     // Create and save IndexedSet references into separate tables
     {create_reflist_blocks_IndexedSet}
-    
-    // Create and save std::vector and std::unordered_set references into separate tables
-    {create_reflist_blocks_vector}
 }}
 
 }} // namespace varmodel
