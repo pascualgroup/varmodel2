@@ -54,6 +54,8 @@ InfectionManager infection_manager;
 AlleleImmuneHistoryManager immune_history_manager;
 LocusImmunityManager locus_immunity_manager;
 
+sqlite3 * sample_db;
+
 #pragma mark \
 *** EVENT QUEUES ***
 
@@ -89,6 +91,8 @@ void load_global_state_from_checkpoint(sqlite3 * db);
 
 std::string get_rng_as_string();
 void set_rng_from_string(std::string const & rng_str);
+
+void initialize_sample_db();
 
 void initialize_gene_pool();
 
@@ -304,6 +308,8 @@ void validate_and_load_parameters() {
 void initialize() {
     BEGIN();
     
+    initialize_sample_db();
+    
     initialize_gene_pool();
     initialize_populations();
     
@@ -378,6 +384,31 @@ void initialize_population_infections(Population * pop) {
     RETURN();
 }
 
+#pragma mark \
+*** Sample database output ***
+
+void initialize_sample_db() {
+    sqlite3_open(SAMPLE_DB_FILENAME.c_str(), &sample_db);
+    
+    sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS hosts (id INTEGER PRIMARY KEY, population_id INTEGER, birth_time REAL, death_time REAL);",
+        NULL, NULL, NULL
+    );
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS strains (id INTEGER PRIMARY KEY, ind INTEGER, gene_id INTEGER);",
+        NULL, NULL, NULL
+    );
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS genes (id INTEGER PRIMARY KEY, is_functional INTEGER, source TEXT);",
+        NULL, NULL, NULL
+    );
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS gene_alleles (gene_id INTEGER, locus INTEGER, allele INTEGER, PRIMARY KEY (gene_id, locus);",
+        NULL, NULL, NULL
+    );
+    sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
+}
 
 #pragma mark \
 *** Object management functions ***

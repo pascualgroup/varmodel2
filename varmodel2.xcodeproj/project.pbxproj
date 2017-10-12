@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		64019A991F8D2491002A61C8 /* stack_traces.c in Sources */ = {isa = PBXBuildFile; fileRef = 64019A971F8D2491002A61C8 /* stack_traces.c */; };
 		6428FDAF1F75A55D00902EBD /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FD9E1F75A55D00902EBD /* main.cpp */; };
 		6428FDB01F75A55D00902EBD /* random.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDA91F75A55D00902EBD /* random.cpp */; };
 		6428FDB11F75A55D00902EBD /* util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDAB1F75A55D00902EBD /* util.cpp */; };
@@ -34,6 +35,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		64019A971F8D2491002A61C8 /* stack_traces.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = stack_traces.c; sourceTree = "<group>"; };
+		64019A981F8D2491002A61C8 /* stack_traces.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stack_traces.h; sourceTree = "<group>"; };
 		6428FD981F75A55D00902EBD /* Gene.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gene.hpp; sourceTree = "<group>"; };
 		6428FD991F75A55D00902EBD /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Host.hpp; sourceTree = "<group>"; };
 		6428FD9B1F75A55D00902EBD /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Infection.hpp; sourceTree = "<group>"; };
@@ -96,6 +99,8 @@
 				6428FD9E1F75A55D00902EBD /* main.cpp */,
 				6428FDAE1F75A55D00902EBD /* varmodel.hpp */,
 				6428FDAD1F75A55D00902EBD /* varmodel.cpp */,
+				64019A981F8D2491002A61C8 /* stack_traces.h */,
+				64019A971F8D2491002A61C8 /* stack_traces.c */,
 				6428FD971F75A55D00902EBD /* datamodel */,
 				6428FDA61F75A55D00902EBD /* util */,
 				6428FD9F1F75A55D00902EBD /* manager_templates */,
@@ -296,6 +301,7 @@
 				6428FDB11F75A55D00902EBD /* util.cpp in Sources */,
 				6428FDB21F75A55D00902EBD /* varmodel.cpp in Sources */,
 				64AC44251F7B223C00176944 /* LocusImmunityManager.cpp in Sources */,
+				64019A991F8D2491002A61C8 /* stack_traces.c in Sources */,
 				6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */,
 				6428FDC31F75A57F00902EBD /* HostManager.cpp in Sources */,
 				6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */,
@@ -399,14 +405,18 @@
 		696C01E81F198B7F009403B6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Debug;
 		};
 		696C01E91F198B7F009403B6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Release;
 		};
