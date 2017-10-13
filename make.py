@@ -80,22 +80,22 @@ def generate_parameters(dst_dirname, params_filename):
 def build(dst_dirname, compiler_cmd, compiler_flags):
     os.makedirs(os.path.join(dst_dirname, 'bin'))
     
-    subprocess.Popen(
-         compiler_cmd +
-         ' ' + compiler_flags +
-         ' -std=c++11' +
-         ' -lsqlite3' +
-         ' -o bin/varmodel2' +
-         ' generated/managers/*.cpp' +
-         ' src/*.cpp' +
-         ' src/util/*.cpp' +
-         ' -I src' +
-         ' -I src/datamodel' +
-         ' -I src/managers' +
-         ' -I src/util'
-         ' -I generated' +
+    compile_cmd =  compiler_cmd + \
+         ' ' + compiler_flags + \
+         ' -std=c++11' + \
+         ' -lsqlite3' + \
+         ' -o bin/varmodel2' + \
+         ' generated/managers/*.cpp' + \
+         ' src/*.cpp' + \
+         ' src/util/*.cpp' + \
+         ' -I src' + \
+         ' -I src/datamodel' + \
+         ' -I src/managers' + \
+         ' -I src/util' + \
+         ' -I generated' + \
          ' -I generated/managers'
-    , cwd = dst_dirname, shell = True).wait()
+    print(compile_cmd)
+    subprocess.Popen(compile_cmd, cwd = dst_dirname, shell = True).wait()
 
 if __name__ == '__main__':
     main()
