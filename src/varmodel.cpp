@@ -1,7 +1,5 @@
 #include "varmodel.hpp"
 
-#include <unistd.h>
-
 #include "StrainManager.hpp"
 #include "GeneManager.hpp"
 #include "PopulationManager.hpp"
@@ -14,6 +12,7 @@
 #include "parameters.hpp"
 #include "EventQueue.hpp"
 
+#include <unistd.h>
 #include <sstream>
 #include <algorithm>
 #include <bitset>

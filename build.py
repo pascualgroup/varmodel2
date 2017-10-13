@@ -59,7 +59,10 @@ def parse_arguments():
     return parser.parse_args()
 
 def copy_sources(dst_dirname):
-    os.makedirs(dst_dirname)
+    try:
+        os.makedirs(dst_dirname)
+    except:
+        pass
     
     shutil.copytree(os.path.join(script_dir, 'src'), os.path.join(dst_dirname, 'src'))
 

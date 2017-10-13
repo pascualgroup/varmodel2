@@ -33,7 +33,7 @@ char const * program_name;
 void handle_sqlite_error(void * p_arg, int error_code, const char * msg) {
     fprintf(stderr, "SQLite error occurred! Aborting.\n");
     fprintf(stderr, "(%d) %s\n", error_code, msg);
-    posix_print_stack_trace();
+    print_stack_trace();
     exit(1);
 }
 
@@ -67,7 +67,7 @@ int addr2line(char const * const program_name, void const * const addr)
 
 #define MAX_STACK_FRAMES 64
 static void *stack_traces[MAX_STACK_FRAMES];
-void posix_print_stack_trace()
+void print_stack_trace()
 {
     int i, trace_size = 0;
     char **messages = (char **)NULL;
@@ -92,7 +92,7 @@ void posix_print_stack_trace()
     if (messages) { free(messages); } 
 }
 
-void posix_signal_handler(int sig, siginfo_t *siginfo, void *context)
+void signal_handler(int sig, siginfo_t *siginfo, void *context)
 {
     (void)context;
     switch(sig)
@@ -175,7 +175,7 @@ void posix_signal_handler(int sig, siginfo_t *siginfo, void *context)
         default:
             break;
     }
-    posix_print_stack_trace();
+    print_stack_trace();
     _Exit(1);
 }
 
@@ -197,7 +197,7 @@ void set_signal_handler()
     /* register our signal handlers */
     {
         struct sigaction sig_action = {};
-        sig_action.sa_sigaction = posix_signal_handler;
+        sig_action.sa_sigaction = signal_handler;
         sigemptyset(&sig_action.sa_mask);
         
 #ifdef __APPLE__
