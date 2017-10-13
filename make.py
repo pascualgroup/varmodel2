@@ -54,7 +54,7 @@ def parse_arguments():
         help = 'Path to destination directory for built model.'
     )
     parser.add_argument('-c', '--compiler', metavar = '<compiler>', default = 'c++', help = 'C++ compiler.')
-    parser.add_argument('-f', '--flags', metavar = '<flags>', default = '-O2', help = 'Compiler flags.')
+    parser.add_argument('-f', '--flags', metavar = '<flags>', default = '-O2 -g', help = 'Compiler flags.')
     
     return parser.parse_args()
 

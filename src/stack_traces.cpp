@@ -10,6 +10,8 @@
  on windows: gcc -g stack_traces.c -limagehlp
  */
 
+#include "stack_traces.hpp"
+
 #include <signal.h>
 #include <stdio.h>
 #include <assert.h>

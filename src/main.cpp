@@ -14,7 +14,7 @@ int main(int argc, const char * argv[]) {
     
     //sqlite3_exec(nullptr, "CREATE TABLE hello", nullptr, nullptr, nullptr);
     //assert(false);
-    //cause_calamity();
+    cause_calamity();
     //varmodel::validate_and_load_parameters();
     //varmodel::load_checkpoint();
     //varmodel::initialize();

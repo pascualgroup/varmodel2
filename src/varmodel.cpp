@@ -15,6 +15,8 @@
 #include "EventQueue.hpp"
 
 #include <sstream>
+#include <algorithm>
+#include <bitset>
 
 namespace varmodel {
 
@@ -804,8 +806,8 @@ double get_specific_immunity_level(Host * host, Gene * gene) {
     for(uint64_t i = 0; i < N_LOCI; i++) {
         auto immunity_level_by_allele = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele; 
         auto itr = immunity_level_by_allele.find(gene->alleles[i]);
-        if(itr != immunity_level_by_allele.end()) {
-            immunity_count += std::min(itr->second, 1ULL);
+        if(itr != immunity_level_by_allele.end() && itr->second > 0) {
+            immunity_count +=  1;
         }
     }
     
