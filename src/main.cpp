@@ -1,7 +1,7 @@
 //#include "varmodel.hpp"
 #include <sqlite3.h>
 #include <assert.h>
-#include "stack_traces.h"
+#include "stack_traces.hpp"
 
 void print_traceback_and_abort();
 void handle_sqlite_error(void * p_arg, int error_code, const char * msg);

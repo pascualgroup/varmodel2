@@ -37,10 +37,14 @@ def main():
     
     params = load_parameters(args.p)
     
+    src_filename = os.path.join(script_dir, 'src', 'parameters.hpp.template')
+    dst_filename = os.path.join(args.d, 'generated', 'parameters.hpp')
+    
+    print('Generating\n  {}\nfrom\n  {}\n'.format(dst_filename, src_filename))
     process_template(
         params,
-        os.path.join(script_dir, 'src', 'parameters.hpp.template'),
-        os.path.join(args.d, 'generated', 'parameters.hpp')
+        src_filename,
+        dst_filename
     )
 
 def parse_arguments():

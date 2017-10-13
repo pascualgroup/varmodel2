@@ -1,10 +1,4 @@
 #!/usr/bin/env python
-'''
-    make.py
-    
-    Builds the model code after substituting parameters into template files.
-    Run `make.py -h' to see documentation of command-line options.
-'''
 
 import sys
 if sys.version_info < (2,7):
@@ -35,11 +29,14 @@ def main():
     except:
         pass
     
+    print('Generating managers in {}'.format(dst_dir))
+    
     for object_type in [
         'Strain', 'Gene',
         'Population', 'Host', 'Infection', 'GeneImmuneHistory', 'AlleleImmuneHistory', 'LocusImmunity'
     ]:
         generate_manager(object_type, dst_dir)
+    print('\n')
 
 def parse_arguments():
     '''Parses command-line arguments.'''
@@ -173,7 +170,7 @@ def generate_manager(object_type, dst_dir):
     src_filename = os.path.join(script_dir, 'src', 'datamodel', '{}.hpp'.format(object_type))
     
     manager_type = object_type + 'Manager'
-    print('Generating {}...'.format(manager_type))
+    print('  Generating {}...'.format(manager_type))
     
     columns, arrays, maps, reflists_array, reflists_unordered_set, reflists_IndexedSet = parse_type(object_type, src_filename)
     

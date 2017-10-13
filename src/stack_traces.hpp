@@ -1,7 +1,3 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,7 +13,3 @@ void stack_overflow();
 void infinite_loop();
 void illegal_instruction();
 void cause_calamity();
-
-#ifdef __cplusplus
-}  /* end of the 'extern "C"' block */
-#endif
