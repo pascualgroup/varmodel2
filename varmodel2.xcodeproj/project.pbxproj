@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		64019A991F8D2491002A61C8 /* stack_traces.c in Sources */ = {isa = PBXBuildFile; fileRef = 64019A971F8D2491002A61C8 /* stack_traces.c */; };
 		6428FDAF1F75A55D00902EBD /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FD9E1F75A55D00902EBD /* main.cpp */; };
 		6428FDB01F75A55D00902EBD /* random.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDA91F75A55D00902EBD /* random.cpp */; };
 		6428FDB11F75A55D00902EBD /* util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDAB1F75A55D00902EBD /* util.cpp */; };
@@ -17,6 +16,7 @@
 		6428FDC51F75A57F00902EBD /* InfectionManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */; };
 		6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */; };
 		6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBF1F75A57F00902EBD /* StrainManager.cpp */; };
+		6466F1D01F9114B800F80B13 /* error_handling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6466F1CE1F9114B800F80B13 /* error_handling.cpp */; };
 		64AC44231F7B223C00176944 /* AlleleImmuneHistoryManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */; };
 		64AC44251F7B223C00176944 /* LocusImmunityManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */; };
 		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
@@ -35,8 +35,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		64019A971F8D2491002A61C8 /* stack_traces.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = stack_traces.c; sourceTree = "<group>"; };
-		64019A981F8D2491002A61C8 /* stack_traces.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stack_traces.h; sourceTree = "<group>"; };
 		6428FD981F75A55D00902EBD /* Gene.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gene.hpp; sourceTree = "<group>"; };
 		6428FD991F75A55D00902EBD /* Host.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Host.hpp; sourceTree = "<group>"; };
 		6428FD9B1F75A55D00902EBD /* Infection.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Infection.hpp; sourceTree = "<group>"; };
@@ -68,6 +66,8 @@
 		6428FDC01F75A57F00902EBD /* StrainManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = StrainManager.hpp; sourceTree = "<group>"; };
 		6428FDC11F75A57F00902EBD /* parameters.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = parameters.hpp; sourceTree = "<group>"; };
 		6428FDC81F75A5EE00902EBD /* HashPair.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HashPair.hpp; sourceTree = "<group>"; };
+		6466F1CE1F9114B800F80B13 /* error_handling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_handling.cpp; sourceTree = "<group>"; };
+		6466F1CF1F9114B800F80B13 /* error_handling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = error_handling.hpp; sourceTree = "<group>"; };
 		64AC44161F79E7D100176944 /* LocusImmunity.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LocusImmunity.hpp; sourceTree = "<group>"; };
 		64AC441A1F79F5C000176944 /* create_reflist_block_vector.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; path = create_reflist_block_vector.cpp.template; sourceTree = "<group>"; };
 		64AC441C1F7B1F6C00176944 /* AlleleImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistory.hpp; sourceTree = "<group>"; };
@@ -99,8 +99,8 @@
 				6428FD9E1F75A55D00902EBD /* main.cpp */,
 				6428FDAE1F75A55D00902EBD /* varmodel.hpp */,
 				6428FDAD1F75A55D00902EBD /* varmodel.cpp */,
-				64019A981F8D2491002A61C8 /* stack_traces.h */,
-				64019A971F8D2491002A61C8 /* stack_traces.c */,
+				6466F1CF1F9114B800F80B13 /* error_handling.hpp */,
+				6466F1CE1F9114B800F80B13 /* error_handling.cpp */,
 				6428FD971F75A55D00902EBD /* datamodel */,
 				6428FDA61F75A55D00902EBD /* util */,
 				6428FD9F1F75A55D00902EBD /* manager_templates */,
@@ -286,7 +286,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/parameter-testcases/allele_specific_basic.py\n";
+			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/tests/allele_specific_basic.py\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -295,13 +295,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6466F1D01F9114B800F80B13 /* error_handling.cpp in Sources */,
 				6428FDB01F75A55D00902EBD /* random.cpp in Sources */,
 				6428FDC21F75A57F00902EBD /* GeneManager.cpp in Sources */,
 				6428FDAF1F75A55D00902EBD /* main.cpp in Sources */,
 				6428FDB11F75A55D00902EBD /* util.cpp in Sources */,
 				6428FDB21F75A55D00902EBD /* varmodel.cpp in Sources */,
 				64AC44251F7B223C00176944 /* LocusImmunityManager.cpp in Sources */,
-				64019A991F8D2491002A61C8 /* stack_traces.c in Sources */,
 				6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */,
 				6428FDC31F75A57F00902EBD /* HostManager.cpp in Sources */,
 				6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */,
@@ -408,6 +408,7 @@
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
+				WARNING_LDFLAGS = "-Wall";
 			};
 			name = Debug;
 		};
@@ -417,6 +418,7 @@
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
+				WARNING_LDFLAGS = "-Wall";
 			};
 			name = Release;
 		};

@@ -1,8 +1,8 @@
 /***
- Modified from https://gist.github.com/jvranish/4441299
- by Job Vranish, downloaded on 2017-10-07.
- Original code is in the public domain. 
- ***/
+    Parts adapted from https://gist.github.com/jvranish/4441299
+    by Job Vranish, downloaded on 2017-10-07.
+    Original code is in the public domain. 
+***/
 
 /* compile with:
  on linux:   gcc -g stack_traces.c
@@ -10,7 +10,7 @@
  on windows: gcc -g stack_traces.c -limagehlp
  */
 
-#include "stack_traces.hpp"
+#include "error_handling.hpp"
 
 #include <signal.h>
 #include <stdio.h>
@@ -29,42 +29,13 @@
 
 char const * program_name;
 
-// void almost_c99_signal_handler(int sig)
-// {
-//   switch(sig)
-//   {
-//     case SIGABRT:
-//       fputs("Caught SIGABRT: usually caused by an abort() or assert()\n", stderr);
-//       break;
-//     case SIGFPE:
-//       fputs("Caught SIGFPE: arithmetic exception, such as divide by zero\n", stderr);
-//       break;
-//     case SIGILL:
-//       fputs("Caught SIGILL: illegal instruction\n", stderr);
-//       break;
-//     case SIGINT:
-//       fputs("Caught SIGINT: interactive attention signal, probably a ctrl+c\n", stderr);
-//       break;
-//     case SIGSEGV:
-//       fputs("Caught SIGSEGV: segfault\n", stderr);
-//       break;
-//     case SIGTERM:
-//     default:
-//       fputs("Caught SIGTERM: a termination request was sent to the program\n", stderr);
-//       break;
-//   }
-//   _Exit(1);
-// }
 
-// void set_signal_handler()
-// {
-//   signal(SIGABRT, almost_c99_signal_handler);
-//   signal(SIGFPE,  almost_c99_signal_handler);
-//   signal(SIGILL,  almost_c99_signal_handler);
-//   signal(SIGINT,  almost_c99_signal_handler);
-//   signal(SIGSEGV, almost_c99_signal_handler);
-//   signal(SIGTERM, almost_c99_signal_handler);
-// }
+void handle_sqlite_error(void * p_arg, int error_code, const char * msg) {
+    fprintf(stderr, "SQLite error occurred! Aborting.\n");
+    fprintf(stderr, "(%d) %s\n", error_code, msg);
+    posix_print_stack_trace();
+    exit(1);
+}
 
 /* Resolve symbol name and source location given the path to the executable 
  and an address */
@@ -251,38 +222,6 @@ void cause_segfault();
 void stack_overflow();
 void infinite_loop();
 void illegal_instruction();
-void cause_calamity();
-
-//int main(int argc, char * argv[])
-//{
-//  (void)argc;
-//
-//  /* store off program path so we can use it later */
-//  icky_global_program_name = argv[0];
-//
-//  set_signal_handler();
-//
-//  cause_calamity();
-//
-//  puts("OMG! Nothing bad happend!");
-//
-//  return 0;
-//}
-
-void cause_calamity()
-{
-    /* uncomment one of the following error conditions to cause a calamity of 
-     your choosing! */
-    
-    // (void)divide_by_zero();
-    cause_segfault();
-    // assert(false);
-    // infinite_loop();
-    // illegal_instruction();
-    // stack_overflow();
-}
-
-
 
 int divide_by_zero()
 {
@@ -297,7 +236,6 @@ void cause_segfault()
     *p = 0;
 }
 
-void stack_overflow();
 void stack_overflow()
 {
     int foo[1000];
