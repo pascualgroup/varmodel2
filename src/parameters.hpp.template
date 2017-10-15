@@ -32,12 +32,6 @@ const bool {OUTPUT_STRAINS};
 // How often to sample hosts, in simulation time units
 const double {HOST_SAMPLING_PERIOD};
 
-// Whether or not to sample transmission events
-const bool {SAMPLE_TRANSMISSION_EVENTS};
-
-// How often to sample a transmission event, in number of transmission events.
-const uint64_t {TRANSMISSION_EVENT_SAMPLING_SKIP};
-
 // Burn-in period for simulation before which output will not be written.
 const double {T_BURNIN};
 
@@ -111,6 +105,10 @@ const double {IMMUNITY_LOSS_RATE};
 // Probability per gene of a mutation when a strain is picked up.
 const double {P_MUTATION};
 
+// Rate of ectopic recombination, per possibility; total rate for an infection
+// is C(N_GENES_PER_STRAIN, 2) * ECTOPIC_RECOMBINATION_RATE 
+const double {ECTOPIC_RECOMBINATION_RATE};
+
 // Probability that an ectopic recombination is a conversion
 const double {P_ECTOPIC_RECOMBINATION_IS_CONVERSION};
 
@@ -127,22 +125,15 @@ const double {TRANSITION_RATE_IMMUNE};
 const uint64_t {N_INFECTIONS_FOR_GENERAL_IMMUNITY};
 
 // Clearance rate paramters (only used for general immunity)
-const std::array<double,4> {CLEARANCE_PARAMS};
+const std::array<double,4> {GENERAL_IMMUNITY_PARAMS};
 
 // Clearance rate when immune (only used for general immunity)
 const double {CLEARANCE_RATE_IMMUNE};
 
-// If true, use a discrete PDF for host lifetime distribution.
-// If false, draw host lifetimes from an exponential distribution with mean MEAN_HOST_LIFETIME.
-const bool {USE_HOST_LIFETIME_PDF};
-
-// If USE_HOST_LIFETIME_PDF is true: host-lifetime distribution, specified as a discrete PDF, one weight per year, with uniform density within each year.
-const std::vector<double> {HOST_LIFETIME_PDF};
-
-// If USE_HOST_LIFETIME_PDF is false, use this as the mean of the (truncated) exponential distribution used to draw host lifetimes
+// Use this as the mean of the (truncated) exponential distribution used to draw host lifetimes
 const double {MEAN_HOST_LIFETIME};
 
-// If USE_HOST_LIFETIME_PDF is false, use this as a maximum value for host lifetimes used to truncate the exponential distribution.
+// Use this as a maximum value for host lifetimes used to truncate the exponential distribution.
 const double {MAX_HOST_LIFETIME};
 
 // Number of populations

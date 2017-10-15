@@ -31,7 +31,7 @@ def main():
     
     test_filenames = [
         filename for filename in os.listdir(os.path.join(script_dir, 'tests'))
-        if filename.endswith('.py')
+        if filename.endswith('.py') and filename != 'shared_test_params.py'
     ]
     dst_dirname = args.dest_dir
     

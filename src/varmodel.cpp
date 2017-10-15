@@ -226,7 +226,6 @@ void validate_and_load_parameters() {
     
     assert(SAMPLE_DB_FILENAME == "" || !file_exists(SAMPLE_DB_FILENAME));
     assert(HOST_SAMPLING_PERIOD > 0.0);
-    assert(!SAMPLE_TRANSMISSION_EVENTS || TRANSMISSION_EVENT_SAMPLING_SKIP > 0);
     assert(T_END >= 0.0);
     assert(T_BURNIN >= 0.0);
     assert(T_BURNIN < T_END);
@@ -259,17 +258,8 @@ void validate_and_load_parameters() {
     
     assert(P_ECTOPIC_RECOMBINATION_IS_CONVERSION >= 0.0 && P_ECTOPIC_RECOMBINATION_IS_CONVERSION <= 1.0);
     
-    
-    if(USE_HOST_LIFETIME_PDF) {
-        assert(accumulate(HOST_LIFETIME_PDF) > 0.0);
-        for(auto value : HOST_LIFETIME_PDF) {
-            assert(value >= 0.0);
-        }
-    }
-    else {
-        assert(MEAN_HOST_LIFETIME > 0.0);
-        assert(MAX_HOST_LIFETIME > MEAN_HOST_LIFETIME);
-    }
+    assert(MEAN_HOST_LIFETIME > 0.0);
+    assert(MAX_HOST_LIFETIME > 0.0);
     
     assert(N_POPULATIONS >= 1);
     for(auto value : N_HOSTS) {
@@ -297,10 +287,10 @@ void validate_and_load_parameters() {
     }
     
     if(SELECTION_MODE == GENERAL_IMMUNITY) {
-        assert(CLEARANCE_PARAMS[0] > 0.0);
-        assert(CLEARANCE_PARAMS[1] > 0.0);
-        assert(CLEARANCE_PARAMS[2] > 0.0);
-        assert(CLEARANCE_PARAMS[3] > 0.0);
+        assert(GENERAL_IMMUNITY_PARAMS[0] > 0.0);
+        assert(GENERAL_IMMUNITY_PARAMS[1] > 0.0);
+        assert(GENERAL_IMMUNITY_PARAMS[2] > 0.0);
+        assert(GENERAL_IMMUNITY_PARAMS[3] > 0.0);
     }
     
     RETURN();
@@ -420,16 +410,10 @@ Host * create_host(Population * pop) {
     Host * host = host_manager.create();
     host->population = pop;
     
-    double lifetime;
-    if(USE_HOST_LIFETIME_PDF) {
-        assert(false); // TODO: implement
-    }
-    else {
-        lifetime = std::min(
-            draw_exponential(1.0 / MEAN_HOST_LIFETIME),
-            MAX_HOST_LIFETIME
-        );
-    }
+    double lifetime = std::min(
+        draw_exponential(1.0 / MEAN_HOST_LIFETIME),
+        MAX_HOST_LIFETIME
+    );
     host->birth_time = now;
     host->death_time = host->birth_time + lifetime;
     death_queue.add(host);
@@ -625,11 +609,15 @@ void recombine_infection(Infection * infection) {
     Gene * new_gene_2;
     
     // Choose random expression order indices
-    uint64_t exp_index_1 = draw_uniform_index(N_GENES_PER_STRAIN);
-    uint64_t exp_index_2 = draw_uniform_index_except(N_GENES_PER_STRAIN, exp_index_1);
+    uint64_t exp_index_1;
+    uint64_t exp_index_2;
+    do {
+        exp_index_1 = draw_uniform_index(N_GENES_PER_STRAIN);
+        exp_index_2 = draw_uniform_index_except(N_GENES_PER_STRAIN, exp_index_1);
+    } while(exp_index_1 == exp_index_2);
+    
     Gene * src_gene_1 = infection->expression_order[exp_index_1];
     Gene * src_gene_2 = infection->expression_order[exp_index_2];
-    
     if(src_gene_1 == src_gene_2) {
         RETURN();
     }
@@ -991,10 +979,10 @@ void update_clearance_time(Infection * infection, bool initial) {
     }
     else {
         Host * host = infection->host;
-        double a = CLEARANCE_PARAMS[0];
-        double b = CLEARANCE_PARAMS[1];
-        double c = CLEARANCE_PARAMS[2];
-        double d = CLEARANCE_PARAMS[3];
+        double a = GENERAL_IMMUNITY_PARAMS[0];
+        double b = GENERAL_IMMUNITY_PARAMS[1];
+        double c = GENERAL_IMMUNITY_PARAMS[2];
+        double d = GENERAL_IMMUNITY_PARAMS[3];
          
         if(host->completed_infection_count < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
             rate = 1.0 / (a +
