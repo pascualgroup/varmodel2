@@ -29,8 +29,14 @@ const bool {OUTPUT_GENES};
 // Whether or not to write out all strains to database
 const bool {OUTPUT_STRAINS};
 
-// How often to sample hosts, in simulation time units
+// Whether or not to sample infected hosts
+const bool {HOST_SAMPLING_ON};
+
+// How often to sample infected hosts, in simulation time units
 const double {HOST_SAMPLING_PERIOD};
+
+// Number of infected hosts to sample
+const double {HOST_SAMPLE_SIZE};
 
 // Burn-in period for simulation before which output will not be written.
 const double {T_BURNIN};

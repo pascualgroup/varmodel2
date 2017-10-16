@@ -27,6 +27,7 @@ double INF = std::numeric_limits<double>::infinity();
 std::mt19937_64 rng(RANDOM_SEED);
 
 double now = 0.0;
+double next_sampling_time = HOST_SAMPLING_ON ? 0.0 : INF;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 double next_info_time = 0.0;
@@ -86,6 +87,8 @@ EventQueue<Infection, get_clearance_time> clearance_queue;
 
 #pragma mark \
 *** Helper function declarations ***
+
+void sample_hosts();
 
 void load_checkpoint();
 void save_checkpoint();
@@ -157,6 +160,7 @@ bool do_next_event();
 
 void do_info_event();
 void do_verification_event();
+void do_sampling_event();
 void do_checkpoint_event();
 
 void do_biting_event();
@@ -183,6 +187,7 @@ double draw_exponential(double lambda);
 uint64_t draw_uniform_index(uint64_t size);
 uint64_t draw_uniform_index_except(uint64_t size, uint64_t except_index);
 double draw_uniform_real(double min, double max);
+std::vector<uint64_t> draw_uniform_indices_without_replacement(uint64_t n, uint64_t k);
 bool draw_bernoulli(double p);
 
 #pragma mark \
@@ -236,7 +241,7 @@ void validate_and_load_parameters() {
     assert(T_BURNIN <= T_END);
     
     assert(SAMPLE_DB_FILENAME == "" || !file_exists(SAMPLE_DB_FILENAME));
-    assert(HOST_SAMPLING_PERIOD > 0.0);
+    assert(!HOST_SAMPLING_ON || HOST_SAMPLING_PERIOD > 0.0);
     
     assert(!SAVE_TO_CHECKPOINT || !file_exists(CHECKPOINT_SAVE_FILENAME));
     assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
@@ -391,6 +396,7 @@ void initialize_sample_db() {
     sqlite3_open(SAMPLE_DB_FILENAME.c_str(), &sample_db);
     
     sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+    
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS hosts (id INTEGER PRIMARY KEY, population_id INTEGER, birth_time REAL, death_time REAL);",
         NULL, NULL, NULL
@@ -400,13 +406,34 @@ void initialize_sample_db() {
         NULL, NULL, NULL
     );
     sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS genes (id INTEGER PRIMARY KEY, is_functional INTEGER, source TEXT);",
+        "CREATE TABLE IF NOT EXISTS genes (id INTEGER PRIMARY KEY, is_functional INTEGER, source INTEGER);",
         NULL, NULL, NULL
     );
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS gene_alleles (gene_id INTEGER, locus INTEGER, allele INTEGER, PRIMARY KEY (gene_id, locus));",
         NULL, NULL, NULL
     );
+    
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS sampled_hosts ("
+        "time REAL, id INTEGER, population_id INTEGER, birth_time REAL, death_time REAL, "
+        "PRIMARY KEY (time, id)"
+        ");",
+        NULL, NULL, NULL
+    );
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS sampled_infections (time REAL, host_id INTEGER, infection_id INTEGER, strain_id INTEGER, PRIMARY KEY (time, host_id, infection_id));",
+        NULL, NULL, NULL
+    );
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS sampled_strains (id INTEGER PRIMARY KEY, ind INTEGER, gene_id INTEGER);",
+        NULL, NULL, NULL
+    );
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS sampled_alleles (gene_id INTEGER, locus INTEGER, allele INTEGER, PRIMARY KEY (gene_id, locus));",
+        NULL, NULL, NULL
+    );
+    
     sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
 }
 
@@ -1031,6 +1058,7 @@ enum class EventType {
     NONE,
     PRINT_INFO,
     VERIFICATION,
+    HOST_SAMPLING,
     CHECKPOINT,
     BITING,
     IMMIGRATION,
@@ -1062,6 +1090,10 @@ bool do_next_event() {
     if(next_info_time < next_event_time) {
         next_event_time = next_info_time;
         next_event_type = EventType::PRINT_INFO;
+    }
+    if(HOST_SAMPLING_ON && next_sampling_time < next_event_time) {
+        next_event_time = next_sampling_time;
+        next_event_type = EventType::HOST_SAMPLING;
     }
     if(VERIFICATION_ON && next_verification_time < next_event_time) {
         next_event_time = next_verification_time;
@@ -1138,6 +1170,9 @@ bool do_next_event() {
         case EventType::VERIFICATION:
             do_verification_event();
             break;
+        case EventType::HOST_SAMPLING:
+            do_sampling_event();
+            break;
         case EventType::CHECKPOINT:
             do_checkpoint_event();
             break;
@@ -1196,6 +1231,13 @@ void do_verification_event() {
     BEGIN();
     verify_simulation_state();
     next_verification_time += VERIFICATION_PERIOD;
+    RETURN();
+}
+
+void do_sampling_event() {
+    BEGIN();
+    sample_hosts();
+    next_sampling_time += HOST_SAMPLING_PERIOD;
     RETURN();
 }
 
@@ -1408,6 +1450,85 @@ void verify_simulation_state() {
 }
 
 #pragma mark \
+*** Verification function implementations ***
+
+void sample_hosts() {
+    BEGIN();
+    
+    sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+    
+    std::vector<Host *> infected_hosts;
+    for(Host * host : host_manager.objects()) {
+        if(host->infections.size() > 0) {
+            infected_hosts.push_back(host);
+        }
+    }
+    
+    std::unordered_set<Host *> sampled_hosts;
+    uint64_t sample_size = infected_hosts.size() < HOST_SAMPLE_SIZE ? infected_hosts.size() : HOST_SAMPLE_SIZE;
+    
+    sqlite3_stmt * host_stmt;
+    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_hosts VALUES (?,?,?,?,?);", -1, &host_stmt, NULL);
+    
+    sqlite3_stmt * inf_stmt;
+    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_infections VALUES (?,?,?,?);", -1, &inf_stmt, NULL);
+    
+    sqlite3_stmt * strain_stmt;
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
+    
+    sqlite3_stmt * allele_stmt;
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_alleles VALUES (?,?,?);", -1, &allele_stmt, NULL);
+    
+    for(uint64_t index : draw_uniform_indices_without_replacement(infected_hosts.size(), sample_size)) {
+        Host * host = infected_hosts[index];
+        
+        sqlite3_bind_double(host_stmt, now, 1);
+        sqlite3_bind_int64(host_stmt, host->id, 2);
+        sqlite3_bind_int64(host_stmt, host->population->id, 3);
+        sqlite3_bind_double(host_stmt, host->birth_time, 4);
+        sqlite3_bind_double(host_stmt, host->death_time, 5);
+        sqlite3_step(host_stmt);
+        sqlite3_reset(host_stmt);
+        
+        for(Infection * infection : host->infections) {
+            Strain * strain = infection->strain;
+            
+            sqlite3_bind_double(inf_stmt, now, 1);
+            sqlite3_bind_int64(inf_stmt, host->id, 2);
+            sqlite3_bind_int64(inf_stmt, infection->id, 3);
+            sqlite3_bind_int64(inf_stmt, strain->id, 4);
+            sqlite3_step(inf_stmt);
+            sqlite3_reset(inf_stmt);
+            
+            for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
+                Gene * gene = strain->genes_sorted[i];
+                sqlite3_bind_int64(strain_stmt, strain->id, 1);
+                sqlite3_bind_int64(strain_stmt, i, 2);
+                sqlite3_bind_int64(strain_stmt, gene->id, 3);
+                sqlite3_step(strain_stmt);
+                sqlite3_reset(strain_stmt);
+                
+                for(uint64_t i = 0; i < N_LOCI; i++) {
+                    sqlite3_bind_int64(allele_stmt, gene->id, 1);
+                    sqlite3_bind_int64(allele_stmt, i, 2);
+                    sqlite3_bind_int64(allele_stmt, gene->alleles[i], 3);
+                    sqlite3_step(allele_stmt);
+                    sqlite3_reset(allele_stmt);
+                }
+            }
+        }
+    }
+    sqlite3_finalize(host_stmt);
+    sqlite3_finalize(inf_stmt);
+    sqlite3_finalize(strain_stmt);
+    sqlite3_finalize(allele_stmt);
+    
+    sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
+    
+    RETURN();
+}
+
+#pragma mark \
 *** Checkpoint function implementations ***
 
 void save_checkpoint() {
@@ -1432,7 +1553,7 @@ void save_checkpoint() {
     immune_history_manager.save_to_checkpoint(db);
     locus_immunity_manager.save_to_checkpoint(db);
     
-    sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+    sqlite3_exec(db, "COMMIT", NULL, NULL, NULL);
     sqlite3_close(db);
     
     if(file_exists(old_checkpoint_filename)) {
@@ -1591,6 +1712,53 @@ uint64_t draw_uniform_index_except(uint64_t size, uint64_t except_index) {
 double draw_uniform_real(double min, double max) {
     BEGIN();
     RETURN(std::uniform_real_distribution<double>(min, max)(rng));
+}
+
+std::vector<uint64_t> draw_uniform_indices_without_replacement(uint64_t n, uint64_t k) {
+    BEGIN();
+    
+    assert(k <= n);
+    
+    std::uniform_int_distribution<uint64_t> index_dist(0, n - 1);
+    
+    // If we're drawing less than half, draw indices to *include*
+    std::vector<uint64_t> indices;
+    if(k < n / 2) {
+        std::unordered_set<uint64_t> include_indices;
+        for(uint64_t i = 0; i < k; i++) {
+            while(true) {
+                uint64_t index = index_dist(rng);
+                if(include_indices.find(index) == include_indices.end()) {
+                    include_indices.insert(index);
+                    break;
+                }
+            }
+        }
+        assert(include_indices.size() == k);
+        indices.insert(indices.end(), include_indices.begin(), include_indices.end());
+        std::sort(indices.begin(), indices.end());
+    }
+    // Otherwise draw indices to *exclude*
+    else {
+        std::unordered_set<uint64_t> exclude_indices;
+        for(uint64_t i = 0; i < n - k; i++) {
+            while(true) {
+                uint64_t index = index_dist(rng);
+                if(exclude_indices.find(index) == exclude_indices.end()) {
+                    exclude_indices.insert(index);
+                    break;
+                }
+            }
+        }
+        assert(exclude_indices.size() == n - k);
+        for(uint64_t i = 0; i < n; i++) {
+            if(exclude_indices.find(i) == exclude_indices.end()) {
+                indices.push_back(i);
+            }
+        }
+    }
+    assert(indices.size() == k);
+    RETURN(indices);
 }
 
 bool draw_bernoulli(double p) {
