@@ -10,7 +10,7 @@ extern char const * program_name;
 
 void handle_sqlite_error(void * p_arg, int error_code, const char * msg);
 
-void set_signal_handler();
+void register_signal_handler();
 void print_stack_trace();
 int  divide_by_zero();
 void cause_segfault();

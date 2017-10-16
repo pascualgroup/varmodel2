@@ -180,7 +180,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void *context)
 }
 
 static uint8_t alternate_stack[SIGSTKSZ];
-void set_signal_handler()
+void register_signal_handler()
 {
     /* setup alternate stack */
     {

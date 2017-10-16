@@ -85,7 +85,7 @@ public:
         if(heap.size() == 0) {
             return std::numeric_limits<double>::infinity();
         }
-        return V(heap[0]);
+        return V(head());
     }
     
 	T * head()

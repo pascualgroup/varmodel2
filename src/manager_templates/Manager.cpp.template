@@ -35,6 +35,15 @@ std::vector<{object_type} *> & {manager_type}::objects() {{
 }}
 
 void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
+    // Load manager info table
+    {{
+        sqlite3_stmt * stmt = NULL;
+        sqlite3_prepare_v2(db, "SELECT * FROM {manager_type} LIMIT 1;", -1, &stmt, NULL);
+        sqlite3_step(stmt);
+        next_id = sqlite3_column_int64(stmt, 0);
+        sqlite3_finalize(stmt);
+    }}
+    
     // Load from columns, minus references
     {{
         sqlite3_stmt * stmt = NULL;
@@ -75,9 +84,22 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
     
     // Load reference lists (std::unordered_set)
     {load_reflist_blocks_unordered_set}
+    
+    // Load reference lists (IndexedSet)
+    {load_reflist_blocks_IndexedSet}
 }}
 
 void {manager_type}::save_to_checkpoint(sqlite3 * db) {{
+    // Create manager info table
+    sqlite3_exec(db, "CREATE TABLE {manager_type} (next_id INTEGER);", NULL, NULL, NULL);
+    {{
+        sqlite3_stmt * stmt = NULL;
+        sqlite3_prepare_v2(db, "INSERT INTO {manager_type} VALUES (?);", -1, &stmt, NULL);
+        sqlite3_bind_int64(stmt, 1, next_id);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }}
+    
     // Create main object table
     sqlite3_exec(db, "CREATE TABLE {object_type} (id INTEGER{sql_create_columns});", NULL, NULL, NULL);
     

@@ -2,7 +2,7 @@ from shared_test_params import *
 
 RANDOM_SEED = 1
 
-N_GENES_IN_POOL = 12720
+N_GENES_INITIAL = 12720
 N_GENES_PER_STRAIN = 60
 N_LOCI = 2
 N_ALLELES_INITIAL = N_LOCI * [1272]

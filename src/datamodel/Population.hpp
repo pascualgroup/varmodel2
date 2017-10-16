@@ -15,7 +15,7 @@ struct Population {
     uint64_t const id;
     
     // Scalar fields
-    uint64_t order;
+    uint64_t ind;
     uint64_t transmission_count;
     double next_biting_time;
     double next_immigration_time;
