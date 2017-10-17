@@ -27,7 +27,7 @@ double INF = std::numeric_limits<double>::infinity();
 std::mt19937_64 rng(RANDOM_SEED);
 
 double now = 0.0;
-double next_sampling_time = HOST_SAMPLING_ON ? 0.0 : INF;
+double next_sampling_time = T_BURNIN;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 double next_info_time = 0.0;
@@ -57,6 +57,18 @@ AlleleImmuneHistoryManager immune_history_manager;
 LocusImmunityManager locus_immunity_manager;
 
 sqlite3 * sample_db;
+
+sqlite3_stmt * summary_stmt;
+sqlite3_stmt * summary_alleles_stmt;
+
+sqlite3_stmt * host_stmt;
+sqlite3_stmt * strain_stmt;
+sqlite3_stmt * allele_stmt;
+
+sqlite3_stmt * sampled_host_stmt;
+sqlite3_stmt * sampled_inf_stmt;
+sqlite3_stmt * sampled_strain_stmt;
+sqlite3_stmt * sampled_allele_stmt;
 
 #pragma mark \
 *** EVENT QUEUES ***
@@ -88,7 +100,17 @@ EventQueue<Infection, get_clearance_time> clearance_queue;
 #pragma mark \
 *** Helper function declarations ***
 
+void initialize();
+void clean_up();
+
+void validate_and_load_parameters();
+
+void write_summary();
 void sample_hosts();
+void write_host(Host * host);
+void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * a_stmt);
+void write_sampled_host(Host * host);
+void write_sampled_infection(Host * host, Infection * infection);
 
 void load_checkpoint();
 void save_checkpoint();
@@ -101,6 +123,7 @@ std::string get_rng_as_string();
 void set_rng_from_string(std::string const & rng_str);
 
 void initialize_sample_db();
+void finalize_sample_db();
 
 void initialize_gene_pool();
 
@@ -110,8 +133,9 @@ void initialize_population_events(Population * pop);
 void initialize_population_hosts(Population * pop);
 void initialize_population_infections(Population * pop);
 
-void destroy_host(Host * host);
 Host * create_host(Population * pop);
+void destroy_host(Host * host);
+
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
 Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional);
 Strain * generate_random_strain();
@@ -158,7 +182,6 @@ void update_clearance_time(Infection * infection, bool initial);
 
 bool do_next_event(); 
 
-void do_info_event();
 void do_verification_event();
 void do_sampling_event();
 void do_checkpoint_event();
@@ -241,14 +264,13 @@ void validate_and_load_parameters() {
     assert(T_BURNIN <= T_END);
     
     assert(SAMPLE_DB_FILENAME == "" || !file_exists(SAMPLE_DB_FILENAME));
-    assert(!HOST_SAMPLING_ON || HOST_SAMPLING_PERIOD > 0.0);
+    assert(HOST_SAMPLING_PERIOD > 0.0);
     
     assert(!SAVE_TO_CHECKPOINT || !file_exists(CHECKPOINT_SAVE_FILENAME));
     assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
     
     assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
     
-    assert(PRINT_INFO_PERIOD > 0.0);
     assert(!VERIFICATION_ON || VERIFICATION_PERIOD > 0.0);
     
     assert(N_GENES_INITIAL >= 1);
@@ -308,6 +330,7 @@ void validate_and_load_parameters() {
 void initialize() {
     BEGIN();
     
+    validate_and_load_parameters();
     initialize_sample_db();
     
     if(LOAD_FROM_CHECKPOINT) {
@@ -317,6 +340,14 @@ void initialize() {
         initialize_gene_pool();
         initialize_populations();
     }
+    
+    RETURN();
+}
+
+void clean_up() {
+    BEGIN();
+    
+    finalize_sample_db();
     
     RETURN();
 }
@@ -401,16 +432,28 @@ void initialize_sample_db() {
         "CREATE TABLE IF NOT EXISTS hosts (id INTEGER PRIMARY KEY, population_id INTEGER, birth_time REAL, death_time REAL);",
         NULL, NULL, NULL
     );
+    
     sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS strains (id INTEGER PRIMARY KEY, ind INTEGER, gene_id INTEGER);",
+        "CREATE TABLE IF NOT EXISTS strains (id INTEGER, ind INTEGER, gene_id INTEGER, PRIMARY KEY (id, ind));",
         NULL, NULL, NULL
     );
+    
     sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS genes (id INTEGER PRIMARY KEY, is_functional INTEGER, source INTEGER);",
+        "CREATE TABLE IF NOT EXISTS alleles (gene_id INTEGER, locus INTEGER, allele INTEGER, PRIMARY KEY (gene_id, locus));",
         NULL, NULL, NULL
     );
+    
     sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS gene_alleles (gene_id INTEGER, locus INTEGER, allele INTEGER, PRIMARY KEY (gene_id, locus));",
+        "CREATE TABLE IF NOT EXISTS summary ("
+            "time REAL, n_infections INTEGER, n_infected INTEGER, n_infections_cumulative INTEGER, n_circulating_strains INTEGER, n_circulating_genes INTEGER"
+        ");",
+        NULL, NULL, NULL
+    );
+    
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS summary_alleles ("
+            "time REAL, locus INTEGER, n_circulating_alleles INTEGER"
+        ");",
         NULL, NULL, NULL
     );
     
@@ -421,20 +464,52 @@ void initialize_sample_db() {
         ");",
         NULL, NULL, NULL
     );
+    
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS sampled_infections (time REAL, host_id INTEGER, infection_id INTEGER, strain_id INTEGER, PRIMARY KEY (time, host_id, infection_id));",
         NULL, NULL, NULL
     );
+    
     sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS sampled_strains (id INTEGER PRIMARY KEY, ind INTEGER, gene_id INTEGER);",
+        "CREATE TABLE IF NOT EXISTS sampled_strains (id INTEGER, ind INTEGER, gene_id INTEGER, PRIMARY KEY (id, ind));",
         NULL, NULL, NULL
     );
+    
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS sampled_alleles (gene_id INTEGER, locus INTEGER, allele INTEGER, PRIMARY KEY (gene_id, locus));",
         NULL, NULL, NULL
     );
     
+    sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?);", -1, &summary_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?);", -1, &summary_alleles_stmt, NULL);
+    
+    sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO alleles VALUES (?,?,?);", -1, &allele_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_hosts VALUES (?,?,?,?,?);", -1, &sampled_host_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_infections VALUES (?,?,?,?);", -1, &sampled_inf_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_strains VALUES (?,?,?);", -1, &sampled_strain_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_alleles VALUES (?,?,?);", -1, &sampled_allele_stmt, NULL);
+    
     sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
+    sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+}
+
+void finalize_sample_db() {
+    sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
+    
+    sqlite3_finalize(summary_stmt);
+    sqlite3_finalize(summary_alleles_stmt);
+    
+    sqlite3_finalize(host_stmt);
+    sqlite3_finalize(sampled_host_stmt);
+    sqlite3_finalize(strain_stmt);
+    sqlite3_finalize(sampled_strain_stmt);
+    sqlite3_finalize(allele_stmt);
+    sqlite3_finalize(sampled_allele_stmt);
+    sqlite3_finalize(sampled_inf_stmt);
+    
+    sqlite3_close(sample_db);
 }
 
 #pragma mark \
@@ -470,6 +545,10 @@ Host * create_host(Population * pop) {
     }
     
     pop->hosts.add(host);
+    
+    if(OUTPUT_HOSTS) {
+        write_host(host);
+    }
     
     RETURN(host);
 }
@@ -564,6 +643,10 @@ Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
         strain = strain_manager.create();
         strain->genes_sorted = genes;
         genes_strain_map[genes] = strain;
+        
+        if(OUTPUT_STRAINS) {
+            write_strain(strain, strain_stmt, allele_stmt);
+        }
     }
     else {
         strain = itr->second;
@@ -1056,7 +1139,6 @@ void update_clearance_time(Infection * infection, bool initial) {
 
 enum class EventType {
     NONE,
-    PRINT_INFO,
     VERIFICATION,
     HOST_SAMPLING,
     CHECKPOINT,
@@ -1072,8 +1154,11 @@ enum class EventType {
 
 void run() {
     BEGIN();
-    while(do_next_event()) { 
-    }
+    
+    initialize();
+    while(do_next_event()) {  }
+    clean_up();
+    
     RETURN();
 }
 
@@ -1087,11 +1172,7 @@ bool do_next_event() {
     // be worth it for simplicity and reduced memory usage.
     // If this section is a speed bottleneck, re-evaluate the choice.
     // It shouldn't come even close.
-    if(next_info_time < next_event_time) {
-        next_event_time = next_info_time;
-        next_event_type = EventType::PRINT_INFO;
-    }
-    if(HOST_SAMPLING_ON && next_sampling_time < next_event_time) {
+    if(next_sampling_time < next_event_time) {
         next_event_time = next_sampling_time;
         next_event_type = EventType::HOST_SAMPLING;
     }
@@ -1148,25 +1229,11 @@ bool do_next_event() {
         now = T_END;
         return false;
     }
-    
-    // If we get the same time a whole bunch of times in a row, we've introduced
-    // a bug where the same event is being reused over and over.
-    // We make the limit 2 * sum(N_INITIAL_INFECTIONS) to allow a bunch of events at
-    // t = T_LIVER_STAGE to be OK (along with an instantaneous activation)
-//    if(next_event_time == now) {
-//        same_time_count++;
-//    }
-//    else {
-//        same_time_count = 0;
-//    }
-//    assert(same_time_count <= 2 * accumulate(N_INITIAL_INFECTIONS));
-    
+        
     now = next_event_time;
     switch(next_event_type) {
         case EventType::NONE:
             break;
-        case EventType::PRINT_INFO:
-            do_info_event();
         case EventType::VERIFICATION:
             do_verification_event();
             break;
@@ -1204,29 +1271,6 @@ bool do_next_event() {
     RETURN(true);
 }
 
-void do_info_event() {
-    BEGIN();
-    
-    uint64_t n_infected = 0;
-    uint64_t n_infections = 0;
-    
-    for(Population * pop : population_manager.objects()) {
-        for(Host * host : pop->hosts.as_vector()) {
-            if(host->infections.size() > 0) {
-                n_infected++;
-            }
-            n_infections += host->infections.size();
-        }
-    }
-    
-    printf("Summary at t = %f:\n", now);
-    printf("                 n_infected: %llu\n", n_infected);
-    printf("               n_infections: %llu\n", n_infections);
-    printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
-    next_info_time += PRINT_INFO_PERIOD;
-    RETURN();
-}
-
 void do_verification_event() {
     BEGIN();
     verify_simulation_state();
@@ -1236,6 +1280,7 @@ void do_verification_event() {
 
 void do_sampling_event() {
     BEGIN();
+    write_summary();
     sample_hosts();
     next_sampling_time += HOST_SAMPLING_PERIOD;
     RETURN();
@@ -1450,12 +1495,10 @@ void verify_simulation_state() {
 }
 
 #pragma mark \
-*** Verification function implementations ***
+*** Sampling implementations ***
 
 void sample_hosts() {
     BEGIN();
-    
-    sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
     
     std::vector<Host *> infected_hosts;
     for(Host * host : host_manager.objects()) {
@@ -1467,65 +1510,130 @@ void sample_hosts() {
     std::unordered_set<Host *> sampled_hosts;
     uint64_t sample_size = infected_hosts.size() < HOST_SAMPLE_SIZE ? infected_hosts.size() : HOST_SAMPLE_SIZE;
     
-    sqlite3_stmt * host_stmt;
-    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_hosts VALUES (?,?,?,?,?);", -1, &host_stmt, NULL);
-    
-    sqlite3_stmt * inf_stmt;
-    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_infections VALUES (?,?,?,?);", -1, &inf_stmt, NULL);
-    
-    sqlite3_stmt * strain_stmt;
-    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
-    
-    sqlite3_stmt * allele_stmt;
-    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_alleles VALUES (?,?,?);", -1, &allele_stmt, NULL);
-    
     for(uint64_t index : draw_uniform_indices_without_replacement(infected_hosts.size(), sample_size)) {
         Host * host = infected_hosts[index];
-        
-        sqlite3_bind_double(host_stmt, now, 1);
-        sqlite3_bind_int64(host_stmt, host->id, 2);
-        sqlite3_bind_int64(host_stmt, host->population->id, 3);
-        sqlite3_bind_double(host_stmt, host->birth_time, 4);
-        sqlite3_bind_double(host_stmt, host->death_time, 5);
-        sqlite3_step(host_stmt);
-        sqlite3_reset(host_stmt);
+        write_sampled_host(host);
         
         for(Infection * infection : host->infections) {
-            Strain * strain = infection->strain;
+            write_sampled_infection(host, infection);
+        }
+    }
+    
+    // Wrap up the transaction, including all the hosts, strains, genes created since the last sampling event
+    sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
+    
+    // Begin a new transaction to include all the hosts, strains, genes created before the next sampling event
+    sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+    
+    RETURN();
+}
+
+void write_summary() {
+    BEGIN();
+    
+    uint64_t n_infected = 0;
+    uint64_t n_infections = 0;
+    
+    std::unordered_set<Strain *> distinct_strains;
+    std::unordered_set<Gene *> distinct_genes;
+    std::array<std::unordered_set<uint64_t>, N_LOCI> distinct_alleles; 
+    
+    for(Population * pop : population_manager.objects()) {
+        for(Host * host : pop->hosts.as_vector()) {
+            if(host->infections.size() > 0) {
+                n_infected++;
+            }
+            n_infections += host->infections.size();
             
-            sqlite3_bind_double(inf_stmt, now, 1);
-            sqlite3_bind_int64(inf_stmt, host->id, 2);
-            sqlite3_bind_int64(inf_stmt, infection->id, 3);
-            sqlite3_bind_int64(inf_stmt, strain->id, 4);
-            sqlite3_step(inf_stmt);
-            sqlite3_reset(inf_stmt);
-            
-            for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
-                Gene * gene = strain->genes_sorted[i];
-                sqlite3_bind_int64(strain_stmt, strain->id, 1);
-                sqlite3_bind_int64(strain_stmt, i, 2);
-                sqlite3_bind_int64(strain_stmt, gene->id, 3);
-                sqlite3_step(strain_stmt);
-                sqlite3_reset(strain_stmt);
-                
-                for(uint64_t i = 0; i < N_LOCI; i++) {
-                    sqlite3_bind_int64(allele_stmt, gene->id, 1);
-                    sqlite3_bind_int64(allele_stmt, i, 2);
-                    sqlite3_bind_int64(allele_stmt, gene->alleles[i], 3);
-                    sqlite3_step(allele_stmt);
-                    sqlite3_reset(allele_stmt);
+            for(Infection * infection : host->infections) {
+                Strain * strain = infection->strain;
+                distinct_strains.insert(strain);
+                for(Gene * gene : strain->genes_sorted) {
+                    distinct_genes.insert(gene);
+                    for(uint64_t i = 0; i < N_LOCI; i++) {
+                        distinct_alleles[i].insert(gene->alleles[i]);
+                    }
                 }
             }
         }
     }
-    sqlite3_finalize(host_stmt);
-    sqlite3_finalize(inf_stmt);
-    sqlite3_finalize(strain_stmt);
-    sqlite3_finalize(allele_stmt);
     
-    sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
+    printf("Summary at t = %f:\n", now);
+    printf("               n_infections: %llu\n", n_infections);
+    printf("                 n_infected: %llu\n", n_infected);
+    printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
+    printf("      n_circulating_strains: %lu\n", distinct_strains.size());
+    printf("        n_circulating_genes: %lu\n", distinct_genes.size());
+    
+    sqlite3_bind_double(summary_stmt, 1, now); // time
+    sqlite3_bind_int64(summary_stmt, 2, n_infections); // n_infections
+    sqlite3_bind_int64(summary_stmt, 3, n_infected); // n_infected
+    sqlite3_bind_int64(summary_stmt, 4, n_infections_cumulative); // n_infections_cumulative
+    sqlite3_bind_int64(summary_stmt, 5, distinct_strains.size()); // n_circulating_strains
+    sqlite3_bind_int64(summary_stmt, 6, distinct_genes.size()); // n_circulating_genes
+    sqlite3_step(summary_stmt);
+    sqlite3_reset(summary_stmt);
+    
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
+        sqlite3_bind_int64(summary_alleles_stmt, 2, i); // locus
+        sqlite3_bind_int64(summary_alleles_stmt, 3, distinct_alleles[i].size()); // n_circulating_alleles
+        sqlite3_step(summary_alleles_stmt);
+        sqlite3_reset(summary_alleles_stmt);
+    }
     
     RETURN();
+}
+
+void write_host(Host * host) {
+    sqlite3_bind_int64(host_stmt, 1, host->id);
+    sqlite3_bind_int64(host_stmt, 2, host->population->id);
+    sqlite3_bind_double(host_stmt, 3, host->birth_time);
+    sqlite3_bind_double(host_stmt, 4, host->death_time);
+    sqlite3_step(host_stmt);
+    sqlite3_reset(host_stmt);
+}
+
+void write_sampled_host(Host * host) {
+    sqlite3_bind_double(sampled_host_stmt, 1, now);
+    sqlite3_bind_int64(sampled_host_stmt, 2, host->id);
+    sqlite3_bind_int64(sampled_host_stmt, 3, host->population->id);
+    sqlite3_bind_double(sampled_host_stmt, 4, host->birth_time);
+    sqlite3_bind_double(sampled_host_stmt, 5, host->death_time);
+    sqlite3_step(sampled_host_stmt);
+    sqlite3_reset(sampled_host_stmt);
+}
+
+void write_sampled_infection(Host * host, Infection * infection) {
+    Strain * strain = infection->strain;
+    
+    sqlite3_bind_double(sampled_inf_stmt, 1, now);
+    sqlite3_bind_int64(sampled_inf_stmt, 2, host->id);
+    sqlite3_bind_int64(sampled_inf_stmt, 3, infection->id);
+    sqlite3_bind_int64(sampled_inf_stmt, 4, strain->id);
+    sqlite3_step(sampled_inf_stmt);
+    sqlite3_reset(sampled_inf_stmt);
+    
+    write_strain(strain, sampled_strain_stmt, sampled_allele_stmt);
+}
+
+void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * a_stmt) {
+    for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
+        Gene * gene = strain->genes_sorted[i];
+        sqlite3_bind_int64(s_stmt, 1, strain->id);
+        sqlite3_bind_int64(s_stmt, 2, i);
+        sqlite3_bind_int64(s_stmt, 3, gene->id);
+        sqlite3_step(s_stmt);
+        sqlite3_reset(s_stmt);
+        
+        for(uint64_t j = 0; j < N_LOCI; j++) {
+            sqlite3_bind_int64(a_stmt, 1, gene->id);
+            sqlite3_bind_int64(a_stmt, 2, j);
+            sqlite3_bind_int64(a_stmt, 3, gene->alleles[j]);
+            sqlite3_step(a_stmt);
+            sqlite3_reset(a_stmt);
+        }
+    }
 }
 
 #pragma mark \
@@ -1583,12 +1691,12 @@ void load_checkpoint() {
     
     // Resolve references to other objects
     strain_manager.resolve_references(db, gene_manager);
-    // gene_manager.resolve_references(db); // Does nothing unless referenes are added to Gene
+    gene_manager.resolve_references(db); // Does nothing unless referenes are added to Gene
     population_manager.resolve_references(db, host_manager);
     host_manager.resolve_references(db, population_manager, immune_history_manager, infection_manager);
     infection_manager.resolve_references(db, strain_manager, host_manager, gene_manager);
     immune_history_manager.resolve_references(db, locus_immunity_manager);
-    // locus_immunity_manager.resolve_references(db); // Does nothing unless referenes are added to LocusImmunity
+    locus_immunity_manager.resolve_references(db); // Does nothing unless referenes are added to LocusImmunity
     
     sqlite3_close(db);
     

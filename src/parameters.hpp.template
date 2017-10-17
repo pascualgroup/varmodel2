@@ -14,23 +14,14 @@ const int64_t {PRINT_DEBUG_LEVEL};
 
 /*** OUTPUT SETTINGS ***/
 
-// How often to print summary info about the simulation
-const double {PRINT_INFO_PERIOD};
-
 // Path to database output file for sampled data, absolute or relative to the working directory the program is executed in.
 const std::string {SAMPLE_DB_FILENAME};
 
 // Whether or not to write out all hosts to database
 const bool {OUTPUT_HOSTS};
 
-// Whether or not to write out all genes to database
-const bool {OUTPUT_GENES};
-
 // Whether or not to write out all strains to database
 const bool {OUTPUT_STRAINS};
-
-// Whether or not to sample infected hosts
-const bool {HOST_SAMPLING_ON};
 
 // How often to sample infected hosts, in simulation time units
 const double {HOST_SAMPLING_PERIOD};

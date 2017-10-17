@@ -9,8 +9,5 @@ int main(int argc, const char * argv[]) {
     sqlite3_config(SQLITE_CONFIG_LOG, handle_sqlite_error, NULL);
     register_signal_handler();
     
-    varmodel::validate_and_load_parameters();
-    
-    varmodel::initialize();
     varmodel::run();
 }

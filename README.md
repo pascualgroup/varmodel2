@@ -12,6 +12,51 @@ The simulation also includes immigration of new strains into the population, rec
 
 The simulation is modeled as a sequence of discrete events (state changes) that happen in continuous time.
 
+## Building and running the model
+
+The code is designed to be used with a fresh working directory for each run.
+
+To do an individual run, first set up a parameter file as a simple Python module, following `parameters-example.py`.
+
+The parameter names should match variables defined in `parameters.hpp.template`, and the values should match the appropriate type: e.g., floating-point numbers for `double`; integers for `int64_t` and `uint64_t`; lists for `array`; etc.
+
+String values are passed verbatim, enabling the use of both enumerated types and strings.
+Therefore, use
+
+```py
+SELECTION_MODE = 'SPECIFIC_IMMUNITY'
+```
+
+to specify an enumerated type, but
+
+```py
+SAMPLE_DB_FILENAME = '"output_samples.sqlite"'
+```
+
+to specify a string, with inner quotation marks.
+
+To build the code with the specified parameters, do:
+
+```sh
+path/to/build.py -p params.py -d rundir
+```
+
+This will do the following things:
+
+* Generate the file `rundir/generated/parameters.hpp` by inserting values from `params.py`
+* Generate `rundir/generated/*Manager.*` files, which contain code to manage objects of different types and save/load them to checkpoint databases
+* If all goes well, compile the model into `rundir/bin/varmodel2`.
+
+You can now run the model via:
+
+```sh
+cd rundir
+./bin/varmodel2
+```
+
+You can also write parameter files in JSON format, following the same 
+This is most useful for generated parameter files, e.g. for producing replicates or parameter sweeps to be submitted to SLURM.
+
 ## History and overview of changes
 
 This code is a new, simpler implementation of the malaria var gene evolution model by Qixin He, in which var genes are composed of loci with varying alleles.
@@ -29,8 +74,6 @@ Checkpoints are SQLite databases following a simple object relational model (ORM
 * C++ language features are used only where they clearly make the code better without impairing readability for people with limited familiarity with C++.
 
 ## Code generation for parameters and database output
-
-## Parameter format
 
 ## Debugging and testing
 
@@ -51,8 +94,12 @@ All changes listed here are relative to [VarModel repo commit f66d253](https://g
 
 ### Dead code removal
 
+TODO: list unused functionality that was removed
+
 ### Bug fixes
 
-Bug fix: same strain cannot be chosen for recombination during transmission
+TODO: detail all bug fixes as discussed with Qixin over email
+
+* Bug fix: same strain cannot be chosen for recombination during transmission
 
 
