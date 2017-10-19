@@ -28,10 +28,12 @@ def main():
     '''Runs everything.'''
     args = parse_arguments()
     
+    build_sqlite(args.c_compiler, args.cflags)
+    
     copy_sources(args.dest_dir)
     generate_managers(args.dest_dir)
     generate_parameters(args.dest_dir, args.params_file)
-    build(args.dest_dir, args.compiler, args.flags)
+    build(args.dest_dir, args.cpp_compiler, args.cppflags)
 
 def parse_arguments():
     '''Parses command-line arguments.'''
@@ -53,10 +55,24 @@ def parse_arguments():
         default = os.path.join(script_dir, 'build'),
         help = 'Path to destination directory for built model.'
     )
-    parser.add_argument('-c', '--compiler', metavar = '<compiler>', default = 'c++', help = 'C++ compiler.')
-    parser.add_argument('-f', '--flags', metavar = '<flags>', default = '-O2 -g', help = 'Compiler flags.')
+    parser.add_argument('-c', '--c-compiler', metavar = '<c-compiler>', default = 'cc', help = 'C compiler.')
+    parser.add_argument('-C', '--cpp-compiler', metavar = '<compiler>', default = 'c++', help = 'C++ compiler.')
+    parser.add_argument('-f', '--cflags', metavar = '<c-flags>', default = '-O2 -g', help = 'C compiler flags.')
+    parser.add_argument('-F', '--cppflags', metavar = '<cpp-flags>', default = '-O2 -g', help = 'C++ compiler flags.')
     
     return parser.parse_args()
+
+def build_sqlite(c_compiler, cflags):
+    sqlite3_dir = os.path.join(script_dir, 'sqlite3')
+    if os.path.exists(os.path.join(sqlite3_dir, 'sqlite3.o')):
+        print('sqlite3 already built.')
+    else:
+        print('Building sqlite3...')
+        subprocess.Popen(
+            '{} {} -c -o sqlite3.o sqlite3.c'.format(c_compiler, cflags),
+            cwd = sqlite3_dir, shell = True
+        ).wait()
+        print('sqlite3 build complete.')
 
 def copy_sources(dst_dirname):
     try:
@@ -83,11 +99,13 @@ def generate_parameters(dst_dirname, params_filename):
 def build(dst_dirname, compiler_cmd, compiler_flags):
     os.makedirs(os.path.join(dst_dirname, 'bin'))
     
+    sqlite3_dir = os.path.abspath(os.path.join(script_dir, 'sqlite3'))
     compile_cmd =  compiler_cmd + \
          ' ' + compiler_flags + \
          ' -std=c++11' + \
-         ' -lsqlite3' + \
          ' -o bin/varmodel2' + \
+         ' ' + '-I ' + sqlite3_dir + \
+         ' ' + os.path.join(sqlite3_dir, 'sqlite3.o') + \
          ' generated/managers/*.cpp' + \
          ' src/*.cpp' + \
          ' src/util/*.cpp' + \
