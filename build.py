@@ -105,6 +105,7 @@ def build(dst_dirname, compiler_cmd, compiler_flags):
          ' -std=c++11' + \
          ' -o bin/varmodel2' + \
          ' ' + '-ldl' + \
+         ' ' + '-lpthread' + \
          ' ' + '-I ' + sqlite3_dir + \
          ' ' + os.path.join(sqlite3_dir, 'sqlite3.o') + \
          ' generated/managers/*.cpp' + \
