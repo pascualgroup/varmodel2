@@ -35,19 +35,22 @@ def main():
     ]
     dst_dirname = args.dest_dir
     
-    def run_test(test_filename):
-        test_name = os.path.splitext(test_filename)[0]
-        test_dst_dirname = os.path.join(dst_dirname, test_name)
-        os.makedirs(os.path.join(test_dst_dirname, 'output'))
-        
-        build(test_name, test_dst_dirname, os.path.join(script_dir, 'tests', test_filename))
-        run(test_name, test_dst_dirname)
-    
+    args_list = [(dst_dirname, filename) for filename in test_filenames]
     if args.n_cores == 1:
-        map(run_test, test_filenames)
+        map(run_test, args_list)
     else:
         pool = multiprocessing.Pool(args.n_cores)
-        pool.map(run_test, test_filenames)
+        pool.map(run_test, args_list)
+
+def run_test(args):
+    dst_dirname, test_filename = args
+    
+    test_name = os.path.splitext(test_filename)[0]
+    test_dst_dirname = os.path.join(dst_dirname, test_name)
+    os.makedirs(os.path.join(test_dst_dirname, 'output'))
+    
+    build(test_name, test_dst_dirname, os.path.join(script_dir, 'tests', test_filename))
+    run(test_name, test_dst_dirname)
 
 def parse_arguments():
     '''Parses command-line arguments.'''
