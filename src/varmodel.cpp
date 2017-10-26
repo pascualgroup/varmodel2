@@ -852,14 +852,12 @@ void gain_immunity(Host * host, Gene * gene) {
 
 void update_immunity_loss_time(Host * host) {
     BEGIN();
+    if(SELECTION_MODE == GENERAL_IMMUNITY) {
+        RETURN();
+    }
     uint64_t immune_allele_count = get_immune_allele_count(host);
     host->immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * immune_allele_count);
     immunity_loss_queue.update(host);
-    RETURN();
-}
-
-void gain_general_immunity(Host * host, Gene * gene) {
-    BEGIN();
     RETURN();
 }
 
