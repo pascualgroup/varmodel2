@@ -8,7 +8,7 @@ namespace varmodel {
 void verify_simulation_state();
 
 
-void run();
+void run(bool override_seed, uint64_t random_seed);
 
 }; // namespace varmodel
 

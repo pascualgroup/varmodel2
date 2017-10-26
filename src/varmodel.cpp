@@ -100,7 +100,7 @@ EventQueue<Infection, get_clearance_time> clearance_queue;
 #pragma mark \
 *** Helper function declarations ***
 
-void initialize();
+void initialize(bool override_seed, uint64_t random_seed);
 void clean_up();
 
 void validate_and_load_parameters();
@@ -112,11 +112,11 @@ void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * a_stmt)
 void write_sampled_host(Host * host);
 void write_sampled_infection(Host * host, Infection * infection);
 
-void load_checkpoint();
+void load_checkpoint(bool should_load_rng_state);
 void save_checkpoint();
 
 void save_global_state_to_checkpoint(sqlite3 * db);
-void load_global_state_from_checkpoint(sqlite3 * db);
+void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state);
 void initialize_event_queues_from_state();
 
 std::string get_rng_as_string();
@@ -328,14 +328,18 @@ void validate_and_load_parameters() {
     RETURN();
 }
 
-void initialize() {
+void initialize(bool override_seed, uint64_t random_seed) {
     BEGIN();
     
     validate_and_load_parameters();
     initialize_sample_db();
     
+    if(override_seed) {
+        rng.seed(random_seed);
+    }
+    
     if(LOAD_FROM_CHECKPOINT) {
-        load_checkpoint();
+        load_checkpoint(!override_seed);
     }
     else {
         initialize_gene_pool();
@@ -1153,10 +1157,10 @@ enum class EventType {
     CLEARANCE
 };
 
-void run() {
+void run(bool override_seed, uint64_t random_seed) {
     BEGIN();
     
-    initialize();
+    initialize(override_seed, random_seed);
     while(do_next_event()) {  }
     clean_up();
     
@@ -1671,7 +1675,7 @@ void save_checkpoint() {
     RETURN();
 }
 
-void load_checkpoint() {
+void load_checkpoint(bool should_load_rng_state) {
     BEGIN();
     
     assert(file_exists(CHECKPOINT_LOAD_FILENAME));
@@ -1679,7 +1683,7 @@ void load_checkpoint() {
     sqlite3 * db;
     sqlite3_open(CHECKPOINT_LOAD_FILENAME.c_str(), &db);
     
-    load_global_state_from_checkpoint(db);
+    load_global_state_from_checkpoint(db, should_load_rng_state);
     
     // Load all objects, minus references to other objects
     strain_manager.load_from_checkpoint(db);
@@ -1732,16 +1736,18 @@ void save_global_state_to_checkpoint(sqlite3 * db) {
     sqlite3_finalize(stmt);
 }
 
-void load_global_state_from_checkpoint(sqlite3 * db) {
+void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state) {
     sqlite3_stmt * stmt;
     sqlite3_prepare_v2(db, "SELECT * FROM global_state LIMIT 1;", -1, &stmt, NULL);
     sqlite3_step(stmt);
     
-    // Load rng from string representation
-    std::string rng_str = (const char *)sqlite3_column_text(stmt, 0);
-    PRINT_DEBUG(1, "rng read: %s", rng_str.c_str());
-    set_rng_from_string(rng_str);
-    assert(rng_str == get_rng_as_string());
+    if(should_load_rng_state) {
+        // Load rng from string representation
+        std::string rng_str = (const char *)sqlite3_column_text(stmt, 0);
+        PRINT_DEBUG(1, "rng read: %s", rng_str.c_str());
+        set_rng_from_string(rng_str);
+        assert(rng_str == get_rng_as_string());
+    }
     
     now = sqlite3_column_double(stmt, 1);
     next_verification_time = sqlite3_column_double(stmt, 2);
