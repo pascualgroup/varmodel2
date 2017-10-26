@@ -852,7 +852,7 @@ void gain_immunity(Host * host, Gene * gene) {
 
 void update_immunity_loss_time(Host * host) {
     BEGIN();
-    if(SELECTION_MODE == GENERAL_IMMUNITY) {
+    if(SELECTION_MODE != GENERAL_IMMUNITY) {
         RETURN();
     }
     uint64_t immune_allele_count = get_immune_allele_count(host);
