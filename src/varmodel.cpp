@@ -63,11 +63,13 @@ sqlite3_stmt * summary_alleles_stmt;
 
 sqlite3_stmt * host_stmt;
 sqlite3_stmt * strain_stmt;
+sqlite3_stmt * gene_stmt;
 sqlite3_stmt * allele_stmt;
 
 sqlite3_stmt * sampled_host_stmt;
 sqlite3_stmt * sampled_inf_stmt;
 sqlite3_stmt * sampled_strain_stmt;
+sqlite3_stmt * sampled_gene_stmt;
 sqlite3_stmt * sampled_allele_stmt;
 
 #pragma mark \
@@ -108,7 +110,8 @@ void validate_and_load_parameters();
 void write_summary();
 void sample_hosts();
 void write_host(Host * host);
-void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * a_stmt);
+void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt);
+void write_gene(Gene * gene, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt);
 void write_sampled_host(Host * host);
 void write_sampled_infection(Host * host, Infection * infection);
 
@@ -138,8 +141,7 @@ void destroy_host(Host * host);
 
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
 Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
-Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
-Strain * generate_random_strain();
+Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source);
 Strain * create_strain(std::vector<Gene *> const & genes);
 Gene * draw_random_gene();
 std::array<uint64_t, N_LOCI> recombine_alleles(std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint);
@@ -148,7 +150,7 @@ Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
 
 Strain * recombine_strains(Strain * s1, Strain * s2);
 Strain * mutate_strain(Strain * strain);
-Gene * mutate_gene(Gene * gene);
+Gene * mutate_gene(Gene * gene, GeneSource source);
 void recombine_infection(Infection * infection);
 double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint);
 
@@ -316,6 +318,8 @@ void validate_and_load_parameters() {
         for(auto value : IMMIGRATION_RATE) {
             assert(value >= 0.0);
         }
+        assert(P_IMMIGRATION_INCLUDES_NEW_GENES >= 0.0 && P_IMMIGRATION_INCLUDES_NEW_GENES <= 1.0);
+        assert(N_IMMIGRATION_NEW_GENES <= N_GENES_PER_STRAIN);
     }
     
     if(SELECTION_MODE == GENERAL_IMMUNITY) {
@@ -369,7 +373,7 @@ void initialize_gene_pool() {
                 alleles[j] = draw_uniform_index(n_alleles[j]);
             }
         } while(get_gene_with_alleles(alleles) != NULL);
-        create_gene(alleles, SOURCE_POOL, true);
+        get_or_create_gene(alleles, SOURCE_POOL, true);
     }
     
     RETURN();
@@ -418,7 +422,7 @@ void initialize_population_infections(Population * pop) {
     
     for(uint64_t i = 0; i < N_INITIAL_INFECTIONS[pop->ind]; i++) {
         Host * host = pop->hosts.object_at_index(draw_uniform_index(pop->hosts.size())); 
-        Strain * strain = generate_random_strain();
+        Strain * strain = generate_random_strain(0, SOURCE_POOL);
         infect_host(host, strain);
     }
     
@@ -440,6 +444,11 @@ void initialize_sample_db() {
     
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS strains (id INTEGER, ind INTEGER, gene_id INTEGER, PRIMARY KEY (id, ind));",
+        NULL, NULL, NULL
+    );
+    
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS genes (id INTEGER PRIMARY KEY, source INTEGER, is_functional INTEGER);",
         NULL, NULL, NULL
     );
     
@@ -481,6 +490,11 @@ void initialize_sample_db() {
     );
     
     sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS sampled_genes (id INTEGER PRIMARY KEY, source INTEGER, is_functional INTEGER);",
+        NULL, NULL, NULL
+    );
+    
+    sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS sampled_alleles (gene_id INTEGER, locus INTEGER, allele INTEGER, PRIMARY KEY (gene_id, locus));",
         NULL, NULL, NULL
     );
@@ -490,10 +504,12 @@ void initialize_sample_db() {
     
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO alleles VALUES (?,?,?);", -1, &allele_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO genes VALUES (?,?,?);", -1, &gene_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO alleles VALUES (?,?,?);", -1, &allele_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_hosts VALUES (?,?,?,?,?);", -1, &sampled_host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_infections VALUES (?,?,?,?);", -1, &sampled_inf_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_strains VALUES (?,?,?);", -1, &sampled_strain_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_genes VALUES (?,?,?);", -1, &sampled_gene_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_alleles VALUES (?,?,?);", -1, &sampled_allele_stmt, NULL);
     
     sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
@@ -509,6 +525,8 @@ void finalize_sample_db() {
     sqlite3_finalize(host_stmt);
     sqlite3_finalize(sampled_host_stmt);
     sqlite3_finalize(strain_stmt);
+    sqlite3_finalize(gene_stmt);
+    sqlite3_finalize(sampled_gene_stmt);
     sqlite3_finalize(sampled_strain_stmt);
     sqlite3_finalize(allele_stmt);
     sqlite3_finalize(sampled_allele_stmt);
@@ -611,25 +629,22 @@ Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSour
         gene->alleles = alleles;
         gene->source = source;
         gene->is_functional = is_functional;
+    
+        if(OUTPUT_STRAINS) {
+            write_gene(gene, gene_stmt, allele_stmt);
+        }
     }
     RETURN(gene);
 }
 
-Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional) {
-    BEGIN();
-    assert(get_gene_with_alleles(alleles) == nullptr);
-    Gene * gene = gene_manager.create();
-    gene->alleles = alleles;
-    gene->source = source;
-    gene->is_functional = is_functional;
-    RETURN(gene);
-}
-
-Strain * generate_random_strain() {
+Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source) {
     BEGIN();
     
     std::array<Gene *, N_GENES_PER_STRAIN> genes;
-    for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
+    for(uint64_t i = 0; i < n_new_genes; i++) {
+        genes[i] = mutate_gene(draw_random_gene(), new_gene_source);
+    }
+    for(uint64_t i = n_new_genes; i < N_GENES_PER_STRAIN; i++) {
         genes[i] = draw_random_gene();
     }
     
@@ -652,7 +667,7 @@ Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
         genes_strain_map[genes] = strain;
         
         if(OUTPUT_STRAINS) {
-            write_strain(strain, strain_stmt, allele_stmt);
+            write_strain(strain, strain_stmt, NULL, NULL);
         }
     }
     else {
@@ -711,17 +726,17 @@ Strain * mutate_strain(Strain * strain) {
     BEGIN();
     uint64_t index = draw_uniform_index(N_GENES_PER_STRAIN);
     std::array<Gene *, N_GENES_PER_STRAIN> genes = strain->genes_sorted;
-    genes[index] = mutate_gene(genes[index]);
+    genes[index] = mutate_gene(genes[index], SOURCE_MUTATION);
     RETURN(get_strain_with_genes(genes));
 }
 
-Gene * mutate_gene(Gene * gene) {
+Gene * mutate_gene(Gene * gene, GeneSource source) {
     BEGIN();
     auto alleles = gene->alleles;
     uint64_t locus = draw_uniform_index(N_LOCI); 
     alleles[locus] = n_alleles[locus];
     n_alleles[locus]++;
-    RETURN(create_gene(alleles, SOURCE_MUTATION, gene->is_functional));
+    RETURN(get_or_create_gene(alleles, source, gene->is_functional));
 }
 
 void recombine_infection(Infection * infection) {
@@ -1085,7 +1100,10 @@ void update_mutation_time(Infection * infection, bool initial) {
 
 void update_recombination_time(Infection * infection, bool initial) {
     BEGIN();
-    infection->recombination_time = draw_exponential_after_now(0.0);
+    infection->recombination_time = draw_exponential_after_now(
+        ECTOPIC_RECOMBINATION_RATE * N_GENES_PER_STRAIN * (N_GENES_PER_STRAIN - 1) / 2.0
+    );
+    
     if(initial) {
         recombination_queue.add(infection);
     }
@@ -1395,7 +1413,15 @@ void do_immigration_event() {
     
     PRINT_DEBUG(1, "immigration event pop: %llu", pop->id);
     
-    Strain * strain = generate_random_strain();
+    uint64_t n_new_genes;
+    if(draw_bernoulli(P_IMMIGRATION_INCLUDES_NEW_GENES)) {
+        n_new_genes = N_IMMIGRATION_NEW_GENES;
+    }
+    else {
+        n_new_genes = 0;
+    }
+    
+    Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION);
     uint64_t index = draw_uniform_index(pop->hosts.size());
     Host * host = pop->hosts.object_at_index(index);
      
@@ -1619,10 +1645,10 @@ void write_sampled_infection(Host * host, Infection * infection) {
     sqlite3_step(sampled_inf_stmt);
     sqlite3_reset(sampled_inf_stmt);
     
-    write_strain(strain, sampled_strain_stmt, sampled_allele_stmt);
+    write_strain(strain, sampled_strain_stmt, sampled_gene_stmt, sampled_allele_stmt);
 }
 
-void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * a_stmt) {
+void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt) {
     for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
         Gene * gene = strain->genes_sorted[i];
         sqlite3_bind_int64(s_stmt, 1, strain->id);
@@ -1631,14 +1657,27 @@ void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * a_stmt)
         sqlite3_step(s_stmt);
         sqlite3_reset(s_stmt);
         
-        for(uint64_t j = 0; j < N_LOCI; j++) {
-            sqlite3_bind_int64(a_stmt, 1, gene->id);
-            sqlite3_bind_int64(a_stmt, 2, j);
-            sqlite3_bind_int64(a_stmt, 3, gene->alleles[j]);
-            sqlite3_step(a_stmt);
-            sqlite3_reset(a_stmt);
+        if(g_stmt != NULL) {
+            write_gene(gene, g_stmt, a_stmt);
         }
     }
+}
+
+void write_gene(Gene * gene, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt) {
+    sqlite3_bind_int64(g_stmt, 1, gene->id);
+    sqlite3_bind_int64(g_stmt, 2, gene->source);
+    sqlite3_bind_int64(g_stmt, 3, gene->is_functional);
+    sqlite3_step(g_stmt);
+    sqlite3_reset(g_stmt);
+    
+    for(uint64_t j = 0; j < N_LOCI; j++) {
+        sqlite3_bind_int64(a_stmt, 1, gene->id);
+        sqlite3_bind_int64(a_stmt, 2, j);
+        sqlite3_bind_int64(a_stmt, 3, gene->alleles[j]);
+        sqlite3_step(a_stmt);
+        sqlite3_reset(a_stmt);
+    }
+
 }
 
 #pragma mark \

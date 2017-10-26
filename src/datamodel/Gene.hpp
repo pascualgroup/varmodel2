@@ -9,7 +9,8 @@ namespace varmodel {
 enum GeneSource {
     SOURCE_POOL = 0,
     SOURCE_RECOMBINATION = 1,
-    SOURCE_MUTATION = 2
+    SOURCE_MUTATION = 2,
+    SOURCE_IMMIGRATION = 3
 };
 
 struct Gene {

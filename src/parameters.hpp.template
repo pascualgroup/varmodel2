@@ -20,8 +20,11 @@ const std::string {SAMPLE_DB_FILENAME};
 // Whether or not to write out all hosts to database
 const bool {OUTPUT_HOSTS};
 
-// Whether or not to write out all strains to database
+// Whether or not to write out all strains, genes, and alleles to database
 const bool {OUTPUT_STRAINS};
+
+// Whether or not to write out all genes to database
+const bool {OUTPUT_GENES};
 
 // How often to sample infected hosts, in simulation time units
 const double {HOST_SAMPLING_PERIOD};
@@ -156,6 +159,14 @@ const bool {IMMIGRATION_ON};
 
 // Immigration rate, in number of random infection events per unit time (per population, not per capita).
 const std::vector<double> {IMMIGRATION_RATE};
+
+// Probability of new genes being included with immigration
+const double {P_IMMIGRATION_INCLUDES_NEW_GENES};
+
+// Number of new genes created with probability P_IMMIGRATION_INCLUDES_NEW_GENES 
+const uint64_t {N_IMMIGRATION_NEW_GENES};
+
+// Number of new genes created during immigration
 
 }} // namespace varmodel
 
