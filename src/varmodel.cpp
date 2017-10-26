@@ -137,7 +137,8 @@ Host * create_host(Population * pop);
 void destroy_host(Host * host);
 
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
-Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional);
+Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
+Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
 Strain * generate_random_strain();
 Strain * create_strain(std::vector<Gene *> const & genes);
 Gene * draw_random_gene();
@@ -364,7 +365,7 @@ void initialize_gene_pool() {
                 alleles[j] = draw_uniform_index(n_alleles[j]);
             }
         } while(get_gene_with_alleles(alleles) != NULL);
-        create_gene(alleles, true);
+        create_gene(alleles, SOURCE_POOL, true);
     }
     
     RETURN();
@@ -598,22 +599,24 @@ Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles) {
     RETURN(itr->second);
 }
 
-Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional) {
+Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional) {
     BEGIN();
     Gene * gene = get_gene_with_alleles(alleles);
     if(gene == nullptr) {
         gene = gene_manager.create();
         gene->alleles = alleles;
+        gene->source = source;
         gene->is_functional = is_functional;
     }
     RETURN(gene);
 }
 
-Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, bool is_functional) {
+Gene * create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional) {
     BEGIN();
     assert(get_gene_with_alleles(alleles) == nullptr);
     Gene * gene = gene_manager.create();
     gene->alleles = alleles;
+    gene->source = source;
     gene->is_functional = is_functional;
     RETURN(gene);
 }
@@ -714,7 +717,7 @@ Gene * mutate_gene(Gene * gene) {
     uint64_t locus = draw_uniform_index(N_LOCI); 
     alleles[locus] = n_alleles[locus];
     n_alleles[locus]++;
-    RETURN(create_gene(alleles, gene->is_functional));
+    RETURN(create_gene(alleles, SOURCE_MUTATION, gene->is_functional));
 }
 
 void recombine_infection(Infection * infection) {
@@ -760,7 +763,7 @@ void recombine_infection(Infection * infection) {
         double similarity = get_gene_similarity(src_gene_1, src_gene_2, breakpoint);
         
         auto rec_alleles_1 = recombine_alleles(src_gene_1->alleles, src_gene_2->alleles, breakpoint);
-        Gene * rec_gene_1 = get_or_create_gene(rec_alleles_1, draw_bernoulli(similarity));
+        Gene * rec_gene_1 = get_or_create_gene(rec_alleles_1, SOURCE_RECOMBINATION, draw_bernoulli(similarity));
         new_gene_1 = rec_gene_1->is_functional ? rec_gene_1 : src_gene_1;
         
         // Under conversion, the second gene remains unchanged
@@ -770,7 +773,7 @@ void recombine_infection(Infection * infection) {
         // Under normal combination, both genes have material swapped
         else {
             auto rec_alleles_2 = recombine_alleles(src_gene_2->alleles, src_gene_1->alleles, breakpoint);
-            Gene * rec_gene_2 = get_or_create_gene(rec_alleles_2, draw_bernoulli(similarity));
+            Gene * rec_gene_2 = get_or_create_gene(rec_alleles_2, SOURCE_RECOMBINATION, draw_bernoulli(similarity));
             new_gene_2 = rec_gene_2->is_functional ? rec_gene_2 : src_gene_2;
         }
     }
@@ -852,7 +855,7 @@ void gain_immunity(Host * host, Gene * gene) {
 
 void update_immunity_loss_time(Host * host) {
     BEGIN();
-    if(SELECTION_MODE != GENERAL_IMMUNITY) {
+    if(SELECTION_MODE != SPECIFIC_IMMUNITY) {
         RETURN();
     }
     uint64_t immune_allele_count = get_immune_allele_count(host);

@@ -6,11 +6,18 @@
 
 namespace varmodel {
 
+enum GeneSource {
+    SOURCE_POOL = 0,
+    SOURCE_RECOMBINATION = 1,
+    SOURCE_MUTATION = 2
+};
+
 struct Gene {
     Gene(uint64_t id) : id(id) { }
     
     uint64_t const id;
     
+    uint64_t source;
     bool is_functional;
     std::array<uint64_t, N_LOCI> alleles;
 };
