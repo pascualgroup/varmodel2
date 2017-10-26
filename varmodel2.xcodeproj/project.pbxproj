@@ -286,7 +286,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/parameters-example.py\n\n";
+			shellScript = "${SRCROOT}/generate_parameters.py -p ${SRCROOT}/parameters-example.py\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
