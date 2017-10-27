@@ -1,7 +1,8 @@
 # varmodel2
 
 Ed Baskerville
-Updated 16 October 2017
+
+Last update: 26 October 2017
 
 This code is an implementation of a model of malaria var gene evolution within an epidemic simulation.
 Malaria strains are represented as unordered sets of var genes, which are in turn composed of abstract loci.
@@ -12,33 +13,115 @@ The simulation also includes immigration of new strains into the population, rec
 
 The simulation is modeled as a sequence of discrete events (state changes) that happen in continuous time.
 
-## Building and running the model
+## Building and running: cheat sheet
 
-The code is designed to be used with a fresh working directory for each run.
+1. Create a parameters file in Python (`params.py`) format, or generate one (or many) in JSON format (`params.json`).
 
-To do an individual run, first set up a parameter file as a simple Python module, following `parameters-example.py`.
+2. Build the code using the specified parameters into run directory `rundir`:
 
-The parameter names should match variables defined in `parameters.hpp.template`, and the values should match the appropriate type: e.g., floating-point numbers for `double`; integers for `int64_t` and `uint64_t`; lists for `array`; etc.
+```sh
+path/to/varmodel2/build.py -p params.py -d rundir
+```
 
-String values are passed verbatim, enabling the use of both enumerated types and strings.
-Therefore, use
+3. Run the model:
 
-```py
+```sh
+cd rundir
+bin/varmodel2
+```
+
+If you want to specify a different random seed without recompiling the model, just do:
+
+```sh
+bin/varmodel 1234
+```
+
+## Building and running the model: details
+
+### Each run lives in a separate working directory
+
+The code is designed to be used with a fresh working directory for each run that contains output as well as the compiled model, source code, and generated source code.
+The file `parameters.hpp` is generated before compilation from a file containing parameter values in either Python or JSON format.
+Storing a copy of the code with each run ensures that you know exactly what version of the code and what parameter values were used to generate a set of outputs.
+
+One exception: if you do replicates with the same parameter values, it is possible to do multiple runs with different random seeds using the same compiled model.
+
+### Setting up parameters
+
+To do an individual run, first set up a parameter file as a simple Python file (module).
+An example is provided in `parameters-example.py`.
+
+This does not require you to know much Python; parameter values are simply assigned to variable names.
+The parameter names should match variables defined in `src/parameters.hpp.template`, and the values should match the appropriate type: e.g., floating-point numbers for `double`; integers for `int64_t` and `uint64_t`; lists for `array`; etc.
+
+When you build the model, parameter values are inserted directly into `parameters.hpp.template` to create `parameters.hpp`.
+
+E.g., since `parameters.hpp.template` contains the line
+
+```cpp
+const double {P_IMMIGRATION_INCLUDES_NEW_GENES};
+```
+
+a parameters file, e.g., `myparameters.py`, must contain a line like
+
+```python
+P_IMMIGRATION_INCLUDES_NEW_GENES = 0.5
+```
+
+which will result in the following line in the generated file `parameters.hpp`:
+
+```python
+const double P_IMMIGRATION_INCLUDES_NEW_GENES = 0.5;
+```
+
+Strings are passed verbatim—without quotation marks—which enables the use of both enumerated (`enum`) types and strings.
+
+E.g., if you want to pass an `enum` value, use a regular Python string:
+
+```python
 SELECTION_MODE = 'SPECIFIC_IMMUNITY'
 ```
 
-to specify an enumerated type, but
+which yields
 
-```py
+```cpp
+const SelectionMode SELECTION_MODE = SPECIFIC_IMMUNITY;
+```
+
+and if you want to pass a string value, add double-quote (`"`) marks inside the string:
+
+```python
 SAMPLE_DB_FILENAME = '"output_samples.sqlite"'
+```
+
+which yields
+
+```cpp
+const std::string SAMPLE_DB_FILENAME = "output_samples.sqlite";
 ```
 
 to specify a string, with inner quotation marks.
 
+You can also write parameter files in JSON format, e.g.:
+
+```javascript
+{
+    // ...
+    "SAMPLE_DB_FILENAME" : "\"output_samples.sqlite\"",
+    "SELECTION_MODE" : "SPECIFIC_IMMUNITY",
+    "P_IMMIGRATION_INCLUDES_NEW_GENES" : 0.5,
+    // ...
+}
+```
+
+This is most useful as an output format for parameter sweep scripts that generate many parameter files.
+
+### Building the model
+
 To build the code with the specified parameters, do:
 
 ```sh
-path/to/build.py -p params.py -d rundir
+path/to/varmodel2/build.py -p params.py -d rundir
 ```
 
 This will do the following things:
@@ -47,6 +130,8 @@ This will do the following things:
 * Generate `rundir/generated/*Manager.*` files, which contain code to manage objects of different types and save/load them to checkpoint databases
 * If all goes well, compile the model into `rundir/bin/varmodel2`.
 
+### Running the model
+
 You can now run the model via:
 
 ```sh
@@ -54,15 +139,14 @@ cd rundir
 ./bin/varmodel2
 ```
 
-You can also write parameter files in JSON format, following the same 
-This is most useful for generated parameter files, e.g. for producing replicates or parameter sweeps to be submitted to SLURM.
+which will generate an output database in SQLite format based on the parameter `SAMPLE_DB_FILENAME`, and will periodically write checkpoints to `CHECKPOINT_SAVE_FILENAME` if checkpointing is on.
 
 ## Model specification
 
 ## History and overview of changes
 
 This code is a new, simpler implementation of the malaria var gene evolution model by Qixin He, in which var genes are composed of loci with varying alleles.
-That model was based on a model by Yael Artzy-Randrup, implemented by Ed Baskerville, in which var genes are simply distinguished from each other by identity.
+That model code was based on a model by Yael Artzy-Randrup, implemented by Ed Baskerville, in which var genes are simply distinguished from each other by identity.
 
 The main changes from the previous implementation are as follows:
 

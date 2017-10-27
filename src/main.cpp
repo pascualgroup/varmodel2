@@ -20,9 +20,7 @@ int main(int argc, char const * argv[]) {
         errno = 0;
         long seed_long = strtol(seed_str, NULL, 0);
         assert(!errno);
-        // Make sure it's unsigned and signed 64-bit safe for the hell of it
         assert(seed_long > 0);
-        assert(seed_long < std::numeric_limits<int64_t>::max());
         random_seed = seed_long; 
     }
     else {

@@ -41,10 +41,6 @@
 		6428FD9C1F75A55D00902EBD /* Population.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Population.hpp; sourceTree = "<group>"; };
 		6428FD9D1F75A55D00902EBD /* Strain.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Strain.hpp; sourceTree = "<group>"; };
 		6428FD9E1F75A55D00902EBD /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		6428FDA01F75A55D00902EBD /* create_reflist_block_IndexedSet.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = create_reflist_block_IndexedSet.cpp.template; sourceTree = "<group>"; };
-		6428FDA21F75A55D00902EBD /* create_vector_block.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = create_vector_block.cpp.template; sourceTree = "<group>"; };
-		6428FDA31F75A55D00902EBD /* Manager.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = Manager.cpp.template; sourceTree = "<group>"; };
-		6428FDA41F75A55D00902EBD /* Manager.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = Manager.hpp.template; sourceTree = "<group>"; };
 		6428FDA51F75A55D00902EBD /* parameters.hpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = parameters.hpp.template; sourceTree = "<group>"; };
 		6428FDA71F75A55D00902EBD /* EventQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = EventQueue.hpp; sourceTree = "<group>"; };
 		6428FDA81F75A55D00902EBD /* IndexedSet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IndexedSet.hpp; sourceTree = "<group>"; };
@@ -69,7 +65,6 @@
 		6466F1CE1F9114B800F80B13 /* error_handling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_handling.cpp; sourceTree = "<group>"; };
 		6466F1CF1F9114B800F80B13 /* error_handling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = error_handling.hpp; sourceTree = "<group>"; };
 		64AC44161F79E7D100176944 /* LocusImmunity.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LocusImmunity.hpp; sourceTree = "<group>"; };
-		64AC441A1F79F5C000176944 /* create_reflist_block_vector.cpp.template */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; path = create_reflist_block_vector.cpp.template; sourceTree = "<group>"; };
 		64AC441C1F7B1F6C00176944 /* AlleleImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistory.hpp; sourceTree = "<group>"; };
 		64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AlleleImmuneHistoryManager.cpp; sourceTree = "<group>"; };
 		64AC441E1F7B223C00176944 /* AlleleImmuneHistoryManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistoryManager.hpp; sourceTree = "<group>"; };
@@ -103,7 +98,6 @@
 				6466F1CE1F9114B800F80B13 /* error_handling.cpp */,
 				6428FD971F75A55D00902EBD /* datamodel */,
 				6428FDA61F75A55D00902EBD /* util */,
-				6428FD9F1F75A55D00902EBD /* manager_templates */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -121,18 +115,6 @@
 				64AC44161F79E7D100176944 /* LocusImmunity.hpp */,
 			);
 			path = datamodel;
-			sourceTree = "<group>";
-		};
-		6428FD9F1F75A55D00902EBD /* manager_templates */ = {
-			isa = PBXGroup;
-			children = (
-				6428FDA01F75A55D00902EBD /* create_reflist_block_IndexedSet.cpp.template */,
-				64AC441A1F79F5C000176944 /* create_reflist_block_vector.cpp.template */,
-				6428FDA21F75A55D00902EBD /* create_vector_block.cpp.template */,
-				6428FDA41F75A55D00902EBD /* Manager.hpp.template */,
-				6428FDA31F75A55D00902EBD /* Manager.cpp.template */,
-			);
-			path = manager_templates;
 			sourceTree = "<group>";
 		};
 		6428FDA61F75A55D00902EBD /* util */ = {
