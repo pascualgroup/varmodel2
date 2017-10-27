@@ -1,5 +1,5 @@
-#ifndef AlleleImmuneHistory_hpp
-#define AlleleImmuneHistory_hpp
+#ifndef ImmuneHistory_hpp
+#define ImmuneHistory_hpp
 
 #include <stdint.h>
 #include <sqlite3.h>
@@ -10,8 +10,8 @@ namespace varmodel {
 
 struct LocusImmunity;
 
-struct AlleleImmuneHistory {
-    AlleleImmuneHistory(uint64_t id) : id(id) { }
+struct ImmuneHistory {
+    ImmuneHistory(uint64_t id) : id(id) { }
      
     uint64_t const id;
     std::array<LocusImmunity *, N_LOCI> immunity_by_locus;
@@ -19,4 +19,4 @@ struct AlleleImmuneHistory {
 
 } // namespace varmodel }
 
-#endif // #define AlleleImmuneHistory_hpp
+#endif // #define ImmuneHistory_hpp

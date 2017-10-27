@@ -143,6 +143,112 @@ which will generate an output database in SQLite format based on the parameter `
 
 ## Model specification
 
+### Overview of structure
+
+In this model, hosts carry infections of different strains of the malaria parasite.
+
+Strains are composed of a collection of `N_GENES_PER_STRAIN` var genes.
+Strain identity is defined by this collection independent of order.
+Although unlikely, the same gene may occur multiple times in a strain.
+
+Genes are composed of `N_LOCI` loci.
+At the outset, each locus `i` has one of `N_ALLELES_INITIAL[i]` possible values, indexed from `0` to `N_ALLELES_INITIAL[i] - 1`.
+Mutation events create new alleles, so the number of distinct alleles at each locus can increase over time.
+
+At any time, hosts may be infected multiple times by the same or different strains.
+Each infection defines a sequence of expression of var genes by a strain.
+The order of expression is randomized distinctly for each infection.
+
+Hosts have an immune history, the details of which depend on the immune selection model being used.
+
+### A discrete-event, continuous-time model
+
+The simulation consists of a sequence of discrete events occurring in continuous time.
+Conceptually, the state of a model consists of the collection of hosts, some of whom contain infections, along with a single *event queue* consisting of events that will occur in the future at specified times.
+The simulation progresses by looking at the event on the queue with the lowest time, advancing the clock to that time, and then executing the state change corresponding to that event.
+State changes will typically modify both host/infection state as well as the set of future events.
+
+In Pythonic pseudo-code, the entire simulation looks approximately like this:
+
+```python
+now = 0.0
+queue = initialize_event_queue()
+while queue.next_event_time() <= T_END:
+    event_time, event = queue.pop_next_event()
+    now = event_time
+    execute_event(event)
+```
+
+In fact, in order to avoid language features that might be confusing to users unfamiliar with C++, this version of the code implements the event queue as *multiple* event queues, one for each type of event.
+First, the code looks across all event queues to find the one with the lowest next event time.
+Then, it executes just that single event.
+
+Event queues are implemented as indexed priority heaps, as in the [next-reaction method by Gibson and Bruck](https://scholar.google.com/scholar?cluster=16469525020041545503) (see "Event queue implementation", below).
+
+Most events in the simulation are modeled as Poisson processes, so the times associated with those events on the queue are probabilistic realizations: specifically, times are drawn from an exponential distribution.
+If a state change causes the underlying rate of the event's Poisson process to change, the time will be re-drawn using the new rate, following the memoryless property of Poisson processes.
+
+In this version of the code, each exponential draw and re-draw is implemented explicitly.
+(This is less automatic than the previous version of the code, but it is somewhat easier to see exactly what is going on.)
+
+### Overview of simulation
+
+1. Initialize the population hosts and initial infections.
+2. Add all initial events to the event queue.
+3. Repeatedly execute events until the simulation is done.
+
+These are the different events that can occur:
+
+* *Biting events* represent the transmission of strains between two hosts.
+* *Immigration events* represent the appearance of a new strain from outside the population.
+* *Immunity loss events* represent the loss of previously gained immunity.
+* *Infection transition events* represent a transition in an infection between the expression of two different var genes.
+* *Mutation events* mutate a gene within an infection.
+* *Recombination events* recombine genes within an infection.
+* *Death events* represent the death of a host, and the birth of a new host in its place.
+
+### Initialization
+
+### Biting events
+
+### Immigration events
+
+### Mutation events
+
+### Recombination events
+
+### Death events
+
+### Immune selection modes
+
+### Expression dynamics
+
+## Event queue implementation
+
+Event queues are implemented using an *indexed priority heap*, an efficient data structure for retrieving the next item in a collection according to some property (key), in this case, the next time of an event, and for adding, removing, and updating items in the collection.
+
+A *heap* is a binary tree, typically implemented using an array using the following indexing scheme:
+
+```
+           0
+     1           2
+  3     4     5     6
+07 08 09 10 11 12 13 14
+```
+
+Each event in the tree has the property that its time is less than its two children.
+E.g., the event at index 6 has time less than the events at indices 13 and 14;
+the event at index 2 has time less than the events at indices 5 and 6;
+and the event at index 0 has time less than the events at indices 1 and 2.
+
+This means that, if the heap is in a consistent state, the event with the lowest time is always stored at index 0.
+
+The heap is *indexed* using a hash table mapping event IDs to the location of the event in the heap.
+This makes it possible to find an event whose time needs updating in the tree in constant time.
+
+When an event time is changed, the heap can be made consistent again by moving the event to the appropriate height in the tree by swapping parents and children.
+This process is limited by the height of the tree, meaning that update operations are logarithmic in the number of events; this is why the heap is so efficient.
+
 ## History and overview of changes
 
 This code is a new, simpler implementation of the malaria var gene evolution model by Qixin He, in which var genes are composed of loci with varying alleles.

@@ -9,8 +9,7 @@ namespace varmodel {
 
 struct Population;
 struct Infection;
-struct GeneImmuneHistory;
-struct AlleleImmuneHistory;
+struct ImmuneHistory;
 
 struct Host {
     Host(uint64_t id) : id(id) { }
@@ -22,14 +21,14 @@ struct Host {
     double birth_time;
     double death_time;
     
-    double immunity_loss_time;
+    double next_immunity_loss_time;
     
     uint64_t completed_infection_count;
     
     // One-to-many relationships
     std::unordered_set<Infection *> infections;
     
-    AlleleImmuneHistory * immune_history;
+    ImmuneHistory * immune_history;
 };
 
 } // namespace varmodel

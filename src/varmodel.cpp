@@ -5,7 +5,7 @@
 #include "PopulationManager.hpp"
 #include "HostManager.hpp"
 #include "InfectionManager.hpp"
-#include "AlleleImmuneHistoryManager.hpp"
+#include "ImmuneHistoryManager.hpp"
 #include "LocusImmunityManager.hpp"
 #include "random.hpp"
 #include "util.hpp"
@@ -53,7 +53,7 @@ std::unordered_map<
 PopulationManager population_manager;
 HostManager host_manager;
 InfectionManager infection_manager;
-AlleleImmuneHistoryManager immune_history_manager;
+ImmuneHistoryManager immune_history_manager;
 LocusImmunityManager locus_immunity_manager;
 
 sqlite3 * sample_db;
@@ -81,8 +81,8 @@ EventQueue<Population, get_biting_time> biting_queue;
 double get_immigration_time(Population * p) { return p->next_immigration_time; }
 EventQueue<Population, get_immigration_time> immigration_queue;
 
-double get_immunity_loss_time(Host * h) { return h->immunity_loss_time; }
-EventQueue<Host, get_immunity_loss_time> immunity_loss_queue;
+double get_next_immunity_loss_time(Host * h) { return h->next_immunity_loss_time; }
+EventQueue<Host, get_next_immunity_loss_time> immunity_loss_queue;
 
 double get_death_time(Host * host) { return host->death_time; }
 EventQueue<Host, get_death_time> death_queue;
@@ -161,7 +161,7 @@ Gene * get_current_gene(Infection * infection);
 uint64_t get_immune_allele_count(Host * host);
 
 void gain_immunity(Host * host, Gene * gene);
-void update_immunity_loss_time(Host * host);
+void update_next_immunity_loss_time(Host * host);
 
 void lose_random_immunity(Host * host);
 
@@ -553,11 +553,11 @@ Host * create_host(Population * pop) {
     death_queue.add(host);
     
     host->completed_infection_count = 0;
-    host->immunity_loss_time = INF;
+    host->next_immunity_loss_time = INF;
     immunity_loss_queue.add(host);
     
     if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
-        AlleleImmuneHistory * immune_history = immune_history_manager.create();
+        ImmuneHistory * immune_history = immune_history_manager.create();
         for(uint64_t i = 0; i < N_LOCI; i++) {
             immune_history->immunity_by_locus[i] = locus_immunity_manager.create();
         }
@@ -857,7 +857,7 @@ Gene * get_current_gene(Infection * infection) {
 
 void gain_immunity(Host * host, Gene * gene) {
     BEGIN();
-    AlleleImmuneHistory * immune_history = host->immune_history;
+    ImmuneHistory * immune_history = host->immune_history;
     for(uint64_t i = 0; i < N_LOCI; i++) {
         LocusImmunity * immunity = immune_history->immunity_by_locus[i];
         auto itr = immunity->immunity_level_by_allele.find(gene->alleles[i]);
@@ -868,17 +868,17 @@ void gain_immunity(Host * host, Gene * gene) {
             immunity->immunity_level_by_allele[gene->alleles[i]]++;
         }
     }
-    update_immunity_loss_time(host);
+    update_next_immunity_loss_time(host);
     RETURN();
 }
 
-void update_immunity_loss_time(Host * host) {
+void update_next_immunity_loss_time(Host * host) {
     BEGIN();
     if(SELECTION_MODE != SPECIFIC_IMMUNITY) {
         RETURN();
     }
     uint64_t immune_allele_count = get_immune_allele_count(host);
-    host->immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * immune_allele_count);
+    host->next_immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * immune_allele_count);
     immunity_loss_queue.update(host);
     RETURN();
 }
@@ -886,7 +886,7 @@ void update_immunity_loss_time(Host * host) {
 void lose_random_immunity(Host * host) {
     BEGIN();
     
-    AlleleImmuneHistory * immune_history = host->immune_history;
+    ImmuneHistory * immune_history = host->immune_history;
     uint64_t cur_index = 0;
     uint64_t index = draw_uniform_index(get_immune_allele_count(host));
     bool found = false;
@@ -910,14 +910,14 @@ void lose_random_immunity(Host * host) {
         }
     }
     assert(found);
-    update_immunity_loss_time(host);
+    update_next_immunity_loss_time(host);
     RETURN();
 }
 
 uint64_t get_immune_allele_count(Host * host) {
     BEGIN();
     uint64_t immune_allele_count = 0;
-    AlleleImmuneHistory * immune_history = host->immune_history;
+    ImmuneHistory * immune_history = host->immune_history;
     for(uint64_t i = 0; i < N_LOCI; i++) {
         LocusImmunity * immunity = immune_history->immunity_by_locus[i];
         immune_allele_count += immunity->immunity_level_by_allele.size();
@@ -1480,7 +1480,7 @@ void do_mutation_event() {
     
     update_mutation_time(infection, false);
     update_transition_time(infection, false);
-    update_immunity_loss_time(infection->host);
+    update_next_immunity_loss_time(infection->host);
     
     RETURN();
 }
@@ -1494,7 +1494,7 @@ void do_recombination_event() {
     
     update_recombination_time(infection, false);
     update_transition_time(infection, false);
-    update_immunity_loss_time(infection->host);
+    update_next_immunity_loss_time(infection->host);
     
     RETURN();
 }

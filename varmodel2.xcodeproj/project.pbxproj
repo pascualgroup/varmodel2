@@ -17,8 +17,8 @@
 		6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBD1F75A57F00902EBD /* PopulationManager.cpp */; };
 		6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6428FDBF1F75A57F00902EBD /* StrainManager.cpp */; };
 		6466F1D01F9114B800F80B13 /* error_handling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6466F1CE1F9114B800F80B13 /* error_handling.cpp */; };
-		64AC44231F7B223C00176944 /* AlleleImmuneHistoryManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */; };
 		64AC44251F7B223C00176944 /* LocusImmunityManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */; };
+		64BB26CA1FA301BC00D55290 /* ImmuneHistoryManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 64BB26C81FA301BC00D55290 /* ImmuneHistoryManager.cpp */; };
 		69D181B31F2AAC83007D5C32 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */; };
 /* End PBXBuildFile section */
 
@@ -65,12 +65,11 @@
 		6466F1CE1F9114B800F80B13 /* error_handling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_handling.cpp; sourceTree = "<group>"; };
 		6466F1CF1F9114B800F80B13 /* error_handling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = error_handling.hpp; sourceTree = "<group>"; };
 		64AC44161F79E7D100176944 /* LocusImmunity.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LocusImmunity.hpp; sourceTree = "<group>"; };
-		64AC441C1F7B1F6C00176944 /* AlleleImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistory.hpp; sourceTree = "<group>"; };
-		64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AlleleImmuneHistoryManager.cpp; sourceTree = "<group>"; };
-		64AC441E1F7B223C00176944 /* AlleleImmuneHistoryManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = AlleleImmuneHistoryManager.hpp; sourceTree = "<group>"; };
+		64AC441C1F7B1F6C00176944 /* ImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ImmuneHistory.hpp; sourceTree = "<group>"; };
 		64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LocusImmunityManager.cpp; sourceTree = "<group>"; };
 		64AC44221F7B223C00176944 /* LocusImmunityManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LocusImmunityManager.hpp; sourceTree = "<group>"; };
-		64F0B8431F7DACB8002156E4 /* GeneImmuneHistory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = GeneImmuneHistory.hpp; sourceTree = "<group>"; };
+		64BB26C81FA301BC00D55290 /* ImmuneHistoryManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImmuneHistoryManager.cpp; sourceTree = "<group>"; };
+		64BB26C91FA301BC00D55290 /* ImmuneHistoryManager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImmuneHistoryManager.hpp; sourceTree = "<group>"; };
 		696C01E01F198B7F009403B6 /* varmodel2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = varmodel2; sourceTree = BUILT_PRODUCTS_DIR; };
 		69D181B21F2AAC83007D5C32 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -110,8 +109,7 @@
 				6428FD9C1F75A55D00902EBD /* Population.hpp */,
 				6428FD991F75A55D00902EBD /* Host.hpp */,
 				6428FD9B1F75A55D00902EBD /* Infection.hpp */,
-				64F0B8431F7DACB8002156E4 /* GeneImmuneHistory.hpp */,
-				64AC441C1F7B1F6C00176944 /* AlleleImmuneHistory.hpp */,
+				64AC441C1F7B1F6C00176944 /* ImmuneHistory.hpp */,
 				64AC44161F79E7D100176944 /* LocusImmunity.hpp */,
 			);
 			path = datamodel;
@@ -154,8 +152,8 @@
 				6428FDB71F75A57F00902EBD /* HostManager.cpp */,
 				6428FDBC1F75A57F00902EBD /* InfectionManager.hpp */,
 				6428FDBB1F75A57F00902EBD /* InfectionManager.cpp */,
-				64AC441E1F7B223C00176944 /* AlleleImmuneHistoryManager.hpp */,
-				64AC441D1F7B223C00176944 /* AlleleImmuneHistoryManager.cpp */,
+				64BB26C91FA301BC00D55290 /* ImmuneHistoryManager.hpp */,
+				64BB26C81FA301BC00D55290 /* ImmuneHistoryManager.cpp */,
 				64AC44221F7B223C00176944 /* LocusImmunityManager.hpp */,
 				64AC44211F7B223C00176944 /* LocusImmunityManager.cpp */,
 			);
@@ -282,12 +280,12 @@
 				6428FDC21F75A57F00902EBD /* GeneManager.cpp in Sources */,
 				6428FDAF1F75A55D00902EBD /* main.cpp in Sources */,
 				6428FDB11F75A55D00902EBD /* util.cpp in Sources */,
+				64BB26CA1FA301BC00D55290 /* ImmuneHistoryManager.cpp in Sources */,
 				6428FDB21F75A55D00902EBD /* varmodel.cpp in Sources */,
 				64AC44251F7B223C00176944 /* LocusImmunityManager.cpp in Sources */,
 				6428FDC61F75A57F00902EBD /* PopulationManager.cpp in Sources */,
 				6428FDC31F75A57F00902EBD /* HostManager.cpp in Sources */,
 				6428FDC71F75A57F00902EBD /* StrainManager.cpp in Sources */,
-				64AC44231F7B223C00176944 /* AlleleImmuneHistoryManager.cpp in Sources */,
 				6428FDC51F75A57F00902EBD /* InfectionManager.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
