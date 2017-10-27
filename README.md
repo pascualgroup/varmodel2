@@ -57,6 +57,8 @@ cd rundir
 You can also write parameter files in JSON format, following the same 
 This is most useful for generated parameter files, e.g. for producing replicates or parameter sweeps to be submitted to SLURM.
 
+## Model specification
+
 ## History and overview of changes
 
 This code is a new, simpler implementation of the malaria var gene evolution model by Qixin He, in which var genes are composed of loci with varying alleles.
@@ -64,6 +66,7 @@ That model was based on a model by Yael Artzy-Randrup, implemented by Ed Baskerv
 
 The main changes from the previous implementation are as follows:
 
+* Some details of model behavior have changed (see section below).
 * Parameters are compile-time constants instead of being dynamically loaded from JSON at runtime, which added unnecessary complexity to the C++ code.
 A Python script is used to generate the `parameters.hpp` constants file from either JSON or from a Python module.
 * The abstraction layer for database output was removed.
@@ -92,14 +95,25 @@ Additionally, every `VERIFICATION_PERIOD` in simulation time units, data structu
 
 All changes listed here are relative to [VarModel repo commit f66d253](https://github.com/pascualgroup/VarModel/commit/f66d253176960a539db9628c1a7aeaa7fa4ab6f1).
 
+### Elimination of inactive state between gene expressions
+
+There is no longer an "inactive" state between gene expressions.
+Instead, state transitions go directly from the liver (waiting) stage to the first expression, then the second expression, and so on.
+
 ### Dead code removal
 
 TODO: list unused functionality that was removed
 
-### Bug fixes
+### Bug fix: off-by-one error in ectopic recombination
 
-TODO: detail all bug fixes as discussed with Qixin over email
+In the previous version of the code, there was an off-by-one error in choosing the crossover point.
 
-* Bug fix: same strain cannot be chosen for recombination during transmission
+The crossover point was never chosen to be just before the last locus; rather, the farthest along it could be was before the second-to-last locus.
+This has been fixed in the new version of the code.
 
+### Bug fix in recombination during transmission
 
+In choosing the two strains to be recombined, the recombination probability was set assuming that a distinct pair of strains would be selected, but in fact the same pair could be selected for recombination.
+
+Now, the code simply chooses two random strains.
+If they are the same, no recombination occurs; if they are different, recombination occurs.
