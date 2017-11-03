@@ -36,6 +36,13 @@ If you want to specify a different random seed without recompiling the model, ju
 bin/varmodel 1234
 ```
 
+## Saving and loading checkpoints
+
+Checkpoints—a complete representation of model state—are saved in a SQLite database representation.
+If `SAVE_TO_CHECKPOINT` is on, then checkpoints are saved to `CHECKPOINT_SAVE_FILENAME` every `CHECKPOINT_SAVE_PERIOD` units of simulation time.
+
+To restore from a checkpoint, build the model using `LOAD_FROM_CHECKPOINT` active and `CHECKPOINT_LOAD_FILENAME` set to the checkpoint (making sure to include double-quotes in the filename string, as described in "Setting up parameters" below).
+
 ## Building and running the model: details
 
 ### Each run lives in a separate working directory
