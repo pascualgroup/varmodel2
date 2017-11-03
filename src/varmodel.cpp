@@ -641,11 +641,23 @@ Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source
     BEGIN();
     
     std::array<Gene *, N_GENES_PER_STRAIN> genes;
-    for(uint64_t i = 0; i < n_new_genes; i++) {
-        genes[i] = mutate_gene(draw_random_gene(), new_gene_source);
-    }
+    
+    // Old genes
     for(uint64_t i = n_new_genes; i < N_GENES_PER_STRAIN; i++) {
         genes[i] = draw_random_gene();
+    }
+    
+    // New genes
+    for(uint64_t i = 0; i < n_new_genes; i++) {
+        bool used_already = false;
+        do {
+            genes[i] = mutate_gene(draw_random_gene(), new_gene_source);
+            for(uint64_t j = 0; j < i; j++) {
+                if(genes[i] == genes[j]) {
+                    used_already = true;
+                }
+            }
+        } while(used_already);
     }
     
     Strain * strain = get_strain_with_genes(genes);
