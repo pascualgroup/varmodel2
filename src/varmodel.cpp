@@ -648,16 +648,14 @@ Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source
     }
     
     // New genes
+    std::unordered_set<Gene *> old_genes_used;
     for(uint64_t i = 0; i < n_new_genes; i++) {
-        bool used_already = false;
+        Gene * old_gene;
         do {
-            genes[i] = mutate_gene(draw_random_gene(), new_gene_source);
-            for(uint64_t j = 0; j < i; j++) {
-                if(genes[i] == genes[j]) {
-                    used_already = true;
-                }
-            }
-        } while(used_already);
+            old_gene = draw_random_gene();
+        } while(old_genes_used.find(old_gene) != old_genes_used.end());
+        old_genes_used.insert(old_gene);
+        genes[i] = mutate_gene(old_gene, new_gene_source);
     }
     
     Strain * strain = get_strain_with_genes(genes);
