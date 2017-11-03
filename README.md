@@ -2,9 +2,9 @@
 
 Ed Baskerville
 
-Last update: 26 October 2017
+Last update: 2 November 2017
 
-This code is an implementation of a model of malaria var gene evolution within an epidemic simulation.
+This code implements a model of malaria var gene evolution within an individual-based disease transmission model.
 Malaria strains are represented as unordered sets of var genes, which are in turn composed of abstract loci.
 A number of alleles can appear at each locus, and the allelic composition of a gene across loci governs immune dynamics in the host.
 Individual hosts are infected by strains, and infections can be transmitted between hosts.
@@ -203,21 +203,90 @@ These are the different events that can occur:
 * *Immigration events* represent the appearance of a new strain from outside the population.
 * *Immunity loss events* represent the loss of previously gained immunity.
 * *Infection transition events* represent a transition in an infection between the expression of two different var genes.
-* *Mutation events* mutate a gene within an infection.
-* *Recombination events* recombine genes within an infection.
+* *Infection mutation events* mutate a gene within an infection.
+* *Ectopic recombination events* recombine genes within an infection.
 * *Death events* represent the death of a host, and the birth of a new host in its place.
+
+The code supports multiple populations, but (as of 2 November 2017) transmission dynamics are not integrated between populations.
+The rest of this document is written assuming a single population.
 
 ### Initialization
 
+1. `N_GENES_INITIAL` genes are generated to populate the global gene pool, consisting of alleles with random values in `[0, N_ALLELES_INITIAL[i] - 1]` at locus `i`.
+2. `N_HOSTS` hosts are born, with lifetimes drawn from exponential distribution with mean `MEAN_HOST_LIFETIME`, truncated at `MAX_HOST_LIFETIME`.
+3. `N_INITIAL_INFECTIONS` random infections are generated, with host drawn randomly from the population and strains generated as uniform-random samples from the gene pool.
+
 ### Biting events
+
+The waiting time between biting events is drawn from an exponential distribution with mean
+
+```
+BITING_RATE_MEAN * (
+    1 + BITING_RATE_RELATIVE_AMPLITUDE * cos(
+        2 * pi * (now / T_YEAR - BITING_RATE_PEAK_PHASE)
+    ))
+)
+```
+
+where `now` is the current time, so that the maximum biting rate is `BITING_RATE_MEAN * (1 + BITING_RATE_RELATIVE_AMPLITUDE` and the minimum biting rate is `BITING_RATE_MEAN * (1 - BITING_RATE_RELATIVE_AMPLITUDE`, and the biting rate varies sinusoidally over the year.
+
+Conceptually, a biting event really is a *paired* biting event: it models a mosquito biting one host, then biting another, and potentially transmitting any strains that were picked up.
+
+During a biting event, the following sequence occurs:
+
+1. A source host is chosen uniformly randomly from the population.
+2. A destination host is chosen uniformly randomly from the population. Currently (2 November 2017; TODO: maybe change), the destination host may be the same as the source host.
+3. Each infection currently expressing a gene (i.e., not in the liver stage; see "Expression dynamics" below) is chosen for inclusion in a *source set* with probability `GENE_TRANSMISSIBILITY / n_active_infections` if `CONINFECTION_REDUCES_TRANSMISSION` is `true; or just `GENE_TRANSMISSIBILITY` otherwise.
+4. A *transmission set* of strains is formed with the same size as the source set. Each member of this set is formed by uniformly randomly drawing two strains from the source set (with replacement). If the two strains are the same, then the strain is included in the transmission set unmodified. If the strains are different, then they are recombined to form a new strain. Each recombined strain consist of a random sample of size `N_GENES_PER_STRAIN`, without replacement, of the `2 * N_GENES_PER_STRAIN` genes in the two strains being recombined.
+5. All strains in the *transmission set* are transmitted to the destination host, initiating an infection.
 
 ### Immigration events
 
-### Mutation events
+The waiting time between immigration events follows an exponential distribution with rate `IMMIGRATION RATE`.
 
-### Recombination events
+An immigration event infects a random host with a new strain.
+
+With probability $P_IMMIGRATION_INCLUDES_NEW_GENES$, the new strain includes $N_IMMIGRATION_NEW_GENES$ new genes.
+
+A new gene is a modified copy of a randomly sampled existing gene, with the allele at one randomly sampled locus set to a new allele.
+Since alleles are indexed starting at zero, the value of a new allele is simply equal to the current number of alleles at the locus; and the new number of alleles at that locus increases by 1.
+
+The other genes in the strain are randomly sampled from existing genes.
+
+### Infection mutation events
+
+The waiting time between mutation events, for each infection, is exponentially distributed with rate `MUTATION_RATE * N_GENES_PER_STRAIN * N_LOCI`.
+
+During a mutation event, a randomly chosen locus within a randomly chosen gene within the strain is chosen to be mutated.
+The new allele at the chosen locus follows the same rule as for new genes in immigration events: the value of a new allele is equal to the current number of alleles at the locus; and the new number of alleles at that locus increases by 1.
+
+### Ectopic recombination events
+
+The waiting time between recombination events, for each possible unordered pair of different genes within a strain, is exponentially distributed with rate `ECTOPIC_RECOMBINATION_RATE`.
+
+This recombination event is a *conversion* with probability `P_ECTOPIC_RECOMBINATION_IS_CONVERSION`.
+Under conversion, both genes are replaced with a single new, recombined gene.
+Otherwise, two new genes replace the existing pair of genes.
+
+The following assumes 0-indexing of loci.
+
+Given two genes, `gene_1`, and `gene_2`, we will choose new genes `new_gene_1` and `new_gene_2` to replace them, in the same position in the expression order, as follows.
+
+First, a recombination breakpoint is drawn in the half-open interval `[0, N_LOCI)`.
+
+If the breakpoint is `0` and the recombination event is a conversion, then both new genes are set to be the same as `gene_1`.
+
+If the breakpoint is `0` and the recombination event is *not* a conversion, then both genes are left unchanged.
+
+If the breakpoint is not `0`, then `new_gene_1` is formed by copying alleles from `gene_1` for loci less than the breakpoint, and by copying alleles from `gene_2` for loci greater than or equal to the breakpoint.
+
+If the recombination is a conversion, then `new_gene_2 = gene_2`.
+
+Otherwise, `new_gene_2` is formed analogously to `new_gene_1`, by copying alleles from `gene_2` for loci less than the breakpoint, and by copying alleles from `gene_1` for loci greater than or equal to the breakpoint.
 
 ### Death events
+
+When a host dies, it is replaced with a new host with no infections and noimmune history and a lifetime drawn from a truncated exponential distribution with pre-truncation mean `MEAN_HOST_LIFETIME` and maximum value `MAX_HOST_LIFETIME.
 
 ### Immune selection modes
 
