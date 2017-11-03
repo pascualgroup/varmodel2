@@ -1365,8 +1365,10 @@ void transmit(Host * src_host, Host * dst_host) {
     if(src_host->infections.size() > 0) {
         std::vector<Strain *> src_strains;
         for(Infection * infection : src_host->infections) {
-            if(draw_bernoulli(get_transmission_probability(infection))) {
-                src_strains.push_back(infection->strain);
+            if(infection->expression_index >= 0) {
+                if(draw_bernoulli(get_transmission_probability(infection))) {
+                    src_strains.push_back(infection->strain);
+                }
             }
         }
         
