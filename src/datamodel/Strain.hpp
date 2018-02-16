@@ -14,6 +14,8 @@ struct Strain {
     
     uint64_t const id;
     std::array<Gene *, N_GENES_PER_STRAIN> genes_sorted;
+    //copy activation bias array
+    std::array<double, N_GENES_PER_STRAIN> actBiasArray;
 };
 
 } // namespace varmodel

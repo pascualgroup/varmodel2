@@ -82,6 +82,9 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
     // Load reference lists (std::array)
     {load_reflist_blocks_array}
     
+    // Load reference lists (std::vector)
+    {load_reflist_blocks_vector}
+
     // Load reference lists (std::unordered_set)
     {load_reflist_blocks_unordered_set}
     
@@ -125,6 +128,9 @@ void {manager_type}::save_to_checkpoint(sqlite3 * db) {{
     // Create and save std::array references into separate tables
     {create_reflist_blocks_array}
     
+    // Create and save std::vector references into separate tables
+    {create_reflist_blocks_vector}
+
     // Create and save std::unordered_set references into separate tables
     {create_reflist_blocks_unordered_set}
     

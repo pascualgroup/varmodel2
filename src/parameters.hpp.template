@@ -109,6 +109,8 @@ const double {MUTATION_RATE};
 // is C(N_GENES_PER_STRAIN, 2) * ECTOPIC_RECOMBINATION_RATE 
 const double {ECTOPIC_RECOMBINATION_RATE};
 
+//expression bias ectopic recombination towards expressed genes
+const bool {EXPRESSION_BIAS_RECOMBINATION};
 // Probability that an ectopic recombination is a conversion
 const double {P_ECTOPIC_RECOMBINATION_IS_CONVERSION};
 
@@ -118,8 +120,15 @@ const double {T_LIVER_STAGE};
 // Gene deactivation rate when not immune or under neutrality
 const double {TRANSITION_RATE_NOT_IMMUNE};
 
-// Gene deactivation rate when fully immune
-const double {TRANSITION_RATE_IMMUNE};
+// minimum days required for the host to gain immunity from exposure
+const double {IMMUNITY_DELAY};
+
+// minimum days required for the immune system to clear a specific var gene after gain immunity
+const double {CLEARANCE_DELAY};
+
+// minimum days required for the immune system to clear an immuned var gene from memory b-cell
+const double {CLEARANCE_IMMUNE};
+    
 
 // Number of infections to gain immunity under general immunity
 const uint64_t {N_INFECTIONS_FOR_GENERAL_IMMUNITY};
@@ -128,7 +137,7 @@ const uint64_t {N_INFECTIONS_FOR_GENERAL_IMMUNITY};
 const std::array<double,4> {GENERAL_IMMUNITY_PARAMS};
 
 // Clearance rate when immune (only used for general immunity)
-const double {CLEARANCE_RATE_IMMUNE};
+const double {GENERALIZED_CLEARANCE_RATE_IMMUNE};
 
 // Use this as the mean of the (truncated) exponential distribution used to draw host lifetimes
 const double {MEAN_HOST_LIFETIME};
