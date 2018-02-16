@@ -81,6 +81,27 @@ def copy_sources(dst_dirname):
         pass
     
     shutil.copytree(os.path.join(script_dir, 'src'), os.path.join(dst_dirname, 'src'))
+    
+    git_dirname = os.path.join(dst_dirname, 'git')
+    try:
+        os.makedirs(git_dirname)
+    except:
+        pass
+    with open(os.path.join(git_dirname, 'commit.txt'), 'w') as f:
+        subprocess.Popen(
+            ['git', 'rev-parse', 'HEAD'],
+            stdout=f
+        )
+    with open(os.path.join(git_dirname, 'log.txt'), 'w') as f:
+        subprocess.Popen(
+            ['git', 'log'],
+            stdout=f
+        )
+    with open(os.path.join(git_dirname, 'diff.txt'), 'w') as f:
+        subprocess.Popen(
+            ['git', 'diff'],
+            stdout=f
+        )
 
 def generate_managers(dst_dirname):
     subprocess.Popen([
