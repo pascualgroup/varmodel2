@@ -95,7 +95,6 @@ def parse_type(object_type, input_filename):
     maps = []
     reflists_IndexedSet = []
     reflists_array = []
-    reflists_vector = []
     reflists_unordered_set = []
     
     with open(input_filename) as input_file:
@@ -134,17 +133,13 @@ def parse_type(object_type, input_filename):
                         and tokens[1] == '*>' and tokens[2].endswith(';'):
                         set_object_type = tokens[0][len('std::unordered_set<'):]
                         reflists_unordered_set.append((set_object_type, tokens[2][:-1]))
-                    elif tokens[0].startswith('std::vector<') \
-                    	and tokens[1] == '*>' and tokens[2].endswith(";"):
-                        vec_object_type = tokens[0][len('std::vector<'):]
-                        reflists_vector.append((vec_object_type, tokens[2][:-1]))
                 elif len(tokens) == 4:
                     if tokens[0].startswith('std::array<') \
                         and tokens[1] == '*,' and tokens[2].endswith('>') and tokens[3].endswith(';'):
                         vec_object_type = tokens[0][len('std::array<'):]
                         reflists_array.append((vec_object_type, tokens[3][:-1]))
     
-    return columns, arrays, maps, reflists_array, reflists_vector, reflists_unordered_set, reflists_IndexedSet
+    return columns, arrays, maps, reflists_array, reflists_unordered_set, reflists_IndexedSet
 
 def get_template(filename):
     with open(os.path.join(script_dir, 'src', 'manager_templates', filename)) as f:
@@ -162,9 +157,6 @@ load_map_block_format = get_template('load_map_block.cpp.template')
 create_reflist_block_array_format = get_template('create_reflist_block_array.cpp.template')
 load_reflist_block_array_format = get_template('load_reflist_block_array.cpp.template')
 
-create_reflist_block_vector_format = get_template('create_reflist_block_vector.cpp.template')
-load_reflist_block_vector_format = get_template('load_reflist_block_vector.cpp.template')
-
 create_reflist_block_unordered_set_format = get_template('create_reflist_block_unordered_set.cpp.template')
 load_reflist_block_unordered_set_format = get_template('load_reflist_block_unordered_set.cpp.template')
 
@@ -180,10 +172,10 @@ def generate_manager(object_type, dst_dir):
     manager_type = object_type + 'Manager'
     print('  Generating {}...'.format(manager_type))
     
-    columns, arrays, maps, reflists_array, reflists_vector, reflists_unordered_set, reflists_IndexedSet = parse_type(object_type, src_filename)
+    columns, arrays, maps, reflists_array, reflists_unordered_set, reflists_IndexedSet = parse_type(object_type, src_filename)
     
     ref_vars = [(c[1], c[2]) for c in columns if c[0] == 'REF'] + \
-        reflists_array + reflists_vector + reflists_unordered_set + reflists_IndexedSet
+        reflists_array + reflists_unordered_set + reflists_IndexedSet
     
 #     print('columns: {}'.format(json.dumps(columns)))
 #     print('arrays: {}'.format(json.dumps(arrays)))
@@ -346,19 +338,6 @@ def generate_manager(object_type, dst_dir):
                 create_reflist_block(reflist_spec) for reflist_spec in reflists_array
             ])
         
-        def format_create_reflist_blocks_vector():
-            def create_reflist_block(reflist_spec):
-                ref_type, reflist_var = reflist_spec
-                return create_reflist_block_vector_format.format(
-                    object_type = object_type,
-                    ref_type = ref_type,
-                    reflist_var = reflist_var
-                )
-            
-            return '\n        '.join([
-                create_reflist_block(reflist_spec) for reflist_spec in reflists_vector
-            ])
-        
         def format_create_reflist_blocks_unordered_set():
             def create_reflist_block(reflist_spec):
                 ref_type, reflist_var = reflist_spec
@@ -396,19 +375,6 @@ def generate_manager(object_type, dst_dir):
             
             return '\n        '.join([
                 format_load_reflist_block(reflist_spec) for reflist_spec in reflists_array
-            ])
-        
-        def format_load_reflist_blocks_vector():
-            def format_load_reflist_block(reflist_spec):
-                ref_type, reflist_var = reflist_spec
-                return load_reflist_block_vector_format.format(
-                    object_type = object_type,
-                    ref_type = ref_type,
-                    reflist_var = reflist_var
-                )
-            
-            return '\n        '.join([
-                format_load_reflist_block(reflist_spec) for reflist_spec in reflists_vector
             ])
         
         def format_load_reflist_blocks_unordered_set():
@@ -513,11 +479,9 @@ def generate_manager(object_type, dst_dir):
             create_map_blocks = format_create_map_blocks(),
             load_map_blocks = format_load_map_blocks(),
             create_reflist_blocks_array = format_create_reflist_blocks_array(),
-            create_reflist_blocks_vector = format_create_reflist_blocks_vector(),
             create_reflist_blocks_unordered_set = format_create_reflist_blocks_unordered_set(),
             create_reflist_blocks_IndexedSet = format_create_reflist_blocks_IndexedSet(),
             load_reflist_blocks_array = format_load_reflist_blocks_array(),
-            load_reflist_blocks_vector = format_load_reflist_blocks_vector(),
             load_reflist_blocks_unordered_set = format_load_reflist_blocks_unordered_set(),
             load_reflist_blocks_IndexedSet = format_load_reflist_blocks_IndexedSet()
         )
