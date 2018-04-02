@@ -136,7 +136,7 @@ void initialize_population_events(Population * pop);
 void initialize_population_hosts(Population * pop);
 void initialize_population_infections(Population * pop);
 
-Host * create_host(Population * pop);
+Host * create_host(Population * pop, bool newborn);
 void destroy_host(Host * host);
 
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
@@ -417,7 +417,7 @@ void initialize_population_hosts(Population * pop) {
     BEGIN();
     
     for(uint64_t i = 0; i < N_HOSTS[pop->ind]; i++) {
-        create_host(pop);
+        create_host(pop,false);
     }
     
     RETURN();
@@ -544,7 +544,7 @@ void finalize_sample_db() {
 #pragma mark \
 *** Object management functions ***
 
-Host * create_host(Population * pop) {
+Host * create_host(Population * pop, bool newborn) {
     BEGIN();
     
     Host * host = host_manager.create();
@@ -554,7 +554,11 @@ Host * create_host(Population * pop) {
         draw_exponential(1.0 / MEAN_HOST_LIFETIME),
         MAX_HOST_LIFETIME
     );
-    host->birth_time = now;
+    if (newborn){
+        host->birth_time = now;
+    }else{
+        host->birth_time = -draw_uniform_real(0, lifetime);
+    }
     host->death_time = host->birth_time + lifetime;
     death_queue.add(host);
     
@@ -1542,7 +1546,7 @@ void do_death_event() {
     Host * host = death_queue.head();
     Population * pop = host->population;
     destroy_host(host);
-    Host * new_host = create_host(pop);
+    Host * new_host = create_host(pop,true);
     PRINT_DEBUG(1, "Created new host id %llu in population %llu", new_host->id, pop->id);
     RETURN();
 }
