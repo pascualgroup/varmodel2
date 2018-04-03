@@ -383,3 +383,9 @@ In choosing the two strains to be recombined, the recombination probability was 
 
 Now, the code simply chooses two random strains.
 If they are the same, no recombination occurs; if they are different, recombination occurs.
+
+## Functionality difference from previous model
+This new implementation does not include several tweaks and some major functionality we had in the previous model. Including:
+* Parameters `moi1` (sample only hosts with moi=1) and `maxMOI` (limit the number of repertoires in hosts).
+* Following a group of hosts from birth, tracking their infection and immune history to produce allele/gene accumulation curves.
+* Microsatellites.
