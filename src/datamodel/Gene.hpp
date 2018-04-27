@@ -19,8 +19,6 @@ struct Gene {
     uint64_t const id;
     
     uint64_t source;
-    uint64_t deactivationClass;
-    uint64_t actBiasClass;
     bool is_functional;
     std::array<uint64_t, N_LOCI> alleles;
 };

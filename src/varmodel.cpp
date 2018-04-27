@@ -140,7 +140,7 @@ Host * create_host(Population * pop, bool newborn);
 void destroy_host(Host * host);
 
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
-Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, uint64_t deActClass, uint64_t actBias, bool is_functional);
+Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
 Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source);
 Strain * create_strain(std::vector<Gene *> const & genes);
 Gene * draw_random_gene();
@@ -175,7 +175,6 @@ void infect_host(Host * host, Strain * strain);
 void perform_infection_transition(Infection * infection);
 void clear_infection(Infection * infection);
 
-Gene * draw_next_gene(Strain * strain);
 void update_transition_time(Infection * infection, bool initial);
 double draw_activation_time(Infection * infection);
 double draw_deactivation_time(Infection * infection);
@@ -287,9 +286,7 @@ void validate_and_load_parameters() {
     
     assert(GENE_TRANSMISSIBILITY >= 0.0 && GENE_TRANSMISSIBILITY <= 1.0);
     assert(IMMUNITY_LOSS_RATE >= 0.0);
-    assert(IMMUNITY_DELAY < CLEARANCE_DELAY);
-    assert(CLEARANCE_IMMUNE < CLEARANCE_DELAY);
-
+    
     assert(MUTATION_RATE >= 0.0);
     assert(T_LIVER_STAGE >= 0.0);
     
@@ -376,10 +373,7 @@ void initialize_gene_pool() {
                 alleles[j] = draw_uniform_index(n_alleles[j]);
             }
         } while(get_gene_with_alleles(alleles) != NULL);
-        // draw random number for deactivation class, and activation bias
-        uint64_t deActClass = draw_uniform_index(2);
-        uint64_t actBias = draw_uniform_index(2);
-        get_or_create_gene(alleles, SOURCE_POOL, deActClass, actBias,true);
+        get_or_create_gene(alleles, SOURCE_POOL, true);
     }
     
     RETURN();
@@ -631,16 +625,14 @@ Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles) {
     RETURN(itr->second);
 }
 
-Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, uint64_t deActClass, uint64_t actBias, bool is_functional) {
+Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional) {
     BEGIN();
     Gene * gene = get_gene_with_alleles(alleles);
     if(gene == nullptr) {
         gene = gene_manager.create();
         gene->alleles = alleles;
         gene->source = source;
-        gene->deactivationClass = deActClass;
-        gene->actBiasClass = actBias;
-       gene->is_functional = is_functional;
+        gene->is_functional = is_functional;
     
         if(OUTPUT_STRAINS) {
             write_gene(gene, gene_stmt, allele_stmt);
@@ -686,10 +678,6 @@ Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
     if(itr == genes_strain_map.end()) {
         strain = strain_manager.create();
         strain->genes_sorted = genes;
-        //add the activation bias array
-        for (uint64_t i =0; i < N_GENES_PER_STRAIN; i++){
-            strain->actBiasArray[i] = genes[i]->actBiasClass*9.0 + 1.0;
-        }
         genes_strain_map[genes] = strain;
         
         if(OUTPUT_STRAINS) {
@@ -762,7 +750,7 @@ Gene * mutate_gene(Gene * gene, GeneSource source) {
     uint64_t locus = draw_uniform_index(N_LOCI); 
     alleles[locus] = n_alleles[locus];
     n_alleles[locus]++;
-    RETURN(get_or_create_gene(alleles, source, gene->deactivationClass,gene->actBiasClass, gene->is_functional));
+    RETURN(get_or_create_gene(alleles, source, gene->is_functional));
 }
 
 void recombine_infection(Infection * infection) {
@@ -776,22 +764,16 @@ void recombine_infection(Infection * infection) {
     Gene * new_gene_2;
     
     // Choose random expression order indices
-    uint64_t index_1;
-    uint64_t index_2;
-    Gene * src_gene_1;
-    Gene * src_gene_2;
-    if(EXPRESSION_BIAS_RECOMBINATION){
-        src_gene_1 = infection->expression_order[infection->expression_index];
-        src_gene_2 = infection->strain->genes_sorted[draw_uniform_index(N_GENES_PER_STRAIN)];
-    }else{
-        do {
-            index_1 = draw_uniform_index(N_GENES_PER_STRAIN);
-            index_2 = draw_uniform_index_except(N_GENES_PER_STRAIN, index_1);
-        } while(index_1 == index_2);
-        src_gene_1 = infection->strain->genes_sorted[index_1];
-        src_gene_2 = infection->strain->genes_sorted[index_2];
-    }
-   if(src_gene_1 == src_gene_2) {
+    uint64_t exp_index_1;
+    uint64_t exp_index_2;
+    do {
+        exp_index_1 = draw_uniform_index(N_GENES_PER_STRAIN);
+        exp_index_2 = draw_uniform_index_except(N_GENES_PER_STRAIN, exp_index_1);
+    } while(exp_index_1 == exp_index_2);
+    
+    Gene * src_gene_1 = infection->expression_order[exp_index_1];
+    Gene * src_gene_2 = infection->expression_order[exp_index_2];
+    if(src_gene_1 == src_gene_2) {
         RETURN();
     }
     
@@ -814,7 +796,7 @@ void recombine_infection(Infection * infection) {
         double similarity = get_gene_similarity(src_gene_1, src_gene_2, breakpoint);
         
         auto rec_alleles_1 = recombine_alleles(src_gene_1->alleles, src_gene_2->alleles, breakpoint);
-        Gene * rec_gene_1 = get_or_create_gene(rec_alleles_1, SOURCE_RECOMBINATION, src_gene_1->deactivationClass, src_gene_1->actBiasClass, draw_bernoulli(similarity));
+        Gene * rec_gene_1 = get_or_create_gene(rec_alleles_1, SOURCE_RECOMBINATION, draw_bernoulli(similarity));
         new_gene_1 = rec_gene_1->is_functional ? rec_gene_1 : src_gene_1;
         
         // Under conversion, the second gene remains unchanged
@@ -824,7 +806,7 @@ void recombine_infection(Infection * infection) {
         // Under normal combination, both genes have material swapped
         else {
             auto rec_alleles_2 = recombine_alleles(src_gene_2->alleles, src_gene_1->alleles, breakpoint);
-            Gene * rec_gene_2 = get_or_create_gene(rec_alleles_2, SOURCE_RECOMBINATION, src_gene_2->deactivationClass, src_gene_2->actBiasClass, draw_bernoulli(similarity));
+            Gene * rec_gene_2 = get_or_create_gene(rec_alleles_2, SOURCE_RECOMBINATION, draw_bernoulli(similarity));
             new_gene_2 = rec_gene_2->is_functional ? rec_gene_2 : src_gene_2;
         }
     }
@@ -837,24 +819,18 @@ void recombine_infection(Infection * infection) {
     // Update expression order and strain
     std::array<Gene *, N_GENES_PER_STRAIN> new_genes = infection->strain->genes_sorted;
     if(new_gene_1 != src_gene_1) {
-        //infection->expression_order[exp_index_1] = new_gene_1;
+        infection->expression_order[exp_index_1] = new_gene_1;
         replace_first(new_genes, src_gene_1, new_gene_1);
     }
     if(new_gene_2 != src_gene_2) {
-        //infection->expression_order[exp_index_2] = new_gene_2;
+        infection->expression_order[exp_index_2] = new_gene_2;
         replace_first(new_genes, src_gene_2, new_gene_2);
-    }
-    if(src_gene_1 == infection->expression_order[infection->expression_index]){
-        infection->expression_order[infection->expression_index] = new_gene_1;
-    }else if(src_gene_2 == infection->expression_order[infection->expression_index]){
-        infection->expression_order[infection->expression_index] = new_gene_2;
     }
     infection->strain = get_strain_with_genes(new_genes);
     
     RETURN();
 }
 
-//add the possibility that ectopic recombination also create new epitopes, 0.5 chance
 std::array<uint64_t, N_LOCI> recombine_alleles(
     std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint
 ) {
@@ -864,10 +840,7 @@ std::array<uint64_t, N_LOCI> recombine_alleles(
         if(i < breakpoint) {
             arc[i] = a1[i];
         }
-        else if ((i == breakpoint) && (draw_bernoulli(0.5))) {
-            arc[i] = n_alleles[i];
-            n_alleles[i]++;
-        }else {
+        else {
             arc[i] = a2[i];
         }
     }
@@ -892,7 +865,6 @@ Gene * draw_random_gene() {
 
 Gene * get_current_gene(Infection * infection) {
     BEGIN();
-    assert(infection->expression_order.size()==infection->expression_index+1);
     Gene * gene = infection->expression_order[infection->expression_index];
     RETURN(gene);
 }
@@ -1001,17 +973,15 @@ void infect_host(Host * host, Strain * strain) {
     infection->host = host;
     infection->strain = strain;
     
-    //changing expression order to be selected at each step according to activation bias
-    /*for(uint64_t i = 0; i < strain->genes_sorted.size(); i++) {
-     infection->expression_order[i] = strain->genes_sorted[i];
-     }
-     std::shuffle(
-     infection->expression_order.begin(), infection->expression_order.end(), rng
-     );*/
-
+    for(uint64_t i = 0; i < strain->genes_sorted.size(); i++) {
+        infection->expression_order[i] = strain->genes_sorted[i];
+    }
+    std::shuffle(
+        infection->expression_order.begin(), infection->expression_order.end(), rng
+    );
+    
     if(T_LIVER_STAGE == 0.0) {
         infection->expression_index = 0;
-        infection->expression_order.push_back(draw_next_gene(infection->strain));
         update_transition_time(infection, true);
     }
     else {
@@ -1025,10 +995,8 @@ void infect_host(Host * host, Strain * strain) {
     
     if(SELECTION_MODE == GENERAL_IMMUNITY) {
         update_clearance_time(infection, true);
-    }else{
-        infection->clearance_time = INF;
-        clearance_queue.add(infection);
     }
+    
     host->infections.insert(infection);
     
     n_infections_cumulative++;
@@ -1036,64 +1004,50 @@ void infect_host(Host * host, Strain * strain) {
     RETURN();
 }
 
-//void add a new kind of transition based on activation network
-    
-//ONLY ADD IT TO SPECIFIC IMMUNITY, if infection from a specific allele is longer than IMMUNE_DELAY
 void perform_infection_transition(Infection * infection) {
     BEGIN();
     
     Host * host = infection->host;
     if(infection->expression_index == -1) {
         infection->expression_index = 0;
-        update_mutation_time(infection, false);
-        update_recombination_time(infection, false);
     }
     else {
-        /*assert(
+        assert(
             infection->expression_index >= 0 &&
             infection->expression_index < N_GENES_PER_STRAIN
-        );*/
+        );
         Gene * gene = get_current_gene(infection);
         
         if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
-            if (infection->transition_time>infection->immune_time){
-                gain_immunity(host, gene);
-            }
+            gain_immunity(host, gene);
         }
         
         infection->expression_index++;
     }
     
-    //transition to new gene infection
-    infection->expression_order.push_back(draw_next_gene(infection->strain));
-    //if(infection->expression_index == N_GENES_PER_STRAIN) {
-    //    clear_infection(infection);
-    //}
-    //else {
-    update_host_infection_times(infection->host);
-    //}
-
+    if(infection->expression_index == N_GENES_PER_STRAIN) {
+        clear_infection(infection);
+    }
+    else {
+        update_host_infection_times(infection->host);
+    }
+    
     RETURN();
 }
 
-//include clearance case for specific immunity
 void clear_infection(Infection * infection) {
     BEGIN();
     
-
     Host * host = infection->host;
-    
-    if (SELECTION_MODE == SPECIFIC_IMMUNITY) {
-        Gene * gene = get_current_gene(infection);
-        gain_immunity(host, gene);
-    }
     host->infections.erase(infection);
     
     destroy_infection(infection);
     host->completed_infection_count++;
     
-    update_host_infection_times(host);
-
+    if(SELECTION_MODE == GENERAL_IMMUNITY) {
+        update_host_infection_times(host);
+    }
+    
     RETURN();
 }
 
@@ -1111,67 +1065,44 @@ void update_infection_times(Infection * infection) {
     RETURN();
 }
 
-//draw index for the next gene to express based on the activation bias
-Gene * draw_next_gene(Strain * strain){
+void update_transition_time(Infection * infection, bool initial) {
     BEGIN();
-    uint64_t id = std::discrete_distribution<>(strain->actBiasArray.begin(),strain->actBiasArray.end())(rng);
-    RETURN(strain->genes_sorted[id]);
-}
-
-    //new update time based on random expression order with new limit on transition
-    void update_transition_time(Infection * infection, bool initial){
-        BEGIN();
-        if(infection->expression_index == -1) {
-            return;
-        }
-        
-        Host * host = infection->host;
-        Gene * active_gene = get_current_gene(infection);
-        double transRate = (active_gene->deactivationClass*9 +1)*TRANSITION_RATE_NOT_IMMUNE;
-        
-        infection->transition_time = draw_exponential_after_now(transRate);
-        //std::cout<<infection->transition_time<<std::endl;
-        //std::cout<<now<<std::endl;
-        
-        if(SELECTION_MODE == SPECIFIC_IMMUNITY){
-            double immunity_level =  get_specific_immunity_level(host, active_gene);
-            assert(immunity_level >= 0.0 && immunity_level <= 1.0);
-            //get the rate of clearance of the gene
-            infection->immune_time = now + IMMUNITY_DELAY;
-            double activeInfectionDelay = CLEARANCE_DELAY * std::pow(get_active_infection_count(host),0.5);
-            infection->clearance_time = now + CLEARANCE_IMMUNE * activeInfectionDelay / (
-                                                                                         CLEARANCE_IMMUNE * (1.0 - immunity_level) +
-                                                                                         activeInfectionDelay * immunity_level);
-            
-            clearance_queue.update(infection);
-            if(initial) {
-                transition_queue.add(infection);
-            }
-            else {
-                transition_queue.update(infection);
-            }
-            
-            
-        }else{
-            if(initial) {
-                transition_queue.add(infection);
-            }
-            else {
-                transition_queue.update(infection);
-            }
-        }
-        RETURN();
+    if(infection->expression_index == -1) {
+        return;
     }
+    
+    assert(infection->expression_index < N_GENES_PER_STRAIN);
+    
+    Host * host = infection->host;
+    double rate;
+    if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
+        Gene * active_gene = get_current_gene(infection);
+        double immunity_level =  get_specific_immunity_level(host, active_gene);
+        assert(immunity_level >= 0.0 && immunity_level <= 1.0);
+        rate = TRANSITION_RATE_IMMUNE * TRANSITION_RATE_NOT_IMMUNE / (
+            TRANSITION_RATE_IMMUNE * (1.0 - immunity_level) +
+            TRANSITION_RATE_NOT_IMMUNE * immunity_level
+        );
+    }
+    else {
+        rate = TRANSITION_RATE_NOT_IMMUNE;
+    }
+    infection->transition_time = draw_exponential_after_now(rate);
+    
+    if(initial) {
+        transition_queue.add(infection);
+    }
+    else {
+        transition_queue.update(infection);
+    }
+    RETURN();
+}
 
 void update_mutation_time(Infection * infection, bool initial) {
     BEGIN();
-    if(infection->expression_index>-1){
-        infection->mutation_time = draw_exponential_after_now(
-                                                              MUTATION_RATE * N_GENES_PER_STRAIN * N_LOCI
-                                                              );
-    }else{
-        infection->mutation_time = INF;
-    }
+    infection->mutation_time = draw_exponential_after_now(
+        MUTATION_RATE * N_GENES_PER_STRAIN * N_LOCI
+    );
     if(initial) {
         mutation_queue.add(infection);
     }
@@ -1183,13 +1114,10 @@ void update_mutation_time(Infection * infection, bool initial) {
 
 void update_recombination_time(Infection * infection, bool initial) {
     BEGIN();
-    //ECTOPIC_RECOMBINATION_RATE describes the overall rate of fixation of a recombination
-    //in a parasite genome lineage
-    if(infection->expression_index>-1){
-        infection->recombination_time = draw_exponential_after_now(ECTOPIC_RECOMBINATION_RATE);
-    }else{
-        infection->recombination_time = INF;
-    }
+    infection->recombination_time = draw_exponential_after_now(
+        ECTOPIC_RECOMBINATION_RATE * N_GENES_PER_STRAIN * (N_GENES_PER_STRAIN - 1) / 2.0
+    );
+    
     if(initial) {
         recombination_queue.add(infection);
     }
@@ -1228,7 +1156,7 @@ void update_clearance_time(Infection * infection, bool initial) {
             );
         }
         else {
-            rate = GENERALIZED_CLEARANCE_RATE_IMMUNE;
+            rate = CLEARANCE_RATE_IMMUNE;
         }
     }
     
@@ -1321,12 +1249,14 @@ bool do_next_event() {
         next_event_time = recombination_queue.next_time();
         next_event_type = EventType::RECOMBINATION;
     }
-    if(clearance_queue.next_time() < next_event_time
-       ) {
-        next_event_time = clearance_queue.next_time();
+    if(
+        SELECTION_MODE == GENERAL_IMMUNITY &&
+        clearance_queue.next_time() < next_event_time
+    ) {
+        next_event_time = clearance_queue.head()->clearance_time;
         next_event_type = EventType::CLEARANCE;
     }
-
+    
     PRINT_DEBUG(1, "next_event_time: %f", next_event_time);
     PRINT_DEBUG(1, "next_event_type: %d", next_event_type);
     
@@ -1446,8 +1376,7 @@ Host * draw_random_destination_host(Population * src_pop) {
 
 void transmit(Host * src_host, Host * dst_host) {
     BEGIN();
-    //transmit only happens if MOI <10
-    if((src_host->infections.size() > 0) && (get_active_infection_count(dst_host)<10)) {
+    if(src_host->infections.size() > 0) {
         std::vector<Strain *> src_strains;
         for(Infection * infection : src_host->infections) {
             if(infection->expression_index >= 0) {
@@ -1512,10 +1441,8 @@ void do_immigration_event() {
     uint64_t index = draw_uniform_index(pop->hosts.size());
     Host * host = pop->hosts.object_at_index(index);
      
-    if (get_active_infection_count(host)<10) {
-        infect_host(host, strain);
-    }
-
+    infect_host(host, strain);
+    
     // Update immigration event time
     update_immigration_time(pop, false);
     RETURN();
@@ -1590,7 +1517,7 @@ void do_recombination_event() {
 
 void do_clearance_event() {
     BEGIN();
-    //assert(SELECTION_MODE == GENERAL_IMMUNITY);
+    assert(SELECTION_MODE == GENERAL_IMMUNITY);
     Infection * infection = clearance_queue.head();
     clear_infection(infection);
     RETURN();

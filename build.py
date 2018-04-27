@@ -81,27 +81,6 @@ def copy_sources(dst_dirname):
         pass
     
     shutil.copytree(os.path.join(script_dir, 'src'), os.path.join(dst_dirname, 'src'))
-    
-    git_dirname = os.path.join(dst_dirname, 'git')
-    try:
-        os.makedirs(git_dirname)
-    except:
-        pass
-    with open(os.path.join(git_dirname, 'commit.txt'), 'w') as f:
-        subprocess.Popen(
-            ['git', 'rev-parse', 'HEAD'],
-            stdout=f
-        )
-    with open(os.path.join(git_dirname, 'log.txt'), 'w') as f:
-        subprocess.Popen(
-            ['git', 'log'],
-            stdout=f
-        )
-    with open(os.path.join(git_dirname, 'diff.txt'), 'w') as f:
-        subprocess.Popen(
-            ['git', 'diff'],
-            stdout=f
-        )
 
 def generate_managers(dst_dirname):
     subprocess.Popen([
@@ -125,8 +104,6 @@ def build(dst_dirname, compiler_cmd, compiler_flags):
          ' ' + compiler_flags + \
          ' -std=c++11' + \
          ' -o bin/varmodel2' + \
-         ' ' + '-ldl' + \
-         ' ' + '-lpthread' + \
          ' ' + '-I ' + sqlite3_dir + \
          ' ' + os.path.join(sqlite3_dir, 'sqlite3.o') + \
          ' generated/managers/*.cpp' + \
@@ -137,7 +114,9 @@ def build(dst_dirname, compiler_cmd, compiler_flags):
          ' -I src/managers' + \
          ' -I src/util' + \
          ' -I generated' + \
-         ' -I generated/managers'
+         ' -I generated/managers' + \
+         ' ' + '-ldl' + \
+         ' ' + '-lpthread'
     print(compile_cmd)
     subprocess.Popen(compile_cmd, cwd = dst_dirname, shell = True).wait()
 

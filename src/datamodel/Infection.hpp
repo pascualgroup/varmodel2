@@ -26,10 +26,9 @@ struct Infection {
     double transition_time;
     double mutation_time;
     double recombination_time;
-    double immune_time;
     double clearance_time;
     
-    std::vector<Gene *> expression_order;
+    std::array<Gene *, N_GENES_PER_STRAIN> expression_order;
 };
 
 } // namespace varmodel
