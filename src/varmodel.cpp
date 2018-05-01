@@ -1319,9 +1319,6 @@ bool do_next_event() {
     PRINT_DEBUG(1, "next_event_type: %d", next_event_type);
     
     // Execute the next event unless it's past T_END, in which case just advance time
-    if(next_event_time < now){
-        PRINT_DEBUG(1, "next_event_time: %f", next_event_time);
-    }
     assert(next_event_time >= now);
     if(next_event_time > T_END) {
         now = T_END;
@@ -1701,6 +1698,7 @@ void verify_simulation_state() {
     assert(recombination_queue.verify_heap());
     assert(clearance_queue.verify_heap());
     assert(IRS_queue.verify_heap());
+    assert(MDA_queue.verify_heap());
 
     RETURN();
 }
