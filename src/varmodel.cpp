@@ -493,7 +493,7 @@ void initialize_sample_db() {
     
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS sampled_hosts ("
-        "time REAL, total_sample INTEGER"
+        "time REAL, total_infected INTEGER"
         ");",
         NULL, NULL, NULL
     );
