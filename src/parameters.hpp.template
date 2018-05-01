@@ -153,6 +153,22 @@ const std::vector<uint64_t> {N_INITIAL_INFECTIONS};
 const std::vector<double> {BITING_RATE_MEAN};
 const std::vector<double> {BITING_RATE_RELATIVE_AMPLITUDE};
 const std::vector<double> {BITING_RATE_PEAK_PHASE};
+//otherwise a vector of daily biting rate with a length of 360 can be supplied
+//biting rate = biting_Rate_mean * daily_biting_rate_distribution[day];
+const std::vector<double> {DAILY_BITING_RATE_DISTRIBUTION};
+//IRS parameters
+const bool {IRS_ON};
+
+const std::vector<double> {IRS_START_TIMES};
+const std::vector<std::vector<double>>  {BITING_RATE_FACTORS};
+const std::vector<double> {IRS_IMMIGRATION_RATE_FACTORS};
+
+//MDA parameters
+const bool {MDA_ON};
+const std::vector<double> {MDA_START_TIMES};
+const std::vector<double> {HOST_FAIL_RATE};
+const std::vector<double> {DRUG_EFF_DURATION};
+const std::vector<double> {MDA_IMMIGRATION_RATE_FACTORS};
 
 // Whether or not to enable immigration
 const bool {IMMIGRATION_ON};

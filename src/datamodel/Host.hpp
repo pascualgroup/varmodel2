@@ -29,6 +29,8 @@ struct Host {
     std::unordered_set<Infection *> infections;
     
     ImmuneHistory * immune_history;
+    
+    bool MDA_effective_period = false;
 };
 
 } // namespace varmodel
