@@ -976,9 +976,9 @@ double get_specific_immunity_level(Host * host, Gene * gene) {
     
     uint64_t immunity_count = 0;
     for(uint64_t i = 0; i < N_LOCI; i++) {
-        auto immunity_level_by_allele = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele; 
-        auto itr = immunity_level_by_allele.find(gene->alleles[i]);
-        if(itr != immunity_level_by_allele.end() && itr->second > 0) {
+        //auto immunity_level_by_allele = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele;
+        auto itr = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele.find(gene->alleles[i]);
+        if(itr != host->immune_history->immunity_by_locus[i]->immunity_level_by_allele.end() && itr->second > 0) {
             immunity_count +=  1;
         }
     }
