@@ -284,7 +284,7 @@ void validate_and_load_parameters() {
     assert(!SAVE_TO_CHECKPOINT || !file_exists(CHECKPOINT_SAVE_FILENAME));
     assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
     
-    assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
+    //assert(!LOAD_FROM_CHECKPOINT || file_exists(CHECKPOINT_LOAD_FILENAME));
     
     assert(!VERIFICATION_ON || VERIFICATION_PERIOD > 0.0);
     
@@ -932,12 +932,12 @@ void update_next_immunity_loss_time(Host * host) {
 void lose_random_immunity(Host * host) {
     BEGIN();
     
-    ImmuneHistory * immune_history = host->immune_history;
+    //ImmuneHistory * immune_history = host->immune_history;
     uint64_t cur_index = 0;
     uint64_t index = draw_uniform_index(get_immune_allele_count(host));
     bool found = false;
     for(uint64_t i = 0; i < N_LOCI && !found; i++) {
-        LocusImmunity * immunity = immune_history->immunity_by_locus[i];
+        LocusImmunity * immunity = host->immune_history->immunity_by_locus[i];
         for(auto kv : immunity->immunity_level_by_allele) {
             if(index == cur_index) {
                 assert(kv.second > 0);
@@ -976,9 +976,9 @@ double get_specific_immunity_level(Host * host, Gene * gene) {
     
     uint64_t immunity_count = 0;
     for(uint64_t i = 0; i < N_LOCI; i++) {
-        //auto immunity_level_by_allele = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele;
-        auto itr = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele.find(gene->alleles[i]);
-        if(itr != host->immune_history->immunity_by_locus[i]->immunity_level_by_allele.end() && itr->second > 0) {
+        auto & immunity_level_by_allele = host->immune_history->immunity_by_locus[i]->immunity_level_by_allele;
+        auto itr = immunity_level_by_allele.find(gene->alleles[i]);
+        if(itr != immunity_level_by_allele.end() && itr->second > 0) {
             immunity_count +=  1;
         }
     }
@@ -1919,7 +1919,7 @@ void load_checkpoint(bool should_load_rng_state) {
     sqlite3_open(CHECKPOINT_LOAD_FILENAME.c_str(), &db);
     
     load_global_state_from_checkpoint(db, should_load_rng_state);
-    
+
     // Load all objects, minus references to other objects
     strain_manager.load_from_checkpoint(db);
     gene_manager.load_from_checkpoint(db);
@@ -1989,7 +1989,7 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     next_checkpoint_time = sqlite3_column_double(stmt, 3);
     next_info_time = sqlite3_column_double(stmt, 4);
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
-    
+    next_sampling_time = now + HOST_SAMPLING_PERIOD;
     sqlite3_finalize(stmt);
 }
 

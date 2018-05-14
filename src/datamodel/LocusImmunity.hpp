@@ -12,6 +12,7 @@ struct LocusImmunity {
      
     uint64_t const id;
     std::unordered_map<uint64_t,uint64_t> immunity_level_by_allele;
+    
 };
 
 } // namespace varmodel }
