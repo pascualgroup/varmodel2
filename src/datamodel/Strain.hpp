@@ -13,6 +13,7 @@ struct Strain {
     Strain(uint64_t id) : id(id) { }
     
     uint64_t const id;
+    uint64_t refcount;
     std::array<Gene *, N_GENES_PER_STRAIN> genes;
 };
 

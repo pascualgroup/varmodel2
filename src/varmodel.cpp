@@ -152,7 +152,12 @@ void destroy_host(Host * host);
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
 Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
 Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source);
-Strain * create_strain(std::vector<Gene *> const & genes);
+
+Strain * create_strain();
+void destroy_strain(Strain * strain);
+void retain_strain(Strain * strain);
+void release_strain(Strain * strain);
+
 Gene * draw_random_gene();
 std::array<uint64_t, N_LOCI> recombine_alleles(std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint);
 bool contains_different_genes(Strain * strain);
@@ -646,6 +651,7 @@ void destroy_host(Host * host) {
 
 void destroy_infection(Infection * infection) {
     BEGIN();
+    release_strain(infection->strain);
     transition_queue.remove(infection);
     mutation_queue.remove(infection);
     recombination_queue.remove(infection);
@@ -678,6 +684,44 @@ Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSour
         }
     }
     RETURN(gene);
+}
+
+Strain * create_strain() {
+    BEGIN();
+    
+    Strain * strain = strain_manager.create();
+    strain->refcount = 0;
+    
+    RETURN(strain);
+}
+
+void destroy_strain(Strain * strain) {
+    BEGIN();
+    
+    strain_manager.destroy(strain);
+    
+    RETURN();
+}
+
+void retain_strain(Strain * strain) {
+    BEGIN();
+    
+    strain->refcount++;
+    
+    RETURN();
+}
+
+void release_strain(Strain * strain) {
+    BEGIN();
+    
+    assert(strain->refcount > 0);
+    strain->refcount--;
+    
+    if(strain->refcount == 0)  {
+        destroy_strain(strain);
+    }
+    
+    RETURN();
 }
 
 Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source) {
@@ -896,7 +940,9 @@ void recombine_infection(Infection * infection) {
         infection->expression_order[exp_index_2] = new_gene_2;
         replace_first(new_genes, src_gene_2, new_gene_2);
     }
+    release_strain(infection->strain);
     infection->strain = strain;
+    retain_strain(infection->strain);
     
     if(OUTPUT_STRAINS) {
         write_strain(strain, strain_stmt, NULL, NULL);
@@ -1085,6 +1131,7 @@ void infect_host(Host * host, Strain * strain) {
     Infection * infection = infection_manager.create();
     infection->host = host;
     infection->strain = strain;
+    retain_strain(strain);
     
     for(uint64_t i = 0; i < strain->genes.size(); i++) {
         infection->expression_order[i] = strain->genes[i];
@@ -1733,7 +1780,10 @@ void do_mutation_event() {
     assert(mutation_queue.size() > 0);
     
     Infection * infection = mutation_queue.head();
-    infection->strain = mutate_strain(infection->strain);
+    Strain * old_strain  = infection->strain;
+    infection->strain = mutate_strain(old_strain);
+    retain_strain(infection->strain);
+    release_strain(old_strain);
     
     update_mutation_time(infection, false);
     update_transition_time(infection, false);
