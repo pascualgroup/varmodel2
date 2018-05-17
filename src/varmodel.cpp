@@ -38,11 +38,6 @@ uint64_t n_infections_cumulative = 0;
 std::array<uint64_t, N_LOCI> n_alleles = N_ALLELES_INITIAL;
 
 StrainManager strain_manager;
-std::unordered_map<
-    std::array<Gene *, N_GENES_PER_STRAIN>,
-    Strain *,
-    HashArray<Gene *, N_GENES_PER_STRAIN>
-> genes_strain_map;
 
 GeneManager gene_manager;
 std::unordered_map<
@@ -161,7 +156,7 @@ Strain * create_strain(std::vector<Gene *> const & genes);
 Gene * draw_random_gene();
 std::array<uint64_t, N_LOCI> recombine_alleles(std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint);
 bool contains_different_genes(Strain * strain);
-Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
+//Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
 
 Strain * recombine_strains(Strain * s1, Strain * s2);
 Strain * mutate_strain(Strain * strain);
@@ -688,7 +683,10 @@ Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSour
 Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source) {
     BEGIN();
     
-    std::array<Gene *, N_GENES_PER_STRAIN> genes;
+    Strain * strain = strain_manager.create();
+    auto & genes =  strain->genes;
+    
+//    std::array<Gene *, N_GENES_PER_STRAIN> genes;
     
     // Old genes
     for(uint64_t i = n_new_genes; i < N_GENES_PER_STRAIN; i++) {
@@ -706,42 +704,50 @@ Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source
         genes[i] = mutate_gene(old_gene, new_gene_source);
     }
     
-    Strain * strain = get_strain_with_genes(genes);
+//    Strain * strain = get_strain_with_genes(genes);
+    
+    if(OUTPUT_STRAINS) {
+        write_strain(strain, strain_stmt, NULL, NULL);
+    }
+    
     RETURN(strain);
 }
 
-Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
-    BEGIN();
-    Strain * strain;
-    std::sort(genes.begin(), genes.end(),
-        [](Gene * o1, Gene * o2) {
-            return o1->id < o2->id;
-        }
-    );
-    auto itr = genes_strain_map.find(genes);
-    if(itr == genes_strain_map.end()) {
-        strain = strain_manager.create();
-        strain->genes_sorted = genes;
-        genes_strain_map[genes] = strain;
-        
-        if(OUTPUT_STRAINS) {
-            write_strain(strain, strain_stmt, NULL, NULL);
-        }
-    }
-    else {
-        strain = itr->second;
-    }
-    RETURN(strain);
-}
+//Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
+//    BEGIN();
+//    Strain * strain;
+//    std::sort(genes.begin(), genes.end(),
+//        [](Gene * o1, Gene * o2) {
+//            return o1->id < o2->id;
+//        }
+//    );
+//    auto itr = genes_strain_map.find(genes);
+//    if(itr == genes_strain_map.end()) {
+//        strain = strain_manager.create();
+//        strain->genes = genes;
+//        genes_strain_map[genes] = strain;
+//        
+//        if(OUTPUT_STRAINS) {
+//            write_strain(strain, strain_stmt, NULL, NULL);
+//        }
+//    }
+//    else {
+//        strain = itr->second;
+//    }
+//    RETURN(strain);
+//}
 
 Strain * recombine_strains(Strain * s1, Strain * s2) {
     BEGIN();
+    
+    Strain * strain =  strain_manager.create();
+    auto & daughter_genes = strain->genes;
     
     // Choose random subset of all genes from strains s1 and s2
     // [0, N_GENES_PER_STRAIN) mapped to s1
     // [N_GENES_PER_STRAIN, 2 * N_GENES_PER_STRAIN) mapped to s2
     std::bitset<2 * N_GENES_PER_STRAIN> used;
-    std::array<Gene *, N_GENES_PER_STRAIN> daughter_genes;
+//    std::array<Gene *, N_GENES_PER_STRAIN> daughter_genes;
     for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
         // Choose random unused index across strains
         uint64_t src_index;
@@ -750,13 +756,18 @@ Strain * recombine_strains(Strain * s1, Strain * s2) {
         } while(used[src_index]);
         used[src_index] = true;
         if(src_index < N_GENES_PER_STRAIN) {
-            daughter_genes[i] = s1->genes_sorted[src_index]; 
+            daughter_genes[i] = s1->genes[src_index]; 
         }
         else {
-            daughter_genes[i] = s2->genes_sorted[src_index - N_GENES_PER_STRAIN];
+            daughter_genes[i] = s2->genes[src_index - N_GENES_PER_STRAIN];
         }
     }
-    RETURN(get_strain_with_genes(daughter_genes));
+    
+    if(OUTPUT_STRAINS) {
+        write_strain(strain, strain_stmt, NULL, NULL);
+    }
+    
+    RETURN(strain);
 }
 
 double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint) {
@@ -783,9 +794,15 @@ double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint) {
 Strain * mutate_strain(Strain * strain) {
     BEGIN();
     uint64_t index = draw_uniform_index(N_GENES_PER_STRAIN);
-    std::array<Gene *, N_GENES_PER_STRAIN> genes = strain->genes_sorted;
-    genes[index] = mutate_gene(genes[index], SOURCE_MUTATION);
-    RETURN(get_strain_with_genes(genes));
+    Strain * mutated_strain = strain_manager.create();
+    mutated_strain->genes = strain->genes;
+    mutated_strain->genes[index] = mutate_gene(strain->genes[index], SOURCE_MUTATION);
+    
+    if(OUTPUT_STRAINS) {
+        write_strain(strain, strain_stmt, NULL, NULL);
+    }
+    
+    RETURN(mutated_strain);
 }
 
 Gene * mutate_gene(Gene * gene, GeneSource source) {
@@ -868,7 +885,9 @@ void recombine_infection(Infection * infection) {
     }
     
     // Update expression order and strain
-    std::array<Gene *, N_GENES_PER_STRAIN> new_genes = infection->strain->genes_sorted;
+    Strain * strain = strain_manager.create();
+    auto & new_genes = strain->genes;
+    new_genes = infection->strain->genes;
     if(new_gene_1 != src_gene_1) {
         infection->expression_order[exp_index_1] = new_gene_1;
         replace_first(new_genes, src_gene_1, new_gene_1);
@@ -877,7 +896,11 @@ void recombine_infection(Infection * infection) {
         infection->expression_order[exp_index_2] = new_gene_2;
         replace_first(new_genes, src_gene_2, new_gene_2);
     }
-    infection->strain = get_strain_with_genes(new_genes);
+    infection->strain = strain;
+    
+    if(OUTPUT_STRAINS) {
+        write_strain(strain, strain_stmt, NULL, NULL);
+    }
     
     RETURN();
 }
@@ -901,7 +924,7 @@ std::array<uint64_t, N_LOCI> recombine_alleles(
 bool contains_different_genes(Strain * strain) {
     BEGIN();
     for(uint64_t i = 1; i < N_GENES_PER_STRAIN; i++) {
-        if(strain->genes_sorted[i] != strain->genes_sorted[0]) {
+        if(strain->genes[i] != strain->genes[0]) {
             RETURN(true);
         }
     }
@@ -1063,8 +1086,8 @@ void infect_host(Host * host, Strain * strain) {
     infection->host = host;
     infection->strain = strain;
     
-    for(uint64_t i = 0; i < strain->genes_sorted.size(); i++) {
-        infection->expression_order[i] = strain->genes_sorted[i];
+    for(uint64_t i = 0; i < strain->genes.size(); i++) {
+        infection->expression_order[i] = strain->genes[i];
     }
     std::shuffle(
         infection->expression_order.begin(), infection->expression_order.end(), rng
@@ -1849,7 +1872,7 @@ void write_summary() {
             for(Infection * infection : host->infections) {
                 Strain * strain = infection->strain;
                 distinct_strains.insert(strain);
-                for(Gene * gene : strain->genes_sorted) {
+                for(Gene * gene : strain->genes) {
                     distinct_genes.insert(gene);
                     for(uint64_t i = 0; i < N_LOCI; i++) {
                         distinct_alleles[i].insert(gene->alleles[i]);
@@ -1924,7 +1947,7 @@ void write_sampled_infection(Host * host, Infection * infection) {
 
 void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt) {
     for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
-        Gene * gene = strain->genes_sorted[i];
+        Gene * gene = strain->genes[i];
         sqlite3_bind_int64(s_stmt, 1, strain->id);
         sqlite3_bind_int64(s_stmt, 2, i);
         sqlite3_bind_int64(s_stmt, 3, gene->id);
