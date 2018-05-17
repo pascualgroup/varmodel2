@@ -1106,7 +1106,7 @@ void update_infection_times(Infection * infection) {
 void update_transition_time(Infection * infection, bool initial) {
     BEGIN();
     if(infection->expression_index == -1) {
-        return;
+        RETURN();
     }
     
     assert(infection->expression_index < N_GENES_PER_STRAIN);
@@ -1322,7 +1322,7 @@ bool do_next_event() {
     assert(next_event_time >= now);
     if(next_event_time > T_END) {
         now = T_END;
-        return false;
+        RETURN(false);
     }
         
     now = next_event_time;
@@ -2056,7 +2056,7 @@ uint64_t draw_uniform_index_except(uint64_t size, uint64_t except_index) {
     if(index >= except_index) {
         index++;
     }
-    return(index);
+    RETURN(index);
 }
 
 double draw_uniform_real(double min, double max) {
