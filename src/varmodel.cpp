@@ -56,7 +56,9 @@ HostManager host_manager;
 InfectionManager infection_manager;
 ImmuneHistoryManager immune_history_manager;
 LocusImmunityManager locus_immunity_manager;
+
 AlleleRefManager allele_ref_manager;
+std::array<std::vector<AlleleRef *>, N_LOCI> allele_refs;
 
 sqlite3 * sample_db;
 
@@ -132,6 +134,7 @@ void save_checkpoint();
 
 void save_global_state_to_checkpoint(sqlite3 * db);
 void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state);
+void load_allele_refs();
 void initialize_event_queues_from_state();
 
 std::string get_rng_as_string();
@@ -381,6 +384,17 @@ void clean_up() {
 void initialize_gene_pool() {
     BEGIN();
     
+    // Create AlleleRefs
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        assert(allele_refs[i].size() == 0);
+        for(uint64_t j = 0; j < n_alleles[i]; j++) {
+            AlleleRef * allele_ref = allele_ref_manager.create();
+            allele_ref->locus = i;
+            allele_ref->allele = j;
+            allele_refs[i].push_back(allele_ref);
+        }
+    }
+    
     // Create gene pool
     for(uint64_t i = 0; i < N_GENES_INITIAL; i++) {
         // Draw random alleles different from all other existing genes
@@ -624,9 +638,6 @@ void destroy_host(Host * host) {
         for(LocusImmunity * immunity : host->immune_history->immunity_by_locus) {
             locus_immunity_manager.destroy(immunity);
         }
-        for(AlleleRef * ar : host->immune_history->alleles_with_immunity.as_vector()) {
-            allele_ref_manager.destroy(ar);
-        }
         immune_history_manager.destroy(host->immune_history);
     }
     
@@ -783,6 +794,13 @@ Gene * mutate_gene(Gene * gene, GeneSource source) {
     uint64_t locus = draw_uniform_index(N_LOCI); 
     alleles[locus] = n_alleles[locus];
     n_alleles[locus]++;
+    
+    // Add new AlleleRef for this allele
+    AlleleRef * allele_ref = allele_ref_manager.create();
+    allele_ref->locus = locus;
+    allele_ref->allele = n_alleles[locus] - 1;
+    allele_refs[locus].push_back(allele_ref);
+    
     RETURN(get_or_create_gene(alleles, source, gene->is_functional));
 }
 
@@ -918,9 +936,7 @@ void gain_immunity(Host * host, Gene * gene) {
         if(itr == immunity->immunity_level_by_allele.end()) {
             immunity->immunity_level_by_allele[gene->alleles[i]] = 1;
             
-            AlleleRef * allele_ref = allele_ref_manager.create();
-            allele_ref->locus = i;
-            allele_ref->allele = gene->alleles[i];
+            AlleleRef * allele_ref = allele_refs[i][gene->alleles[i]];
             immune_history->alleles_with_immunity.add(allele_ref);
         }
         else {
@@ -1002,7 +1018,6 @@ void lose_immunity(Host * host, AlleleRef * allele_ref) {
     if(level == 1) {
         immunity_level_by_allele.erase(allele);
         immune_history->alleles_with_immunity.remove(allele_ref);
-        allele_ref_manager.destroy(allele_ref);
     }
     else {
         immunity_level_by_allele[allele]--;
@@ -2016,6 +2031,7 @@ void load_checkpoint(bool should_load_rng_state) {
     
     sqlite3_close(db);
     
+    load_allele_refs();
     initialize_event_queues_from_state();
     
     RETURN();
@@ -2067,6 +2083,35 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
     next_sampling_time = now + HOST_SAMPLING_PERIOD;
     sqlite3_finalize(stmt);
+}
+
+void load_allele_refs() {
+    BEGIN();
+    
+    // Put each allele into the vector for its locus
+    for(AlleleRef * ar : allele_ref_manager.objects()) {
+        allele_refs[ar->locus].push_back(ar);
+    }
+    
+    // Sort each locus
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        std::sort(allele_refs[i].begin(), allele_refs[i].end(),
+            [](AlleleRef * o1, AlleleRef * o2) {
+                return o1->allele < o2->allele;
+            }
+        );
+    }
+    
+    // Verify everything's right
+    for(uint64_t i = 0; i < N_LOCI; i++) {
+        assert(allele_refs[i].size() == n_alleles[i]);
+        for(uint64_t j = 0; j < n_alleles[i]; j++) {
+            assert(allele_refs[i][j]->locus == i);
+            assert(allele_refs[i][j]->allele == j);
+        }
+    }
+    
+    RETURN();
 }
 
 void initialize_event_queues_from_state() {
