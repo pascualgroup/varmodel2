@@ -33,7 +33,7 @@ def main():
     
     for object_type in [
         'Strain', 'Gene',
-        'Population', 'Host', 'Infection', 'ImmuneHistory', 'LocusImmunity'
+        'Population', 'Host', 'Infection', 'ImmuneHistory', 'LocusImmunity', 'AlleleRef'
     ]:
         generate_manager(object_type, dst_dir)
     print('\n')

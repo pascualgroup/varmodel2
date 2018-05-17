@@ -7,6 +7,7 @@
 #include "InfectionManager.hpp"
 #include "ImmuneHistoryManager.hpp"
 #include "LocusImmunityManager.hpp"
+#include "AlleleRefManager.hpp"
 #include "random.hpp"
 #include "util.hpp"
 #include "parameters.hpp"
@@ -55,6 +56,7 @@ HostManager host_manager;
 InfectionManager infection_manager;
 ImmuneHistoryManager immune_history_manager;
 LocusImmunityManager locus_immunity_manager;
+AlleleRefManager allele_ref_manager;
 
 sqlite3 * sample_db;
 
@@ -1900,6 +1902,7 @@ void save_checkpoint() {
     infection_manager.save_to_checkpoint(db);
     immune_history_manager.save_to_checkpoint(db);
     locus_immunity_manager.save_to_checkpoint(db);
+    allele_ref_manager.save_to_checkpoint(db);
     
     sqlite3_exec(db, "COMMIT", NULL, NULL, NULL);
     sqlite3_close(db);
@@ -1928,6 +1931,7 @@ void load_checkpoint(bool should_load_rng_state) {
     infection_manager.load_from_checkpoint(db);
     immune_history_manager.load_from_checkpoint(db);
     locus_immunity_manager.load_from_checkpoint(db);
+    allele_ref_manager.load_from_checkpoint(db);
     
     // Resolve references to other objects
     strain_manager.resolve_references(db, gene_manager);
@@ -1935,7 +1939,7 @@ void load_checkpoint(bool should_load_rng_state) {
     population_manager.resolve_references(db, host_manager);
     host_manager.resolve_references(db, population_manager, immune_history_manager, infection_manager);
     infection_manager.resolve_references(db, strain_manager, host_manager, gene_manager);
-    immune_history_manager.resolve_references(db, locus_immunity_manager);
+    immune_history_manager.resolve_references(db, locus_immunity_manager, allele_ref_manager);
     locus_immunity_manager.resolve_references(db); // Does nothing unless referenes are added to LocusImmunity
     
     sqlite3_close(db);
