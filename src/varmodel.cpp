@@ -161,7 +161,6 @@ void release_strain(Strain * strain);
 Gene * draw_random_gene();
 std::array<uint64_t, N_LOCI> recombine_alleles(std::array<uint64_t, N_LOCI> const & a1, std::array<uint64_t, N_LOCI> const & a2, uint64_t breakpoint);
 bool contains_different_genes(Strain * strain);
-//Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes);
 
 Strain * recombine_strains(Strain * s1, Strain * s2);
 Strain * mutate_strain(Strain * strain);
@@ -748,38 +747,12 @@ Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source
         genes[i] = mutate_gene(old_gene, new_gene_source);
     }
     
-//    Strain * strain = get_strain_with_genes(genes);
-    
     if(OUTPUT_STRAINS) {
         write_strain(strain, strain_stmt, NULL, NULL);
     }
     
     RETURN(strain);
 }
-
-//Strain * get_strain_with_genes(std::array<Gene *, N_GENES_PER_STRAIN> genes) {
-//    BEGIN();
-//    Strain * strain;
-//    std::sort(genes.begin(), genes.end(),
-//        [](Gene * o1, Gene * o2) {
-//            return o1->id < o2->id;
-//        }
-//    );
-//    auto itr = genes_strain_map.find(genes);
-//    if(itr == genes_strain_map.end()) {
-//        strain = strain_manager.create();
-//        strain->genes = genes;
-//        genes_strain_map[genes] = strain;
-//        
-//        if(OUTPUT_STRAINS) {
-//            write_strain(strain, strain_stmt, NULL, NULL);
-//        }
-//    }
-//    else {
-//        strain = itr->second;
-//    }
-//    RETURN(strain);
-//}
 
 Strain * recombine_strains(Strain * s1, Strain * s2) {
     BEGIN();
@@ -791,7 +764,6 @@ Strain * recombine_strains(Strain * s1, Strain * s2) {
     // [0, N_GENES_PER_STRAIN) mapped to s1
     // [N_GENES_PER_STRAIN, 2 * N_GENES_PER_STRAIN) mapped to s2
     std::bitset<2 * N_GENES_PER_STRAIN> used;
-//    std::array<Gene *, N_GENES_PER_STRAIN> daughter_genes;
     for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
         // Choose random unused index across strains
         uint64_t src_index;
@@ -1026,39 +998,6 @@ void update_next_immunity_loss_time(Host * host) {
     immunity_loss_queue.update(host);
     RETURN();
 }
-
-/*
-void lose_random_immunity(Host * host) {
-    BEGIN();
-    
-    //ImmuneHistory * immune_history = host->immune_history;
-    uint64_t cur_index = 0;
-    uint64_t index = draw_uniform_index(get_immune_allele_count(host));
-    bool found = false;
-    for(uint64_t i = 0; i < N_LOCI && !found; i++) {
-        LocusImmunity * immunity = host->immune_history->immunity_by_locus[i];
-        for(auto kv : immunity->immunity_level_by_allele) {
-            if(index == cur_index) {
-                assert(kv.second > 0);
-                if(kv.second == 1) {
-                    immunity->immunity_level_by_allele.erase(kv.first);
-                }
-                else {
-                    immunity->immunity_level_by_allele[kv.first]--;
-                }
-                found = true;
-            }
-            if(found) {
-                break;
-            }
-            cur_index++;
-        }
-    }
-    assert(found);
-    update_next_immunity_loss_time(host);
-    RETURN();
-}
-*/
 
 void lose_random_immunity(Host * host) {
     BEGIN();
