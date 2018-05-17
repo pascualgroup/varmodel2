@@ -111,6 +111,8 @@ EventQueue<Population, get_MDA_time> MDA_queue;
 #pragma mark \
 *** Helper function declarations ***
 
+void verify_immunity_consistency();
+
 void initialize(bool override_seed, uint64_t random_seed);
 void clean_up();
 
@@ -176,6 +178,7 @@ void gain_immunity(Host * host, Gene * gene);
 void update_next_immunity_loss_time(Host * host);
 
 void lose_random_immunity(Host * host);
+void lose_immunity(Host * host, AlleleRef * allele_ref);
 
 void update_host_infection_times(Host * host);
 void update_infection_times(Infection * infection);
@@ -621,6 +624,9 @@ void destroy_host(Host * host) {
         for(LocusImmunity * immunity : host->immune_history->immunity_by_locus) {
             locus_immunity_manager.destroy(immunity);
         }
+        for(AlleleRef * ar : host->immune_history->alleles_with_immunity.as_vector()) {
+            allele_ref_manager.destroy(ar);
+        }
         immune_history_manager.destroy(host->immune_history);
     }
     
@@ -911,6 +917,11 @@ void gain_immunity(Host * host, Gene * gene) {
         auto itr = immunity->immunity_level_by_allele.find(gene->alleles[i]);
         if(itr == immunity->immunity_level_by_allele.end()) {
             immunity->immunity_level_by_allele[gene->alleles[i]] = 1;
+            
+            AlleleRef * allele_ref = allele_ref_manager.create();
+            allele_ref->locus = i;
+            allele_ref->allele = gene->alleles[i];
+            immune_history->alleles_with_immunity.add(allele_ref);
         }
         else {
             immunity->immunity_level_by_allele[gene->alleles[i]]++;
@@ -931,6 +942,7 @@ void update_next_immunity_loss_time(Host * host) {
     RETURN();
 }
 
+/*
 void lose_random_immunity(Host * host) {
     BEGIN();
     
@@ -961,16 +973,45 @@ void lose_random_immunity(Host * host) {
     update_next_immunity_loss_time(host);
     RETURN();
 }
+*/
+
+void lose_random_immunity(Host * host) {
+    BEGIN();
+    
+    ImmuneHistory * immune_history = host->immune_history;
+    auto & alleles_with_immunity = immune_history->alleles_with_immunity; 
+    assert(alleles_with_immunity.size() > 0);
+    
+    uint64_t index = draw_uniform_index(alleles_with_immunity.size());
+    AlleleRef * ar = alleles_with_immunity.object_at_index(index);
+    
+    lose_immunity(host, ar);
+    update_next_immunity_loss_time(host);
+    
+    RETURN();
+}
+
+void lose_immunity(Host * host, AlleleRef * allele_ref) {
+    uint64_t locus = allele_ref->locus;
+    uint64_t allele = allele_ref->allele; 
+    
+    ImmuneHistory * immune_history = host->immune_history;
+    auto & immunity_level_by_allele = immune_history->immunity_by_locus[locus]->immunity_level_by_allele;
+    uint64_t level = immunity_level_by_allele[allele];
+    assert(level > 0);
+    if(level == 1) {
+        immunity_level_by_allele.erase(allele);
+        immune_history->alleles_with_immunity.remove(allele_ref);
+        allele_ref_manager.destroy(allele_ref);
+    }
+    else {
+        immunity_level_by_allele[allele]--;
+    }
+}
 
 uint64_t get_immune_allele_count(Host * host) {
     BEGIN();
-    uint64_t immune_allele_count = 0;
-    ImmuneHistory * immune_history = host->immune_history;
-    for(uint64_t i = 0; i < N_LOCI; i++) {
-        LocusImmunity * immunity = immune_history->immunity_by_locus[i];
-        immune_allele_count += immunity->immunity_level_by_allele.size();
-    }
-    RETURN(immune_allele_count);
+    RETURN(host->immune_history->alleles_with_immunity.size());
 }
 
 double get_specific_immunity_level(Host * host, Gene * gene) {
@@ -1701,7 +1742,38 @@ void verify_simulation_state() {
     assert(clearance_queue.verify_heap());
     assert(IRS_queue.verify_heap());
     assert(MDA_queue.verify_heap());
+    
+    verify_immunity_consistency();
 
+    RETURN();
+}
+
+void verify_immunity_consistency() {
+    BEGIN();
+    
+    for(Population * pop : population_manager.objects()) {
+        for(Host * host : pop->hosts.as_vector()) {
+            ImmuneHistory * immune_history = host->immune_history;
+            
+            // Ensure that every AlleleRef in alleles_with_immunity has an immunity count present
+            for(AlleleRef * ar : immune_history->alleles_with_immunity.as_vector()) {
+                assert(immune_history->immunity_by_locus[ar->locus]->immunity_level_by_allele[ar->allele] > 0);
+            }
+            
+            // Ensure that the total number of present alleles is the same as the size of alleles_with_immunity,
+            // and all present alleles have immunity levels > 0
+            uint64_t allele_count = 0;
+            for(uint64_t i = 0; i < N_LOCI; i++) {
+                LocusImmunity * locus_immunity = immune_history->immunity_by_locus[i]; 
+                allele_count += locus_immunity->immunity_level_by_allele.size();
+                for(auto kv : locus_immunity->immunity_level_by_allele) {
+                    assert(kv.second > 0);
+                }
+            }
+            assert(allele_count == immune_history->alleles_with_immunity.size());
+        }
+    }
+    
     RETURN();
 }
 
