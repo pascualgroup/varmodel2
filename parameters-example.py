@@ -20,7 +20,7 @@ T_YEAR = 360.0
 T_BURNIN = 0 # in days
 T_END = 50.0 * T_YEAR
 
-SAMPLE_DB_FILENAME = '""'
+SAMPLE_DB_FILENAME = '"testdb.sqlite"'
 
 PRINT_INFO_PERIOD = 120.0
 

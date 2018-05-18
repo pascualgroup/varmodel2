@@ -496,7 +496,7 @@ void initialize_sample_db() {
     
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS summary ("
-            "time REAL, n_infections INTEGER, n_infected INTEGER, n_infections_cumulative INTEGER, n_circulating_strains INTEGER, n_circulating_genes INTEGER"
+            "time REAL, n_infections INTEGER, n_infected INTEGER, n_infections_cumulative INTEGER, n_infected_bites INTEGER, n_total_bites INTEGER, n_circulating_strains INTEGER, n_circulating_genes INTEGER"
         ");",
         NULL, NULL, NULL
     );
@@ -533,7 +533,7 @@ void initialize_sample_db() {
                  NULL, NULL, NULL
                  );
 
-    sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?);", -1, &summary_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?);", -1, &summary_alleles_stmt, NULL);
     
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
@@ -1870,10 +1870,10 @@ void write_summary() {
     sqlite3_bind_int64(summary_stmt, 2, n_infections); // n_infections
     sqlite3_bind_int64(summary_stmt, 3, n_infected); // n_infected
     sqlite3_bind_int64(summary_stmt, 4, n_infections_cumulative); // n_infections_cumulative
-    sqlite3_bind_int64(summary_stmt, 5, n_infected_bites);
-    sqlite3_bind_int64(summary_stmt, 6, n_bites_cumulative);
-    sqlite3_bind_int64(summary_stmt, 5, distinct_strains.size()); // n_circulating_strains
-    sqlite3_bind_int64(summary_stmt, 6, distinct_genes.size()); // n_circulating_genes
+    sqlite3_bind_int64(summary_stmt, 5, n_infected_bites); //number of infected bites
+    sqlite3_bind_int64(summary_stmt, 6, n_bites_cumulative); //number of total bites in the sampling period
+    sqlite3_bind_int64(summary_stmt, 7, distinct_strains.size()); // n_circulating_strains
+    sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
     sqlite3_step(summary_stmt);
     sqlite3_reset(summary_stmt);
     
