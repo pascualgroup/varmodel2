@@ -2078,7 +2078,7 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     next_checkpoint_time = sqlite3_column_double(stmt, 3);
     next_info_time = sqlite3_column_double(stmt, 4);
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
-    next_sampling_time = now + T_BURNIN + HOST_SAMPLING_PERIOD;
+    next_sampling_time = now + T_BURNIN;
     sqlite3_finalize(stmt);
 }
 
