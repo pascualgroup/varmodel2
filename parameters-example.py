@@ -20,7 +20,7 @@ T_YEAR = 360.0
 T_BURNIN = 0 # in days
 T_END = 50.0 * T_YEAR
 
-SAMPLE_DB_FILENAME = '"testdb.sqlite"'
+SAMPLE_DB_FILENAME = '""'
 
 PRINT_INFO_PERIOD = 120.0
 
@@ -68,12 +68,12 @@ BITING_RATE_RELATIVE_AMPLITUDE = [0.0]
 BITING_RATE_PEAK_PHASE = [0.0]
 DAILY_BITING_RATE_DISTRIBUTION = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] # the "raw" values of mosquito numbers from mathematica. needs to be of length 360. Otherwise will run without it
 
-IRS_ON = False
+IRS_ON = True
 IRS_START_TIMES = [100,200]
 BITING_RATE_FACTORS = [[0.05,0.06,0.07],[0.05,0.06,0.07]] #each vector is the "raw" values of mosquito numbers from mathematica. The ABM will use this vector to multiply the BITING_RATE_MEAN until it ends, and then go back to the baseline DAILY_BITING_RATE_DISTRIBUTION
 IRS_IMMIGRATION_RATE_FACTORS = [0.2,0.6]
 
-MDA_ON = False
+MDA_ON = True
 MDA_START_TIMES = [250,300]
 HOST_FAIL_RATE = [0.2,0.2] # % of host sthat did not take the drug
 DRUG_EFF_DURATION = [15,15] # How long the drug remains effective in the body

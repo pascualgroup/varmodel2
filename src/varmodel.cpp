@@ -2025,7 +2025,7 @@ void load_checkpoint(bool should_load_rng_state) {
     infection_manager.resolve_references(db, strain_manager, host_manager, gene_manager);
     immune_history_manager.resolve_references(db, locus_immunity_manager, allele_ref_manager);
     locus_immunity_manager.resolve_references(db); // Does nothing unless referenes are added to LocusImmunity
-    
+    allele_ref_manager.resolve_references(db);
     sqlite3_close(db);
     
     load_allele_refs();
@@ -2100,8 +2100,11 @@ void load_allele_refs() {
     }
     
     // Verify everything's right
+    // make n_alleles the size of allele_refs
+    
     for(uint64_t i = 0; i < N_LOCI; i++) {
-        assert(allele_refs[i].size() == n_alleles[i]);
+        n_alleles[i] = allele_refs[i].size();
+        //assert(allele_refs[i].size() == n_alleles[i]);
         for(uint64_t j = 0; j < n_alleles[i]; j++) {
             assert(allele_refs[i][j]->locus == i);
             assert(allele_refs[i][j]->allele == j);
