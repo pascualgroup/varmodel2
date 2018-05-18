@@ -22,7 +22,7 @@ struct Population {
     double next_IRS_rate_change_time;
     uint64_t current_IRS_id = 0;
     uint64_t within_IRS_id = 0;
-    double IRS_biting_rate = 1;
+    double IRS_biting_rate = -1;
     double IRS_immigration_rate_factor = 1;
     uint64_t MDA_id = 0;
     double next_MDA_time;

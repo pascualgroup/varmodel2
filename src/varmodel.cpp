@@ -34,6 +34,8 @@ double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 double next_info_time = 0.0;
 
 uint64_t n_infections_cumulative = 0;
+uint64_t n_bites_cumulative = 0;
+uint64_t n_infected_bites = 0;
 
 std::array<uint64_t, N_LOCI> n_alleles = N_ALLELES_INITIAL;
 
@@ -65,7 +67,6 @@ sqlite3_stmt * strain_stmt;
 sqlite3_stmt * gene_stmt;
 sqlite3_stmt * allele_stmt;
 
-sqlite3_stmt * sampled_host_stmt;
 sqlite3_stmt * sampled_inf_stmt;
 sqlite3_stmt * sampled_strain_stmt;
 sqlite3_stmt * sampled_gene_stmt;
@@ -120,10 +121,8 @@ void sample_hosts();
 void write_host(Host * host);
 void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt);
 void write_gene(Gene * gene, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt);
-void write_sampled_host(uint64_t totalSampledHosts);
 void write_sampled_infection(Host * host, Infection * infection);
 void write_duration(Host * host, Infection * infection);
-
 void load_checkpoint(bool should_load_rng_state);
 void save_checkpoint();
 
@@ -510,13 +509,6 @@ void initialize_sample_db() {
     );
     
     sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS sampled_hosts ("
-        "time REAL, total_infected INTEGER"
-        ");",
-        NULL, NULL, NULL
-    );
-    
-    sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS sampled_infections (time REAL, host_id INTEGER, infection_id INTEGER, strain_id INTEGER, gene_id INTEGER, infected_length REAL, PRIMARY KEY (time, host_id, infection_id));",
         NULL, NULL, NULL
     );
@@ -541,7 +533,6 @@ void initialize_sample_db() {
                  NULL, NULL, NULL
                  );
 
-    
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?);", -1, &summary_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?);", -1, &summary_alleles_stmt, NULL);
     
@@ -549,7 +540,6 @@ void initialize_sample_db() {
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO genes VALUES (?,?,?);", -1, &gene_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO alleles VALUES (?,?,?);", -1, &allele_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_hosts VALUES (?,?);", -1, &sampled_host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_infections VALUES (?,?,?,?,?,?);", -1, &sampled_inf_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_strains VALUES (?,?,?);", -1, &sampled_strain_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_genes VALUES (?,?,?);", -1, &sampled_gene_stmt, NULL);
@@ -566,7 +556,6 @@ void finalize_sample_db() {
     sqlite3_finalize(summary_alleles_stmt);
     
     sqlite3_finalize(host_stmt);
-    sqlite3_finalize(sampled_host_stmt);
     sqlite3_finalize(strain_stmt);
     sqlite3_finalize(gene_stmt);
     sqlite3_finalize(sampled_gene_stmt);
@@ -1468,7 +1457,7 @@ void do_biting_event() {
     PRINT_DEBUG(1, "biting event pop: %llu", pop->id);
     Host * src_host = draw_random_source_host(pop); 
     Host * dst_host = draw_random_destination_host(pop);
-    
+    n_bites_cumulative++;
     transmit(src_host, dst_host);
     
     // Update biting event time
@@ -1551,7 +1540,7 @@ void update_biting_rate_change(Population * pop){
             IRS_queue.update(pop);
             
         }
-        pop->IRS_biting_rate = 1;
+        pop->IRS_biting_rate = -1;
         pop->IRS_immigration_rate_factor = 1;
     }else{
         pop->IRS_biting_rate = BITING_RATE_FACTORS[pop->current_IRS_id][pop->within_IRS_id];
@@ -1596,42 +1585,46 @@ Host * draw_random_destination_host(Population * src_pop) {
 
 void transmit(Host * src_host, Host * dst_host) {
     BEGIN();
-    //if the host is in MDA effective state
-    if (dst_host->MDA_effective_period) {
-        RETURN();
+    //count the total number of infections per host
+    uint64_t srcInf = get_active_infection_count(dst_host);
+    if (srcInf>0) {
+        n_infected_bites ++;
+        //transmit only happens if MOI <10;
+        //if the host is in MDA effective state, do not transmit
+        if ((srcInf >=10)||(dst_host->MDA_effective_period)) {
+            RETURN();
+        }
     }
-    //transmit only happens if MOI <10
-    if((src_host->infections.size() > 0) && (get_active_infection_count(dst_host)<10)) {
-        std::vector<Strain *> src_strains;
-        for(Infection * infection : src_host->infections) {
-            if(infection->expression_index >= 0) {
-                if(draw_bernoulli(get_transmission_probability(infection))) {
-                    src_strains.push_back(infection->strain);
-                }
+    
+    std::vector<Strain *> src_strains;
+    for(Infection * infection : src_host->infections) {
+        if(infection->expression_index >= 0) {
+            if(draw_bernoulli(get_transmission_probability(infection))) {
+                src_strains.push_back(infection->strain);
             }
         }
+    }
+    
+    // Form set of strains to transmit: some recombinants; some unmodified
+    std::vector<Strain *> strains_to_transmit(src_strains.size());
+    
+    // Produce a set of strains of the same size as src_strains
+    for(uint64_t i = 0; i < src_strains.size(); i++) {
+        Strain * strain1 = src_strains[draw_uniform_index(src_strains.size())];
+        Strain * strain2 = src_strains[draw_uniform_index(src_strains.size())];
         
-        // Form set of strains to transmit: some recombinants; some unmodified 
-        std::vector<Strain *> strains_to_transmit(src_strains.size());
-        
-        // Produce a set of strains of the same size as src_strains
-        for(uint64_t i = 0; i < src_strains.size(); i++) {
-            Strain * strain1 = src_strains[draw_uniform_index(src_strains.size())];
-            Strain * strain2 = src_strains[draw_uniform_index(src_strains.size())];
-            
-            // If they're the same, use them unchanged. Otherwise, recombine.
-            if(strain1 == strain2) {
-                strains_to_transmit[i] = strain1;
-            }
-            else {
-                strains_to_transmit[i] = recombine_strains(strain1, strain2);
-            }
+        // If they're the same, use them unchanged. Otherwise, recombine.
+        if(strain1 == strain2) {
+            strains_to_transmit[i] = strain1;
         }
-        
-        for(Strain * strain : strains_to_transmit) {
-            infect_host(dst_host, strain);
+        else {
+            strains_to_transmit[i] = recombine_strains(strain1, strain2);
         }
-    }    
+    }
+    
+    for(Strain * strain : strains_to_transmit) {
+        infect_host(dst_host, strain);
+    }
     RETURN();
 }
 
@@ -1809,23 +1802,18 @@ void verify_immunity_consistency() {
 
 void sample_hosts() {
     BEGIN();
-    //record prevelance
-    uint64_t totalSampledHost = 0;
+
     std::vector<Host *> infected_hosts;
     for(Host * host : host_manager.objects()) {
         if(host->infections.size() > 0) {
             infected_hosts.push_back(host);
-            totalSampledHost++;
         }
     }
     
-    //std::unordered_set<Host *> sampled_hosts;
     uint64_t sample_size = infected_hosts.size() < HOST_SAMPLE_SIZE ? infected_hosts.size() : HOST_SAMPLE_SIZE;
-    write_sampled_host(totalSampledHost);
     
     for(uint64_t index : draw_uniform_indices_without_replacement(infected_hosts.size(), sample_size)) {
         Host * host = infected_hosts[index];
-        //write_sampled_host(host);
         
         for(Infection * infection : host->infections) {
             write_sampled_infection(host, infection);
@@ -1882,6 +1870,8 @@ void write_summary() {
     sqlite3_bind_int64(summary_stmt, 2, n_infections); // n_infections
     sqlite3_bind_int64(summary_stmt, 3, n_infected); // n_infected
     sqlite3_bind_int64(summary_stmt, 4, n_infections_cumulative); // n_infections_cumulative
+    sqlite3_bind_int64(summary_stmt, 5, n_infected_bites);
+    sqlite3_bind_int64(summary_stmt, 6, n_bites_cumulative);
     sqlite3_bind_int64(summary_stmt, 5, distinct_strains.size()); // n_circulating_strains
     sqlite3_bind_int64(summary_stmt, 6, distinct_genes.size()); // n_circulating_genes
     sqlite3_step(summary_stmt);
@@ -1895,6 +1885,9 @@ void write_summary() {
         sqlite3_reset(summary_alleles_stmt);
     }
     
+    n_bites_cumulative = 0;
+    n_infected_bites = 0;
+    
     RETURN();
 }
 
@@ -1905,13 +1898,6 @@ void write_host(Host * host) {
     sqlite3_bind_double(host_stmt, 4, host->death_time);
     sqlite3_step(host_stmt);
     sqlite3_reset(host_stmt);
-}
-
-void write_sampled_host(uint64_t totalInfected) {
-    sqlite3_bind_double(sampled_host_stmt, 1, now);
-    sqlite3_bind_int64(sampled_host_stmt, 2, totalInfected);
-    sqlite3_step(sampled_host_stmt);
-    sqlite3_reset(sampled_host_stmt);
 }
 
 void write_sampled_infection(Host * host, Infection * infection) {
@@ -1975,7 +1961,6 @@ void write_duration(Host * host, Infection * infection) {
     sqlite3_reset(sampled_duration_stmt);
 
 }
-    
     
 #pragma mark \
 *** Checkpoint function implementations ***
@@ -2252,15 +2237,16 @@ bool draw_bernoulli(double p) {
 void update_biting_time(Population * pop, bool initial) {
     BEGIN();
     
-    double biting_rate;
-    if(DAILY_BITING_RATE_DISTRIBUTION.size()==360){
-        biting_rate = BITING_RATE_MEAN[pop->ind]*N_HOSTS[pop->ind]*DAILY_BITING_RATE_DISTRIBUTION[(int)(now)%360];
+    double biting_rate = BITING_RATE_MEAN[pop->ind]*N_HOSTS[pop->ind];
+    if (pop->IRS_biting_rate>=0){
+        biting_rate *= pop->IRS_biting_rate;
+    }else if(DAILY_BITING_RATE_DISTRIBUTION.size()==360){
+        biting_rate *= DAILY_BITING_RATE_DISTRIBUTION[(int)(now)%360];
     }else{
-        biting_rate = BITING_RATE_MEAN[pop->ind]*N_HOSTS[pop->ind]*(1.0 + BITING_RATE_RELATIVE_AMPLITUDE[pop->ind] *cos(
+        biting_rate *= (1.0 + BITING_RATE_RELATIVE_AMPLITUDE[pop->ind] *cos(
                           2 * M_PI * ((now / T_YEAR) - BITING_RATE_PEAK_PHASE[pop->ind])
                           ));
     }
-    biting_rate *= pop->IRS_biting_rate;
     pop->next_biting_time = draw_exponential_after_now(biting_rate);
     if(initial) {
         biting_queue.add(pop);
