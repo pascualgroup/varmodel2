@@ -2118,6 +2118,15 @@ void initialize_event_queues_from_state() {
     for(Population * pop : population_manager.objects()) {
         biting_queue.add(pop);
         immigration_queue.add(pop);
+        if(IRS_ON){
+            pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
+            IRS_queue.add(pop);
+        }
+        if(MDA_ON){
+            pop->next_MDA_time = MDA_START_TIMES[pop->MDA_id];
+            MDA_queue.add(pop);
+        }
+
     }
     
     for(Host * host : host_manager.objects()) {
