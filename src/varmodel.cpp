@@ -355,7 +355,6 @@ void initialize(bool override_seed, uint64_t random_seed) {
     
     validate_and_load_parameters();
     initialize_sample_db();
-    
     if(override_seed) {
         rng.seed(random_seed);
     }
@@ -972,6 +971,7 @@ void gain_immunity(Host * host, Gene * gene) {
         else {
             immunity->immunity_level_by_allele[gene->alleles[i]]++;
         }
+        host->total_immunity+=1;
     }
     update_next_immunity_loss_time(host);
     RETURN();
@@ -982,8 +982,8 @@ void update_next_immunity_loss_time(Host * host) {
     if(SELECTION_MODE != SPECIFIC_IMMUNITY) {
         RETURN();
     }
-    uint64_t immune_allele_count = get_immune_allele_count(host);
-    host->next_immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * immune_allele_count);
+    //uint64_t immune_allele_count = get_immune_allele_count(host);
+    host->next_immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * host->total_immunity);
     immunity_loss_queue.update(host);
     RETURN();
 }
@@ -994,7 +994,7 @@ void lose_random_immunity(Host * host) {
     ImmuneHistory * immune_history = host->immune_history;
     auto & alleles_with_immunity = immune_history->alleles_with_immunity; 
     assert(alleles_with_immunity.size() > 0);
-    
+
     uint64_t index = draw_uniform_index(alleles_with_immunity.size());
     AlleleRef * ar = alleles_with_immunity.object_at_index(index);
     
@@ -1019,6 +1019,7 @@ void lose_immunity(Host * host, AlleleRef * allele_ref) {
     else {
         immunity_level_by_allele[allele]--;
     }
+    host->total_immunity-=1;
 }
 
 uint64_t get_immune_allele_count(Host * host) {
@@ -1130,9 +1131,9 @@ void clear_infection(Infection * infection) {
     
     Host * host = infection->host;
     //record infection duration, for every 1000 infections.
-    if (n_infections_cumulative%1000 == 0) {
+    //if (n_infections_cumulative%1000 == 0) {
         write_duration(host, infection);
-    }
+    //}
     host->infections.erase(infection);
     
     destroy_infection(infection);
@@ -1238,33 +1239,28 @@ void update_clearance_time(Infection * infection, bool initial) {
     
     // TODO: replace with Qixin's function based on vector of parameters
     double rate;
-    if(infection->expression_index == -1) {
-        rate = 0.0;
+    Host * host = infection->host;
+    double a = GENERAL_IMMUNITY_PARAMS[0];
+    double b = GENERAL_IMMUNITY_PARAMS[1];
+    double c = GENERAL_IMMUNITY_PARAMS[2];
+    double d = GENERAL_IMMUNITY_PARAMS[3];
+
+    if(host->completed_infection_count < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
+        rate = 1.0 / (a +
+            b * exp(
+                -c * double(host->completed_infection_count
+            )) /
+            pow(
+                d * double(host->completed_infection_count) + 1.0,
+                d
+            )
+        );
     }
     else {
-        Host * host = infection->host;
-        double a = GENERAL_IMMUNITY_PARAMS[0];
-        double b = GENERAL_IMMUNITY_PARAMS[1];
-        double c = GENERAL_IMMUNITY_PARAMS[2];
-        double d = GENERAL_IMMUNITY_PARAMS[3];
-         
-        if(host->completed_infection_count < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
-            rate = 1.0 / (a +
-                b * exp(
-                    -c * host->completed_infection_count
-                ) /
-                pow(
-                    d * host->completed_infection_count + 1.0,
-                    d
-                )
-            );
-        }
-        else {
-            rate = CLEARANCE_RATE_IMMUNE;
-        }
+        rate = CLEARANCE_RATE_IMMUNE;
     }
     
-    infection->clearance_time = draw_exponential_after_now(rate);
+    infection->clearance_time = draw_exponential_after_now(rate)+T_LIVER_STAGE;
     if(initial) {
         clearance_queue.add(infection);
     }
