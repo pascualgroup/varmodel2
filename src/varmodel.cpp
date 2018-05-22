@@ -340,12 +340,12 @@ void validate_and_load_parameters() {
         assert(N_IMMIGRATION_NEW_GENES <= N_GENES_PER_STRAIN);
     }
     
-    if(SELECTION_MODE == GENERAL_IMMUNITY) {
+    /*if(SELECTION_MODE == GENERAL_IMMUNITY) {
         assert(GENERAL_IMMUNITY_PARAMS[0] > 0.0);
         assert(GENERAL_IMMUNITY_PARAMS[1] > 0.0);
         assert(GENERAL_IMMUNITY_PARAMS[2] > 0.0);
         assert(GENERAL_IMMUNITY_PARAMS[3] > 0.0);
-    }
+    }*/
     
     RETURN();
 }
