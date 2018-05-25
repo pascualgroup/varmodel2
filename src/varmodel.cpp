@@ -423,6 +423,13 @@ void initialize_population(uint64_t index) {
     Population * pop = population_manager.create();
     pop->ind = index;
     pop->transmission_count = 0;
+    pop->IRS_biting_rate = -1;
+    pop->IRS_immigration_rate_factor = 1;
+    pop->MDA_id = 0;
+    pop->MDA_effective_period = false;
+    pop->MDA_immigration_rate_factor = 1;
+    pop->current_IRS_id = 0;
+    pop->within_IRS_id = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -574,7 +581,8 @@ Host * create_host(Population * pop, bool newborn) {
     
     Host * host = host_manager.create();
     host->population = pop;
-    
+    host->total_immunity = 0.0;
+    host->MDA_effective_period = false;
     double lifetime = std::min(
         draw_exponential(1.0 / MEAN_HOST_LIFETIME),
         MAX_HOST_LIFETIME
