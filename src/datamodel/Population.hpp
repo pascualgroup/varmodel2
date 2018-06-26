@@ -13,7 +13,6 @@ struct Population {
     Population(uint64_t id) : id(id) { }
     
     uint64_t const id;
-    
     // Scalar fields
     uint64_t ind;
     uint64_t transmission_count;

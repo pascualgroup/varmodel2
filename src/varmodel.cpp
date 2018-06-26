@@ -210,6 +210,8 @@ void do_MDA_event();
 void do_biting_event();
 Host * draw_random_source_host(Population * pop);
 Host * draw_random_destination_host(Population * src_pop);
+double distanceWeightFunction(double dist);
+double calDistance(Population * src_pop, Population * dest_pop);
 void transmit(Host * src_host, Host * dst_host);
 double get_transmission_probability(Infection * infection);
 
@@ -233,7 +235,7 @@ uint64_t draw_uniform_index_except(uint64_t size, uint64_t except_index);
 double draw_uniform_real(double min, double max);
 std::vector<uint64_t> draw_uniform_indices_without_replacement(uint64_t n, uint64_t k);
 bool draw_bernoulli(double p);
-
+uint64_t draw_discrete_distribution(std::vector<double> weights);
 #pragma mark \
 *** Printing/debugging helpers ***
 
@@ -340,6 +342,10 @@ void validate_and_load_parameters() {
         assert(N_IMMIGRATION_NEW_GENES <= N_GENES_PER_STRAIN);
     }
     
+    assert(DISTANCE_MAT.size() == N_POPULATIONS);
+    for (auto distRow : DISTANCE_MAT){
+        assert(distRow.size() == N_POPULATIONS);
+    }
     /*if(SELECTION_MODE == GENERAL_IMMUNITY) {
         assert(GENERAL_IMMUNITY_PARAMS[0] > 0.0);
         assert(GENERAL_IMMUNITY_PARAMS[1] > 0.0);
@@ -1565,23 +1571,27 @@ Host * draw_random_source_host(Population * pop) {
     RETURN(host);
 }
 
+double distanceWeightFunction(double dist){
+    BEGIN();
+    assert(dist > 0.0);
+    RETURN(pow(dist, -DIST_POWER));
+}
+    
 Host * draw_random_destination_host(Population * src_pop) {
     BEGIN();
     
     Host * host = nullptr;
-    
-    // Uniform random across populations using linear search
-    // TODO: add distance-based method back in
-    uint64_t n_hosts_total = accumulate(N_HOSTS);
-    uint64_t index = draw_uniform_index(n_hosts_total);
-    uint64_t offset = 0;
-    for(Population * pop : population_manager.objects()) {
-        if(index < offset + pop->hosts.size()) {
-            host = pop->hosts.object_at_index(index - offset);
-            break;
-        }
-        offset += pop->hosts.size();
+    std::vector<double> weights;
+    for (uint64_t i = 0; i<N_POPULATIONS; i++){
+        Population * pop = population_manager.object_for_id(i);
+        double dist = distanceWeightFunction(DISTANCE_MAT[src_pop->id][pop->id]);
+        weights.push_back(
+                          dist
+                          * N_HOSTS[pop->id]
+                          );
     }
+    Population * dest_pop = population_manager.object_for_id(draw_discrete_distribution(weights));
+    host = dest_pop->hosts.object_at_index(draw_uniform_index(N_HOSTS[dest_pop->id]));
     assert(host != nullptr);
     
     RETURN(host);
@@ -2248,6 +2258,12 @@ std::vector<uint64_t> draw_uniform_indices_without_replacement(uint64_t n, uint6
 bool draw_bernoulli(double p) {
     BEGIN();
     RETURN(std::bernoulli_distribution(p)(rng));
+}
+
+uint64_t draw_discrete_distribution(std::vector<double> weights) {
+    BEGIN();
+    std::discrete_distribution<uint64_t> d(weights.begin(),weights.end());
+    RETURN(d(rng));
 }
 
 void update_biting_time(Population * pop, bool initial) {

@@ -153,6 +153,12 @@ const std::vector<uint64_t> {N_INITIAL_INFECTIONS};
 const std::vector<double> {BITING_RATE_MEAN};
 const std::vector<double> {BITING_RATE_RELATIVE_AMPLITUDE};
 const std::vector<double> {BITING_RATE_PEAK_PHASE};
+//matrix of distances between populations,each row is the distances from the focal pop to other populations
+const std::vector<std::vector<double>> {DISTANCE_MAT};
+//how is distance translated to prob of getting transmission from
+//different pop? e.g., if there dist_power = 1, then prob of
+//transmission is weighted by dist^(-dist_power) = 1/dist;
+const double {DIST_POWER};
 //otherwise a vector of daily biting rate with a length of 360 can be supplied
 //biting rate = biting_Rate_mean * daily_biting_rate_distribution[day];
 const std::vector<double> {DAILY_BITING_RATE_DISTRIBUTION};
