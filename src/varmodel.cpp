@@ -1112,9 +1112,17 @@ void perform_infection_transition(Infection * infection) {
     
     Host * host = infection->host;
     if(infection->expression_index == -1) {
-        infection->expression_index = 0;
-        update_mutation_time(infection, false);
-        update_recombination_time(infection, false);
+        if(get_active_infection_count(host)<10) {
+            infection->expression_index = 0;
+            update_mutation_time(infection, false);
+            update_recombination_time(infection, false);
+        }else{
+            //if MOI>=10, dormant for 48 hrs. Infections can be queued in line.
+            infection->transition_time = now + 2;
+            transition_queue.update(infection);
+            RETURN();
+        }
+        
     }
     else {
         assert(
