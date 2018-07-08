@@ -1581,6 +1581,8 @@ Host * draw_random_destination_host(Population * src_pop) {
     BEGIN();
     
     Host * host = nullptr;
+    Population * dest_pop = nullptr;
+    if (N_POPULATIONS>1){
     std::vector<double> weights;
     for (uint64_t i = 0; i<N_POPULATIONS; i++){
         Population * pop = population_manager.object_for_id(i);
@@ -1590,7 +1592,10 @@ Host * draw_random_destination_host(Population * src_pop) {
                           * N_HOSTS[pop->id]
                           );
     }
-    Population * dest_pop = population_manager.object_for_id(draw_discrete_distribution(weights));
+        dest_pop = population_manager.object_for_id(draw_discrete_distribution(weights));
+    }else{
+        dest_pop = population_manager.object_for_id(0);
+    }
     host = dest_pop->hosts.object_at_index(draw_uniform_index(N_HOSTS[dest_pop->id]));
     assert(host != nullptr);
     
@@ -1853,6 +1858,7 @@ void write_summary() {
     std::unordered_set<Gene *> distinct_genes;
     std::array<std::unordered_set<uint64_t>, N_LOCI> distinct_alleles; 
     
+    //to do: make each pop summary separate
     for(Population * pop : population_manager.objects()) {
         for(Host * host : pop->hosts.as_vector()) {
             if(host->infections.size() > 0) {
@@ -1871,25 +1877,26 @@ void write_summary() {
                 }
             }
         }
+        printf("Summary at t = %f:\n", now);
+        printf("population %llu:\n", pop->id);
+        printf("               n_infections: %llu\n", n_infections);
+        printf("                 n_infected: %llu\n", n_infected);
+        printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
+        printf("      n_circulating_strains: %lu\n", distinct_strains.size());
+        printf("        n_circulating_genes: %lu\n", distinct_genes.size());
+        
+        sqlite3_bind_double(summary_stmt, 1, now); // time
+        sqlite3_bind_int64(summary_stmt, 2, n_infections); // n_infections
+        sqlite3_bind_int64(summary_stmt, 3, n_infected); // n_infected
+        sqlite3_bind_int64(summary_stmt, 4, n_infections_cumulative); // n_infections_cumulative
+        sqlite3_bind_int64(summary_stmt, 5, n_infected_bites); //number of infected bites
+        sqlite3_bind_int64(summary_stmt, 6, n_bites_cumulative); //number of total bites in the sampling period
+        sqlite3_bind_int64(summary_stmt, 7, distinct_strains.size()); // n_circulating_strains
+        sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
+        sqlite3_step(summary_stmt);
+        sqlite3_reset(summary_stmt);
     }
     
-    printf("Summary at t = %f:\n", now);
-    printf("               n_infections: %llu\n", n_infections);
-    printf("                 n_infected: %llu\n", n_infected);
-    printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
-    printf("      n_circulating_strains: %lu\n", distinct_strains.size());
-    printf("        n_circulating_genes: %lu\n", distinct_genes.size());
-    
-    sqlite3_bind_double(summary_stmt, 1, now); // time
-    sqlite3_bind_int64(summary_stmt, 2, n_infections); // n_infections
-    sqlite3_bind_int64(summary_stmt, 3, n_infected); // n_infected
-    sqlite3_bind_int64(summary_stmt, 4, n_infections_cumulative); // n_infections_cumulative
-    sqlite3_bind_int64(summary_stmt, 5, n_infected_bites); //number of infected bites
-    sqlite3_bind_int64(summary_stmt, 6, n_bites_cumulative); //number of total bites in the sampling period
-    sqlite3_bind_int64(summary_stmt, 7, distinct_strains.size()); // n_circulating_strains
-    sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
-    sqlite3_step(summary_stmt);
-    sqlite3_reset(summary_stmt);
     
     for(uint64_t i = 0; i < N_LOCI; i++) {
         sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
