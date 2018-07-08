@@ -521,7 +521,7 @@ void initialize_sample_db() {
     );
     
     sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS sampled_infections (time REAL, host_id INTEGER, infection_id INTEGER, strain_id INTEGER, gene_id INTEGER, infected_length REAL, PRIMARY KEY (time, host_id, infection_id));",
+        "CREATE TABLE IF NOT EXISTS sampled_infections (time REAL, host_id INTEGER, pop_id INTEGER, infection_id INTEGER, strain_id INTEGER, gene_id INTEGER, infected_length REAL, PRIMARY KEY (time, host_id, infection_id));",
         NULL, NULL, NULL
     );
     
@@ -541,7 +541,7 @@ void initialize_sample_db() {
     );
 
     sqlite3_exec(sample_db,
-                 "CREATE TABLE IF NOT EXISTS sampled_duration (time REAL, duration REAL, host_id INTEGER, infection_id INTEGER);",
+                 "CREATE TABLE IF NOT EXISTS sampled_duration (time REAL, duration REAL, host_id INTEGER, pop_id INTEGER, infection_id INTEGER);",
                  NULL, NULL, NULL
                  );
 
@@ -552,11 +552,11 @@ void initialize_sample_db() {
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO genes VALUES (?,?,?);", -1, &gene_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO alleles VALUES (?,?,?);", -1, &allele_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_infections VALUES (?,?,?,?,?,?);", -1, &sampled_inf_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO sampled_infections VALUES (?,?,?,?,?,?,?);", -1, &sampled_inf_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_strains VALUES (?,?,?);", -1, &sampled_strain_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_genes VALUES (?,?,?);", -1, &sampled_gene_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_alleles VALUES (?,?,?);", -1, &sampled_allele_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_duration VALUES (?,?,?,?);",-1, &sampled_duration_stmt, NULL);    
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_duration VALUES (?,?,?,?,?);",-1, &sampled_duration_stmt, NULL);
     sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
     sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
 }
@@ -1927,14 +1927,15 @@ void write_sampled_infection(Host * host, Infection * infection) {
     
     sqlite3_bind_double(sampled_inf_stmt, 1, now);
     sqlite3_bind_int64(sampled_inf_stmt, 2, host->id);
-    sqlite3_bind_int64(sampled_inf_stmt, 3, infection->id);
-    sqlite3_bind_int64(sampled_inf_stmt, 4, strain->id);
+    sqlite3_bind_int64(sampled_inf_stmt, 3, host->population->id);
+    sqlite3_bind_int64(sampled_inf_stmt, 4, infection->id);
+    sqlite3_bind_int64(sampled_inf_stmt, 5, strain->id);
     if (infection->expression_index>-1){
-        sqlite3_bind_int64(sampled_inf_stmt, 5, get_current_gene(infection)->id);
+        sqlite3_bind_int64(sampled_inf_stmt, 6, get_current_gene(infection)->id);
     }else{
-        sqlite3_bind_int64(sampled_inf_stmt, 5, -1);
+        sqlite3_bind_int64(sampled_inf_stmt, 6, -1);
     }
-    sqlite3_bind_double(sampled_inf_stmt, 6, (now-infection->infected_time));
+    sqlite3_bind_double(sampled_inf_stmt, 7, (now-infection->infected_time));
 
     sqlite3_step(sampled_inf_stmt);
     sqlite3_reset(sampled_inf_stmt);
@@ -1978,7 +1979,8 @@ void write_duration(Host * host, Infection * infection) {
     sqlite3_bind_double(sampled_duration_stmt, 1, now);
     sqlite3_bind_double(sampled_duration_stmt, 2, (now-infection->infected_time));
     sqlite3_bind_int64(sampled_duration_stmt, 3, host->id);
-    sqlite3_bind_int64(sampled_duration_stmt, 4, host->completed_infection_count);
+    sqlite3_bind_int64(sampled_duration_stmt, 4, host->population->id);
+    sqlite3_bind_int64(sampled_duration_stmt, 5, host->completed_infection_count);
     sqlite3_step(sampled_duration_stmt);
     sqlite3_reset(sampled_duration_stmt);
 
