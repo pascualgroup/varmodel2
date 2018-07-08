@@ -34,8 +34,6 @@ double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 double next_info_time = 0.0;
 
 uint64_t n_infections_cumulative = 0;
-uint64_t n_bites_cumulative = 0;
-uint64_t n_infected_bites = 0;
 
 std::array<uint64_t, N_LOCI> n_alleles = N_ALLELES_INITIAL;
 
@@ -436,6 +434,8 @@ void initialize_population(uint64_t index) {
     pop->MDA_immigration_rate_factor = 1;
     pop->current_IRS_id = 0;
     pop->within_IRS_id = 0;
+    pop->n_bites_cumulative = 0;
+    pop->n_infected_bites = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -508,14 +508,14 @@ void initialize_sample_db() {
     
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS summary ("
-            "time REAL, n_infections INTEGER, n_infected INTEGER, n_infections_cumulative INTEGER, n_infected_bites INTEGER, n_total_bites INTEGER, n_circulating_strains INTEGER, n_circulating_genes INTEGER"
+            "time REAL, pop_id INTEGER, n_infections INTEGER, n_infected INTEGER, n_infected_bites INTEGER, n_total_bites INTEGER, n_circulating_strains INTEGER, n_circulating_genes INTEGER"
         ");",
         NULL, NULL, NULL
     );
-    
+
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS summary_alleles ("
-            "time REAL, locus INTEGER, n_circulating_alleles INTEGER"
+            "time REAL, pop_id INTEGER, locus INTEGER, n_circulating_alleles INTEGER"
         ");",
         NULL, NULL, NULL
     );
@@ -546,7 +546,7 @@ void initialize_sample_db() {
                  );
 
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?);", -1, &summary_alleles_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?,?);", -1, &summary_alleles_stmt, NULL);
     
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
@@ -1467,7 +1467,7 @@ void do_biting_event() {
     PRINT_DEBUG(1, "biting event pop: %llu", pop->id);
     Host * src_host = draw_random_source_host(pop); 
     Host * dst_host = draw_random_destination_host(pop);
-    n_bites_cumulative++;
+    pop->n_bites_cumulative++;
     transmit(src_host, dst_host);
     
     // Update biting event time
@@ -1607,7 +1607,7 @@ void transmit(Host * src_host, Host * dst_host) {
     //count the total number of infections per host
     uint64_t srcInf = get_active_infection_count(dst_host);
     if (srcInf>0) {
-        n_infected_bites ++;
+        src_host->population->n_infected_bites ++;
         //transmit only happens if MOI <10;
         //if the host is in MDA effective state, do not transmit
         if ((srcInf >=10)||(dst_host->MDA_effective_period)) {
@@ -1851,15 +1851,17 @@ void sample_hosts() {
 void write_summary() {
     BEGIN();
     
-    uint64_t n_infected = 0;
-    uint64_t n_infections = 0;
-    
-    std::unordered_set<Strain *> distinct_strains;
-    std::unordered_set<Gene *> distinct_genes;
-    std::array<std::unordered_set<uint64_t>, N_LOCI> distinct_alleles; 
-    
-    //to do: make each pop summary separate
+    printf("\nSummary at t = %f:\n", now);
+    printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
+
     for(Population * pop : population_manager.objects()) {
+        uint64_t n_infected = 0;
+        uint64_t n_infections = 0;
+        
+        std::unordered_set<Strain *> distinct_strains;
+        std::unordered_set<Gene *> distinct_genes;
+        std::array<std::unordered_set<uint64_t>, N_LOCI> distinct_alleles;
+        
         for(Host * host : pop->hosts.as_vector()) {
             if(host->infections.size() > 0) {
                 n_infected++;
@@ -1877,37 +1879,36 @@ void write_summary() {
                 }
             }
         }
-        printf("Summary at t = %f:\n", now);
-        printf("population %llu:\n", pop->id);
+        printf("\n            population %llu:\n", pop->id);
         printf("               n_infections: %llu\n", n_infections);
         printf("                 n_infected: %llu\n", n_infected);
-        printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
+        printf("         n_infectious_bites: %llu\n", pop->n_infected_bites);
         printf("      n_circulating_strains: %lu\n", distinct_strains.size());
         printf("        n_circulating_genes: %lu\n", distinct_genes.size());
         
         sqlite3_bind_double(summary_stmt, 1, now); // time
-        sqlite3_bind_int64(summary_stmt, 2, n_infections); // n_infections
-        sqlite3_bind_int64(summary_stmt, 3, n_infected); // n_infected
-        sqlite3_bind_int64(summary_stmt, 4, n_infections_cumulative); // n_infections_cumulative
-        sqlite3_bind_int64(summary_stmt, 5, n_infected_bites); //number of infected bites
-        sqlite3_bind_int64(summary_stmt, 6, n_bites_cumulative); //number of total bites in the sampling period
+        sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
+        sqlite3_bind_int64(summary_stmt, 3, n_infections); // n_infections
+        sqlite3_bind_int64(summary_stmt, 4, n_infected); // n_infected
+        sqlite3_bind_int64(summary_stmt, 5, pop->n_infected_bites); //number of infected bites
+        sqlite3_bind_int64(summary_stmt, 6, pop->n_bites_cumulative); //number of total bites in the sampling period
         sqlite3_bind_int64(summary_stmt, 7, distinct_strains.size()); // n_circulating_strains
         sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
         sqlite3_step(summary_stmt);
         sqlite3_reset(summary_stmt);
+
+        for(uint64_t i = 0; i < N_LOCI; i++) {
+            sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
+            sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
+            sqlite3_bind_int64(summary_alleles_stmt, 3, i); // locus
+            sqlite3_bind_int64(summary_alleles_stmt, 4, distinct_alleles[i].size()); // n_circulating_alleles
+            sqlite3_step(summary_alleles_stmt);
+            sqlite3_reset(summary_alleles_stmt);
+        }
+        
+        pop->n_infected_bites = 0;
+        pop->n_bites_cumulative = 0;
     }
-    
-    
-    for(uint64_t i = 0; i < N_LOCI; i++) {
-        sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
-        sqlite3_bind_int64(summary_alleles_stmt, 2, i); // locus
-        sqlite3_bind_int64(summary_alleles_stmt, 3, distinct_alleles[i].size()); // n_circulating_alleles
-        sqlite3_step(summary_alleles_stmt);
-        sqlite3_reset(summary_alleles_stmt);
-    }
-    
-    n_bites_cumulative = 0;
-    n_infected_bites = 0;
     
     RETURN();
 }

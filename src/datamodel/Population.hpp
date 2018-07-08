@@ -16,6 +16,8 @@ struct Population {
     // Scalar fields
     uint64_t ind;
     uint64_t transmission_count;
+    uint64_t n_bites_cumulative;
+    uint64_t n_infected_bites;
     double next_biting_time;
     double next_immigration_time;
     double next_IRS_rate_change_time;
