@@ -1184,7 +1184,7 @@ void update_dormant_infections(Host * host){
 
 };
 
-void chose_dormant_infection(Infection * infection){
+void choose_dormant_infection(Infection * infection){
     BEGIN();
     uint64_t actCount = get_active_infection_count(infection->host);
     if((actCount<5)||(draw_bernoulli(exp(-(actCount-4)/2)))) {
