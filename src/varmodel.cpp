@@ -181,7 +181,8 @@ void lose_immunity(Host * host, AlleleRef * allele_ref);
 
 void update_host_infection_times(Host * host);
 void update_infection_times(Infection * infection);
-
+void update_dormant_infections(Host * host);
+void choose_dormant_infection(Infection * infection);
 double get_specific_immunity_level(Host * host, Gene * gene);
 uint64_t get_active_infection_count(Host * host);
 void infect_host(Host * host, Strain * strain);
@@ -1112,13 +1113,15 @@ void perform_infection_transition(Infection * infection) {
     
     Host * host = infection->host;
     if(infection->expression_index == -1) {
-        if(get_active_infection_count(host)<10) {
+        //if MOI<=4, it will start expressing, otherwise
+        uint64_t actCount = get_active_infection_count(host);
+        if((actCount<5)||(draw_bernoulli(exp(-(actCount-4)/2)))) {
             infection->expression_index = 0;
             update_mutation_time(infection, false);
             update_recombination_time(infection, false);
         }else{
-            //if MOI>=10, dormant for 48 hrs. Infections can be queued in line.
-            infection->transition_time = now + 2;
+            infection->transition_time = INF;
+            infection->expression_index = -2;//-2 denotes dormant status
             transition_queue.update(infection);
             RETURN();
         }
@@ -1161,6 +1164,8 @@ void clear_infection(Infection * infection) {
     destroy_infection(infection);
     host->completed_infection_count++;
     
+    update_dormant_infections(host);
+    
     if(SELECTION_MODE == GENERAL_IMMUNITY) {
         update_host_infection_times(host);
     }
@@ -1168,6 +1173,31 @@ void clear_infection(Infection * infection) {
     RETURN();
 }
 
+void update_dormant_infections(Host * host){
+    BEGIN();
+    for(Infection * infection : host->infections) {
+        if(infection->expression_index == -2){
+            choose_dormant_infection(infection);
+        }
+    }
+    RETURN();
+
+};
+
+void chose_dormant_infection(Infection * infection){
+    BEGIN();
+    uint64_t actCount = get_active_infection_count(infection->host);
+    if((actCount<5)||(draw_bernoulli(exp(-(actCount-4)/2)))) {
+        infection->expression_index = 0;
+        infection->transition_time = now;
+        update_mutation_time(infection, false);
+        update_recombination_time(infection, false);
+        update_transition_time(infection,false);
+    }
+    RETURN();
+}
+    
+    
 void update_host_infection_times(Host * host) {
     BEGIN();
     for(Infection * infection : host->infections) {
@@ -1184,7 +1214,7 @@ void update_infection_times(Infection * infection) {
 
 void update_transition_time(Infection * infection, bool initial) {
     BEGIN();
-    if(infection->expression_index == -1) {
+    if(infection->expression_index < 0) {
         RETURN();
     }
     
@@ -1616,9 +1646,8 @@ void transmit(Host * src_host, Host * dst_host) {
     uint64_t srcInf = get_active_infection_count(dst_host);
     if (srcInf>0) {
         src_host->population->n_infected_bites ++;
-        //transmit only happens if MOI <10;
         //if the host is in MDA effective state, do not transmit
-        if ((srcInf >=10)||(dst_host->MDA_effective_period)) {
+        if (dst_host->MDA_effective_period) {
             RETURN();
         }
     }
