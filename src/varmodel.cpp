@@ -185,6 +185,7 @@ void update_dormant_infections(Host * host);
 void choose_dormant_infection(Infection * infection);
 double get_specific_immunity_level(Host * host, Gene * gene);
 uint64_t get_active_infection_count(Host * host);
+uint64_t get_liver_infection_count(Host * host);
 void infect_host(Host * host, Strain * strain);
 
 void perform_infection_transition(Infection * infection);
@@ -1069,6 +1070,18 @@ uint64_t get_active_infection_count(Host * host) {
     RETURN(count);
 }
 
+uint64_t get_liver_infection_count(Host * host) {
+    BEGIN();
+    uint64_t count = 0;
+    for(Infection * infection : host->infections) {
+        if((infection->expression_index == -1)&(infection->transition_time<now+7)) {
+            count += 1;
+        }
+    }
+    
+    RETURN(count);
+}
+
 void infect_host(Host * host, Strain * strain) {
     BEGIN();
     
@@ -1115,7 +1128,7 @@ void perform_infection_transition(Infection * infection) {
     if(infection->expression_index == -1) {
         //if MOI<=4, it will start expressing, otherwise
         uint64_t actCount = get_active_infection_count(host);
-        if((actCount<5)||(draw_bernoulli(exp(-(actCount-4)/2)))) {
+        if((actCount<5)||draw_bernoulli(exp(-(double(actCount)-4)/2))) {
             infection->expression_index = 0;
             update_mutation_time(infection, false);
             update_recombination_time(infection, false);
@@ -1187,7 +1200,7 @@ void update_dormant_infections(Host * host){
 void choose_dormant_infection(Infection * infection){
     BEGIN();
     uint64_t actCount = get_active_infection_count(infection->host);
-    if((actCount<5)||(draw_bernoulli(exp(-(actCount-4)/2)))) {
+    if((actCount<5)||(draw_bernoulli(exp(-(double(actCount)-4.0)/2.0)))) {
         infection->expression_index = 0;
         infection->transition_time = now;
         update_mutation_time(infection, false);
@@ -1647,7 +1660,8 @@ void transmit(Host * src_host, Host * dst_host) {
     if (srcInf>0) {
         src_host->population->n_infected_bites ++;
         //if the host is in MDA effective state, do not transmit
-        if (dst_host->MDA_effective_period) {
+        //if the host has many strains in liver stage, then do not transmit
+        if ((dst_host->MDA_effective_period)||(dst_host->infections.size()>20)) {
             RETURN();
         }
     }
