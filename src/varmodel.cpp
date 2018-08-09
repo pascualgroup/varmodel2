@@ -1482,6 +1482,8 @@ void do_IRS_event() {
     Population * pop = IRS_queue.head();
     PRINT_DEBUG(1, "schedule next IRS event timing for pop %llu", pop->id);
     update_biting_rate_change(pop);
+    update_biting_time(pop,false);
+    update_immigration_time(pop,false);
     RETURN();
 }
 
@@ -1491,6 +1493,7 @@ void do_MDA_event() {
     Population * pop = MDA_queue.head();
     PRINT_DEBUG(1, "schedule next MDA event timing for pop %llu", pop->id);
     update_MDA_time(pop);
+    update_immigration_time(pop,false);
     RETURN();
 }
     
@@ -1681,7 +1684,6 @@ void do_immigration_event() {
     if (get_active_infection_count(host)<10) {
     infect_host(host, strain);
     }
-    
     // Update immigration event time
     update_immigration_time(pop, false);
     RETURN();
