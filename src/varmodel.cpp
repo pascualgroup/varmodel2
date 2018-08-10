@@ -148,7 +148,7 @@ void destroy_host(Host * host);
 
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
 Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
-Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source);
+Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source, double ratio);
 
 Strain * create_strain();
 void destroy_strain(Strain * strain);
@@ -168,7 +168,7 @@ double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint);
 void destroy_infection(Infection * infection);
 
 Gene * get_current_gene(Infection * infection);
-Gene * draw_random_pool_gene();
+Gene * draw_random_pool_gene(double ratio);
 
     
 uint64_t get_immune_allele_count(Host * host);
@@ -204,7 +204,7 @@ void do_sampling_event();
 void do_checkpoint_event();
 void do_IRS_event();
 void do_MDA_event();
-
+uint64_t current_distinct_genes(Population * pop);
 void do_biting_event();
 Host * draw_random_source_host(Population * pop);
 Host * draw_random_destination_host(Population * src_pop);
@@ -436,6 +436,8 @@ void initialize_population(uint64_t index) {
     pop->within_IRS_id = 0;
     pop->n_bites_cumulative = 0;
     pop->n_infected_bites = 0;
+    pop->pool_size_decrease_ratio = 1;
+    pop->poolSizeBeforeIntervention = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -471,7 +473,7 @@ void initialize_population_infections(Population * pop) {
     
     for(uint64_t i = 0; i < N_INITIAL_INFECTIONS[pop->ind]; i++) {
         Host * host = pop->hosts.object_at_index(draw_uniform_index(pop->hosts.size())); 
-        Strain * strain = generate_random_strain(0, SOURCE_POOL);
+        Strain * strain = generate_random_strain(0, SOURCE_POOL,1);
         infect_host(host, strain);
     }
     
@@ -725,7 +727,7 @@ void release_strain(Strain * strain) {
     RETURN();
 }
 
-Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source) {
+Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source, double ratio) {
     BEGIN();
     
     Strain * strain = strain_manager.create();
@@ -735,7 +737,7 @@ Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source
     
     // Old genes
     for(uint64_t i = n_new_genes; i < N_GENES_PER_STRAIN; i++) {
-        genes[i] = draw_random_pool_gene();
+        genes[i] = draw_random_pool_gene(ratio);
     }
     
     // New genes
@@ -743,7 +745,7 @@ Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source
     for(uint64_t i = 0; i < n_new_genes; i++) {
         Gene * old_gene;
         do {
-            old_gene = draw_random_pool_gene();
+            old_gene = draw_random_pool_gene(ratio);
         } while(old_genes_used.find(old_gene) != old_genes_used.end());
         old_genes_used.insert(old_gene);
         genes[i] = mutate_gene(old_gene, new_gene_source);
@@ -957,9 +959,10 @@ Gene * draw_random_gene() {
     RETURN(gene);
 }
 
-Gene * draw_random_pool_gene() {
+Gene * draw_random_pool_gene(double ratio) {
     BEGIN();
-    Gene * gene = gene_manager.objects()[draw_uniform_index(N_GENES_INITIAL)];
+    assert(ratio>0);
+    Gene * gene = gene_manager.objects()[draw_uniform_index(int(N_GENES_INITIAL*ratio))];
     RETURN(gene);
 }
 
@@ -1501,6 +1504,10 @@ void update_MDA_time(Population * pop) {
     BEGIN();
     if(pop->MDA_effective_period == false){
         //if the host is not failed, clear all the infections in the host
+        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->MDA_id == 0)){
+            pop->poolSizeBeforeIntervention = current_distinct_genes(pop);
+        }
+
         for(Host * host : pop->hosts.as_vector()) {
             if(draw_bernoulli(1-HOST_FAIL_RATE[pop->MDA_id])) {
                 std::vector<Infection *> InfectionsToRemove;
@@ -1535,10 +1542,29 @@ void update_MDA_time(Population * pop) {
             pop->next_MDA_time = MDA_START_TIMES[pop->MDA_id];
             MDA_queue.update(pop);
         }
+        if(!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION){
+            std::cout<<double(current_distinct_genes(pop))<<std::endl;
+            pop->pool_size_decrease_ratio = double(current_distinct_genes(pop))/double(pop->poolSizeBeforeIntervention);
+        }
+
     }
     RETURN();
 }
-    
+
+uint64_t current_distinct_genes(Population * pop){
+    BEGIN();
+    std::unordered_set<Gene *> distinct_genes;
+    for(Host * host : pop->hosts.as_vector()) {
+        for(Infection * infection : host->infections) {
+            Strain * strain = infection->strain;
+            for(Gene * gene : strain->genes) {
+                distinct_genes.insert(gene);
+            }
+        }
+    }
+    RETURN(distinct_genes.size());
+}
+
 void update_biting_rate_change(Population * pop){
     BEGIN();
     //if within_IRS_id has surpassed the vector size of one IRS rate change range, then go to the next IRS event
@@ -1546,6 +1572,7 @@ void update_biting_rate_change(Population * pop){
     if (pop->within_IRS_id == BITING_RATE_FACTORS[pop->current_IRS_id].size()) {
         if (pop->current_IRS_id == (IRS_START_TIMES.size()-1)) {
             IRS_queue.remove(pop);
+            
         }else{
             pop->current_IRS_id++;
             pop->within_IRS_id = 0;
@@ -1555,7 +1582,14 @@ void update_biting_rate_change(Population * pop){
         }
         pop->IRS_biting_rate = -1;
         pop->IRS_immigration_rate_factor = 1;
+        if(!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION){
+            //std::cout<<double(current_distinct_genes(pop))<<std::endl;
+            pop->pool_size_decrease_ratio = double(current_distinct_genes(pop))/double(pop->poolSizeBeforeIntervention);
+        }
     }else{
+        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->current_IRS_id == 0)){
+            pop->poolSizeBeforeIntervention = current_distinct_genes(pop);
+        }
         pop->IRS_biting_rate = BITING_RATE_FACTORS[pop->current_IRS_id][pop->within_IRS_id];
         pop->IRS_immigration_rate_factor = IRS_IMMIGRATION_RATE_FACTORS[pop->current_IRS_id];
         pop->next_IRS_rate_change_time += 1;//update the rate daily
@@ -1676,8 +1710,10 @@ void do_immigration_event() {
     else {
         n_new_genes = 0;
     }
-    
-    Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION);
+    if (pop->pool_size_decrease_ratio == 0){
+        RETURN();
+    }
+    Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION, pop->pool_size_decrease_ratio);
     uint64_t index = draw_uniform_index(pop->hosts.size());
     Host * host = pop->hosts.object_at_index(index);
      

@@ -168,13 +168,15 @@ const bool {IRS_ON};
 const std::vector<double> {IRS_START_TIMES};
 const std::vector<std::vector<double>>  {BITING_RATE_FACTORS};
 const std::vector<double> {IRS_IMMIGRATION_RATE_FACTORS};
-
 //MDA parameters
 const bool {MDA_ON};
 const std::vector<double> {MDA_START_TIMES};
 const std::vector<double> {HOST_FAIL_RATE};
 const std::vector<double> {DRUG_EFF_DURATION};
 const std::vector<double> {MDA_IMMIGRATION_RATE_FACTORS};
+//intervention parameter
+//if true, it bounces back to the original pool size, if false, it bounces back to reduced pool size
+const bool {POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION};
 
 // Whether or not to enable immigration
 const bool {IMMIGRATION_ON};
