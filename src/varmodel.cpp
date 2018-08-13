@@ -37,6 +37,9 @@ uint64_t n_infections_cumulative = 0;
 
 std::array<uint64_t, N_LOCI> n_alleles = N_ALLELES_INITIAL;
 
+double pool_size_decrease_ratio = 1;
+uint64_t pool_size_before_intervention = 0;
+
 StrainManager strain_manager;
 
 GeneManager gene_manager;
@@ -204,7 +207,7 @@ void do_sampling_event();
 void do_checkpoint_event();
 void do_IRS_event();
 void do_MDA_event();
-uint64_t current_distinct_genes(Population * pop);
+uint64_t current_distinct_genes();
 void do_biting_event();
 Host * draw_random_source_host(Population * pop);
 Host * draw_random_destination_host(Population * src_pop);
@@ -436,8 +439,6 @@ void initialize_population(uint64_t index) {
     pop->within_IRS_id = 0;
     pop->n_bites_cumulative = 0;
     pop->n_infected_bites = 0;
-    pop->pool_size_decrease_ratio = 1;
-    pop->poolSizeBeforeIntervention = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -1503,12 +1504,11 @@ void do_MDA_event() {
 void update_MDA_time(Population * pop) {
     BEGIN();
     if(pop->MDA_effective_period == false){
-        //if the host is not failed, clear all the infections in the host
-        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->MDA_id == 0)){
-            pop->poolSizeBeforeIntervention = current_distinct_genes(pop);
+        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->MDA_id == 0)&&(pool_size_before_intervention == 0)){
+            pool_size_before_intervention = current_distinct_genes();
         }
-
-        for(Host * host : pop->hosts.as_vector()) {
+        //if the host is not failed, clear all the infections in the host
+         for(Host * host : pop->hosts.as_vector()) {
             if(draw_bernoulli(1-HOST_FAIL_RATE[pop->MDA_id])) {
                 std::vector<Infection *> InfectionsToRemove;
                 for(Infection * infection : host->infections) {
@@ -1543,26 +1543,29 @@ void update_MDA_time(Population * pop) {
             MDA_queue.update(pop);
         }
         if(!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION){
-            std::cout<<double(current_distinct_genes(pop))<<std::endl;
-            pop->pool_size_decrease_ratio = double(current_distinct_genes(pop))/double(pop->poolSizeBeforeIntervention);
+            pool_size_decrease_ratio = double(current_distinct_genes())/double(pool_size_before_intervention);
         }
 
     }
     RETURN();
 }
 
-uint64_t current_distinct_genes(Population * pop){
+uint64_t current_distinct_genes(){
     BEGIN();
-    std::unordered_set<Gene *> distinct_genes;
-    for(Host * host : pop->hosts.as_vector()) {
-        for(Infection * infection : host->infections) {
-            Strain * strain = infection->strain;
-            for(Gene * gene : strain->genes) {
-                distinct_genes.insert(gene);
+    uint64_t average_distinct_genes = 0;
+    for(Population * pop : population_manager.objects()) {
+        std::unordered_set<Gene *> distinct_genes;
+        for(Host * host : pop->hosts.as_vector()) {
+            for(Infection * infection : host->infections) {
+                Strain * strain = infection->strain;
+                for(Gene * gene : strain->genes) {
+                    distinct_genes.insert(gene);
+                }
             }
         }
+        average_distinct_genes += distinct_genes.size();
     }
-    RETURN(distinct_genes.size());
+    RETURN(average_distinct_genes/N_POPULATIONS);
 }
 
 void update_biting_rate_change(Population * pop){
@@ -1583,12 +1586,12 @@ void update_biting_rate_change(Population * pop){
         pop->IRS_biting_rate = -1;
         pop->IRS_immigration_rate_factor = 1;
         if(!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION){
-            //std::cout<<double(current_distinct_genes(pop))<<std::endl;
-            pop->pool_size_decrease_ratio = double(current_distinct_genes(pop))/double(pop->poolSizeBeforeIntervention);
+            pool_size_decrease_ratio = double(current_distinct_genes())/double(pool_size_before_intervention);
+
         }
     }else{
-        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->current_IRS_id == 0)){
-            pop->poolSizeBeforeIntervention = current_distinct_genes(pop);
+        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->current_IRS_id == 0)&&(pool_size_before_intervention == 0)){
+            pool_size_before_intervention = current_distinct_genes();
         }
         pop->IRS_biting_rate = BITING_RATE_FACTORS[pop->current_IRS_id][pop->within_IRS_id];
         pop->IRS_immigration_rate_factor = IRS_IMMIGRATION_RATE_FACTORS[pop->current_IRS_id];
@@ -1710,10 +1713,10 @@ void do_immigration_event() {
     else {
         n_new_genes = 0;
     }
-    if (pop->pool_size_decrease_ratio == 0){
+    if (pool_size_decrease_ratio == 0){
         RETURN();
     }
-    Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION, pop->pool_size_decrease_ratio);
+    Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION, pool_size_decrease_ratio);
     uint64_t index = draw_uniform_index(pop->hosts.size());
     Host * host = pop->hosts.object_at_index(index);
      
@@ -1891,6 +1894,7 @@ void write_summary() {
     
     printf("\nSummary at t = %f:\n", now);
     printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
+   
 
     for(Population * pop : population_manager.objects()) {
         uint64_t n_infected = 0;
@@ -1934,7 +1938,7 @@ void write_summary() {
         sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
         sqlite3_step(summary_stmt);
         sqlite3_reset(summary_stmt);
-
+        
         for(uint64_t i = 0; i < N_LOCI; i++) {
             sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
             sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
@@ -2132,7 +2136,7 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
         std::string rng_str = (const char *)sqlite3_column_text(stmt, 0);
         PRINT_DEBUG(1, "rng read: %s", rng_str.c_str());
         set_rng_from_string(rng_str);
-        assert(rng_str == get_rng_as_string());
+        //assert(rng_str == get_rng_as_string());
     }
     
     now = sqlite3_column_double(stmt, 1);

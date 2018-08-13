@@ -29,8 +29,6 @@ struct Population {
     double next_MDA_time;
     bool MDA_effective_period;
     double MDA_immigration_rate_factor;
-    double pool_size_decrease_ratio;
-    uint64_t poolSizeBeforeIntervention;
 
     // Collections of objects
     IndexedSet<Host> hosts;
