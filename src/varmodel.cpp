@@ -1714,18 +1714,21 @@ void do_immigration_event() {
         n_new_genes = 0;
     }
     if (pool_size_decrease_ratio == 0){
+        // Update immigration event time
+        update_immigration_time(pop, false);
+        RETURN();
+    }else{
+        Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION, pool_size_decrease_ratio);
+        uint64_t index = draw_uniform_index(pop->hosts.size());
+        Host * host = pop->hosts.object_at_index(index);
+        
+        if (get_active_infection_count(host)<10) {
+            infect_host(host, strain);
+        }
+        // Update immigration event time
+        update_immigration_time(pop, false);
         RETURN();
     }
-    Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION, pool_size_decrease_ratio);
-    uint64_t index = draw_uniform_index(pop->hosts.size());
-    Host * host = pop->hosts.object_at_index(index);
-     
-    if (get_active_infection_count(host)<10) {
-    infect_host(host, strain);
-    }
-    // Update immigration event time
-    update_immigration_time(pop, false);
-    RETURN();
 }
 
 void do_immunity_loss_event() {
