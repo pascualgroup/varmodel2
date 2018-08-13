@@ -1715,7 +1715,8 @@ void do_immigration_event() {
     }
     if (pool_size_decrease_ratio == 0){
         // Update immigration event time
-        update_immigration_time(pop, false);
+        pop->next_immigration_time = INF;
+        immigration_queue.update(pop);
         RETURN();
     }else{
         Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION, pool_size_decrease_ratio);
