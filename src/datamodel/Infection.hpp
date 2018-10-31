@@ -20,13 +20,12 @@ struct Infection {
     
     Strain * strain;
     Host * host;
-    
+    uint64_t hostInfection_id;
     int64_t expression_index;
     
     double transition_time;
     double mutation_time;
     double recombination_time;
-    double clearance_time;
     double infected_time;
     
     std::array<Gene *, N_GENES_PER_STRAIN> expression_order;

@@ -98,9 +98,6 @@ EventQueue<Infection, get_mutation_time> mutation_queue;
 double get_recombination_time(Infection * infection) { return infection->recombination_time; }
 EventQueue<Infection, get_recombination_time> recombination_queue;
 
-double get_clearance_time(Infection * infection) { return infection->clearance_time; }
-EventQueue<Infection, get_clearance_time> clearance_queue;
-
 double get_IRS_time(Population * p) {return p->next_IRS_rate_change_time;}
 EventQueue<Population, get_IRS_time> IRS_queue;
 
@@ -198,7 +195,7 @@ double draw_deactivation_time(Infection * infection);
 
 void update_mutation_time(Infection * infection, bool initial);
 void update_recombination_time(Infection * infection, bool initial);
-void update_clearance_time(Infection * infection, bool initial);
+double update_general_transition_time(Infection * infection);
 
 bool do_next_event(); 
 
@@ -223,7 +220,6 @@ void do_death_event();
 void do_transition_event();
 void do_mutation_event();
 void do_recombination_event();
-void do_clearance_event(); 
 
 void update_biting_time(Population * pop, bool initial);
 void update_immigration_time(Population * pop, bool initial);
@@ -604,7 +600,7 @@ Host * create_host(Population * pop, bool newborn) {
     host->death_time = host->birth_time + lifetime;
     death_queue.add(host);
     
-    host->completed_infection_count = 0;
+    host->infection_count = 0;
     host->next_immunity_loss_time = INF;
     immunity_loss_queue.add(host);
     
@@ -659,7 +655,6 @@ void destroy_infection(Infection * infection) {
     transition_queue.remove(infection);
     mutation_queue.remove(infection);
     recombination_queue.remove(infection);
-    clearance_queue.remove(infection);
     infection_manager.destroy(infection);
     RETURN();
 }
@@ -1100,11 +1095,9 @@ void infect_host(Host * host, Strain * strain) {
     update_mutation_time(infection, true);
     update_recombination_time(infection, true);
     
-    if(SELECTION_MODE == GENERAL_IMMUNITY) {
-        update_clearance_time(infection, true);
-    }
-    
     host->infections.insert(infection);
+    host->infection_count++;
+    infection->hostInfection_id = host->infection_count;
     infection->infected_time = now;
     n_infections_cumulative++;
     
@@ -1155,11 +1148,6 @@ void clear_infection(Infection * infection) {
     host->infections.erase(infection);
     
     destroy_infection(infection);
-    host->completed_infection_count++;
-    
-    if(SELECTION_MODE == GENERAL_IMMUNITY) {
-        update_host_infection_times(host);
-    }
     
     RETURN();
 }
@@ -1197,7 +1185,9 @@ void update_transition_time(Infection * infection, bool initial) {
             TRANSITION_RATE_NOT_IMMUNE * immunity_level
         );
     }
-    else {
+    else if(SELECTION_MODE == GENERAL_IMMUNITY){
+        rate = update_general_transition_time(infection);
+    }else{
         rate = TRANSITION_RATE_NOT_IMMUNE;
     }
     infection->transition_time = draw_exponential_after_now(rate);
@@ -1250,7 +1240,7 @@ void update_recombination_time(Infection * infection, bool initial) {
     RETURN();
 }
 
-void update_clearance_time(Infection * infection, bool initial) {
+double update_general_transition_time(Infection * infection) {
     BEGIN();
     
     assert(SELECTION_MODE == GENERAL_IMMUNITY);
@@ -1262,14 +1252,15 @@ void update_clearance_time(Infection * infection, bool initial) {
     double b = GENERAL_IMMUNITY_PARAMS[1];
     double c = GENERAL_IMMUNITY_PARAMS[2];
     double d = GENERAL_IMMUNITY_PARAMS[3];
-
-    if(host->completed_infection_count < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
+    
+    double n = double(infection->hostInfection_id-1);
+    
+    if(host->infection_count < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
         rate = 1.0 / (a +
             b * exp(
-                -c * double(host->completed_infection_count
-            )) /
+                -c * n) /
             pow(
-                d * double(host->completed_infection_count) + 1.0,
+                d * n + 1.0,
                 d
             )
         );
@@ -1278,14 +1269,9 @@ void update_clearance_time(Infection * infection, bool initial) {
         rate = CLEARANCE_RATE_IMMUNE;
     }
     
-    infection->clearance_time = draw_exponential_after_now(rate)+T_LIVER_STAGE;
-    if(initial) {
-        clearance_queue.add(infection);
-    }
-    else {
-        clearance_queue.update(infection);
-    }
-    RETURN();
+    //rate needs to multiply by the number of genes in the strain
+    rate *= N_GENES_PER_STRAIN;
+    RETURN(rate);
 }
 
 
@@ -1306,7 +1292,6 @@ enum class EventType {
     TRANSITION,
     MUTATION,
     RECOMBINATION,
-    CLEARANCE
 };
 
 void run(bool override_seed, uint64_t random_seed) {
@@ -1377,13 +1362,6 @@ bool do_next_event() {
         next_event_time = recombination_queue.next_time();
         next_event_type = EventType::RECOMBINATION;
     }
-    if(
-        SELECTION_MODE == GENERAL_IMMUNITY &&
-        clearance_queue.next_time() < next_event_time
-    ) {
-        next_event_time = clearance_queue.head()->clearance_time;
-        next_event_type = EventType::CLEARANCE;
-    }
     
     PRINT_DEBUG(1, "next_event_time: %f", next_event_time);
     PRINT_DEBUG(1, "next_event_type: %d", next_event_type);
@@ -1434,9 +1412,6 @@ bool do_next_event() {
             break;
         case EventType::RECOMBINATION:
             do_recombination_event();
-            break;
-        case EventType::CLEARANCE:
-            do_clearance_event();
             break;
     }
     RETURN(true);
@@ -1802,13 +1777,6 @@ void do_recombination_event() {
     RETURN();
 }
 
-void do_clearance_event() {
-    BEGIN();
-    assert(SELECTION_MODE == GENERAL_IMMUNITY);
-    Infection * infection = clearance_queue.head();
-    clear_infection(infection);
-    RETURN();
-}
 
 #pragma mark \
 *** Verification function implementations ***
@@ -1823,7 +1791,6 @@ void verify_simulation_state() {
     assert(transition_queue.verify_heap());
     assert(mutation_queue.verify_heap());
     assert(recombination_queue.verify_heap());
-    assert(clearance_queue.verify_heap());
     assert(IRS_queue.verify_heap());
     assert(MDA_queue.verify_heap());
     
@@ -2026,7 +1993,7 @@ void write_duration(Host * host, Infection * infection) {
     sqlite3_bind_double(sampled_duration_stmt, 2, (now-infection->infected_time));
     sqlite3_bind_int64(sampled_duration_stmt, 3, host->id);
     sqlite3_bind_int64(sampled_duration_stmt, 4, host->population->id);
-    sqlite3_bind_int64(sampled_duration_stmt, 5, host->completed_infection_count);
+    sqlite3_bind_int64(sampled_duration_stmt, 5, infection->hostInfection_id);
     sqlite3_step(sampled_duration_stmt);
     sqlite3_reset(sampled_duration_stmt);
 
@@ -2208,7 +2175,6 @@ void initialize_event_queues_from_state() {
         transition_queue.add(infection);
         mutation_queue.add(infection);
         recombination_queue.add(infection);
-        clearance_queue.add(infection);
     }
 }
 
