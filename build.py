@@ -126,7 +126,7 @@ def build(dst_dirname, compiler_cmd, compiler_flags):
     compile_cmd =  compiler_cmd + \
          ' ' + compiler_flags + \
          ' -std=c++11' + \
-         ' -o bin/varRdiv' + \
+         ' -o bin/varMig' + \
          ' ' + '-ldl' + \
          ' ' + '-lpthread' + \
          ' ' + '-I ' + sqlite3_dir + \
