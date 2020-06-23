@@ -174,22 +174,20 @@ const std::vector<double> {MDA_START_TIMES};
 const std::vector<double> {HOST_FAIL_RATE};
 const std::vector<double> {DRUG_EFF_DURATION};
 const std::vector<double> {MDA_IMMIGRATION_RATE_FACTORS};
-//intervention parameter
-//if true, it bounces back to the original pool size, if false, it bounces back to reduced pool size
-const bool {POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION};
 
 // Whether or not to enable immigration
 const bool {IMMIGRATION_ON};
 
-// Immigration rate, in number of random infection events per unit time (per population, not per capita).
+// Immigration rate
+// new change here: Immigration rate here is the ratio of migration rates to biting rates
+// in infectious diseases, reproductive rate = biting rate, generation time = 1/biting rate
+// actual migration rate is updated when biting rates are updated. 
 const std::vector<double> {IMMIGRATION_RATE};
 
-// Probability of new genes being included with immigration
-const double {P_IMMIGRATION_INCLUDES_NEW_GENES};
-
-// Number of new genes created with probability P_IMMIGRATION_INCLUDES_NEW_GENES 
-const uint64_t {N_IMMIGRATION_NEW_GENES};
-
+// ratio of effective population size of the regional pool compared to local pool, e.g., 10
+// this number determines the regional pool gene mutation and turnover rates.
+const double {REGION_TO_LOCAL_POP_SIZE_RATIO};
+    
 // Number of new genes created during immigration
 
 }} // namespace varmodel

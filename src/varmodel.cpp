@@ -32,12 +32,14 @@ double next_sampling_time = T_BURNIN;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 double next_info_time = 0.0;
+//add a new type of event that introduce global mutations to the population
+double next_global_mutation_time = T_BURNIN;
+
 
 uint64_t n_infections_cumulative = 0;
 
 std::array<uint64_t, N_LOCI> n_alleles = N_ALLELES_INITIAL;
 
-double pool_size_decrease_ratio = 1;
 uint64_t pool_size_before_intervention = 0;
 
 StrainManager strain_manager;
@@ -147,8 +149,8 @@ Host * create_host(Population * pop, bool newborn);
 void destroy_host(Host * host);
 
 Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles);
-Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional);
-Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source, double ratio);
+Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional, bool in_pool);
+Strain * generate_random_strain();
 
 Strain * create_strain();
 void destroy_strain(Strain * strain);
@@ -161,7 +163,7 @@ bool contains_different_genes(Strain * strain);
 
 Strain * recombine_strains(Strain * s1, Strain * s2);
 Strain * mutate_strain(Strain * strain);
-Gene * mutate_gene(Gene * gene, GeneSource source);
+Gene * mutate_gene(Gene * gene, GeneSource source, bool in_pool);
 void recombine_infection(Infection * infection);
 double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint);
 
@@ -220,9 +222,13 @@ void do_death_event();
 void do_transition_event();
 void do_mutation_event();
 void do_recombination_event();
+void do_global_mutation_event();
+void do_global_pool_adjust();
 
+uint64_t check_global_pool_size();
 void update_biting_time(Population * pop, bool initial);
 void update_immigration_time(Population * pop, bool initial);
+void update_global_mutation_time();
 void update_MDA_time(Population * pop);
 void update_biting_rate_change(Population * pop);
 double draw_exponential_after_now(double lambda);
@@ -335,8 +341,6 @@ void validate_and_load_parameters() {
         for(auto value : IMMIGRATION_RATE) {
             assert(value >= 0.0);
         }
-        assert(P_IMMIGRATION_INCLUDES_NEW_GENES >= 0.0 && P_IMMIGRATION_INCLUDES_NEW_GENES <= 1.0);
-        assert(N_IMMIGRATION_NEW_GENES <= N_GENES_PER_STRAIN);
     }
     
     assert(DISTANCE_MAT.size() == N_POPULATIONS);
@@ -404,7 +408,7 @@ void initialize_gene_pool() {
                 alleles[j] = draw_uniform_index(n_alleles[j]);
             }
         } while(get_gene_with_alleles(alleles) != NULL);
-        get_or_create_gene(alleles, SOURCE_POOL, true);
+        get_or_create_gene(alleles, SOURCE_POOL_ORIGINAL, true, true);
     }
     
     RETURN();
@@ -435,6 +439,7 @@ void initialize_population(uint64_t index) {
     pop->within_IRS_id = 0;
     pop->n_bites_cumulative = 0;
     pop->n_infected_bites = 0;
+    pop->current_pop_size = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -443,7 +448,8 @@ void initialize_population(uint64_t index) {
         pop->next_MDA_time = MDA_START_TIMES[pop->MDA_id];
         MDA_queue.add(pop);
     }
-    update_biting_time(pop, true);
+
+    update_biting_time(pop, true);//this will update pop->current_biting_rate
     
     if(IMMIGRATION_ON) {
         update_immigration_time(pop, true);
@@ -470,7 +476,7 @@ void initialize_population_infections(Population * pop) {
     
     for(uint64_t i = 0; i < N_INITIAL_INFECTIONS[pop->ind]; i++) {
         Host * host = pop->hosts.object_at_index(draw_uniform_index(pop->hosts.size())); 
-        Strain * strain = generate_random_strain(0, SOURCE_POOL,1);
+        Strain * strain = generate_random_strain();
         infect_host(host, strain);
     }
     
@@ -489,7 +495,7 @@ void initialize_sample_db() {
         "CREATE TABLE IF NOT EXISTS hosts (id INTEGER PRIMARY KEY, population_id INTEGER, birth_time REAL, death_time REAL);",
         NULL, NULL, NULL
     );
-    
+
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS strains (id INTEGER, ind INTEGER, gene_id INTEGER, PRIMARY KEY (id, ind));",
         NULL, NULL, NULL
@@ -569,9 +575,9 @@ void finalize_sample_db() {
     sqlite3_finalize(host_stmt);
     sqlite3_finalize(strain_stmt);
     sqlite3_finalize(gene_stmt);
+    sqlite3_finalize(allele_stmt);
     sqlite3_finalize(sampled_gene_stmt);
     sqlite3_finalize(sampled_strain_stmt);
-    sqlite3_finalize(allele_stmt);
     sqlite3_finalize(sampled_allele_stmt);
     sqlite3_finalize(sampled_inf_stmt);
     sqlite3_finalize(sampled_duration_stmt);
@@ -669,7 +675,7 @@ Gene * get_gene_with_alleles(std::array<uint64_t, N_LOCI> const & alleles) {
     RETURN(itr->second);
 }
 
-Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional) {
+Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSource source, bool is_functional, bool in_pool) {
     BEGIN();
     Gene * gene = get_gene_with_alleles(alleles);
     if(gene == nullptr) {
@@ -677,7 +683,7 @@ Gene * get_or_create_gene(std::array<uint64_t, N_LOCI> const & alleles, GeneSour
         gene->alleles = alleles;
         gene->source = source;
         gene->is_functional = is_functional;
-    
+        gene->in_pool = in_pool;
         if(OUTPUT_STRAINS) {
             write_gene(gene, gene_stmt, allele_stmt);
         }
@@ -723,7 +729,7 @@ void release_strain(Strain * strain) {
     RETURN();
 }
 
-Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source, double ratio) {
+Strain * generate_random_strain() {
     BEGIN();
     
     Strain * strain = strain_manager.create();
@@ -732,19 +738,8 @@ Strain * generate_random_strain(uint64_t n_new_genes, GeneSource new_gene_source
 //    std::array<Gene *, N_GENES_PER_STRAIN> genes;
     
     // Old genes
-    for(uint64_t i = n_new_genes; i < N_GENES_PER_STRAIN; i++) {
-        genes[i] = draw_random_pool_gene(ratio);
-    }
-    
-    // New genes
-    std::unordered_set<Gene *> old_genes_used;
-    for(uint64_t i = 0; i < n_new_genes; i++) {
-        Gene * old_gene;
-        do {
-            old_gene = draw_random_pool_gene(ratio);
-        } while(old_genes_used.find(old_gene) != old_genes_used.end());
-        old_genes_used.insert(old_gene);
-        genes[i] = mutate_gene(old_gene, new_gene_source);
+    for(uint64_t i = 0; i < N_GENES_PER_STRAIN; i++) {
+        genes[i] = draw_random_gene();
     }
     
     if(OUTPUT_STRAINS) {
@@ -812,7 +807,7 @@ Strain * mutate_strain(Strain * strain) {
     uint64_t index = draw_uniform_index(N_GENES_PER_STRAIN);
     Strain * mutated_strain = strain_manager.create();
     mutated_strain->genes = strain->genes;
-    mutated_strain->genes[index] = mutate_gene(strain->genes[index], SOURCE_MUTATION);
+    mutated_strain->genes[index] = mutate_gene(strain->genes[index], SOURCE_MUTATION, false);
     
     if(OUTPUT_STRAINS) {
         write_strain(strain, strain_stmt, NULL, NULL);
@@ -821,7 +816,7 @@ Strain * mutate_strain(Strain * strain) {
     RETURN(mutated_strain);
 }
 
-Gene * mutate_gene(Gene * gene, GeneSource source) {
+Gene * mutate_gene(Gene * gene, GeneSource source, bool in_pool) {
     BEGIN();
     auto alleles = gene->alleles;
     uint64_t locus = draw_uniform_index(N_LOCI); 
@@ -834,7 +829,7 @@ Gene * mutate_gene(Gene * gene, GeneSource source) {
     allele_ref->allele = n_alleles[locus] - 1;
     allele_refs[locus].push_back(allele_ref);
     
-    RETURN(get_or_create_gene(alleles, source, gene->is_functional));
+    RETURN(get_or_create_gene(alleles, source, gene->is_functional, in_pool));
 }
 
 void recombine_infection(Infection * infection) {
@@ -880,7 +875,7 @@ void recombine_infection(Infection * infection) {
         double similarity = get_gene_similarity(src_gene_1, src_gene_2, breakpoint);
         
         auto rec_alleles_1 = recombine_alleles(src_gene_1->alleles, src_gene_2->alleles, breakpoint);
-        Gene * rec_gene_1 = get_or_create_gene(rec_alleles_1, SOURCE_RECOMBINATION, draw_bernoulli(similarity));
+        Gene * rec_gene_1 = get_or_create_gene(rec_alleles_1, SOURCE_RECOMBINATION, draw_bernoulli(similarity),false);
         new_gene_1 = rec_gene_1->is_functional ? rec_gene_1 : src_gene_1;
         
         // Under conversion, the second gene remains unchanged
@@ -890,7 +885,7 @@ void recombine_infection(Infection * infection) {
         // Under normal combination, both genes have material swapped
         else {
             auto rec_alleles_2 = recombine_alleles(src_gene_2->alleles, src_gene_1->alleles, breakpoint);
-            Gene * rec_gene_2 = get_or_create_gene(rec_alleles_2, SOURCE_RECOMBINATION, draw_bernoulli(similarity));
+            Gene * rec_gene_2 = get_or_create_gene(rec_alleles_2, SOURCE_RECOMBINATION, draw_bernoulli(similarity),false);
             new_gene_2 = rec_gene_2->is_functional ? rec_gene_2 : src_gene_2;
         }
     }
@@ -952,6 +947,9 @@ bool contains_different_genes(Strain * strain) {
 Gene * draw_random_gene() {
     BEGIN();
     Gene * gene = gene_manager.objects()[draw_uniform_index(gene_manager.size())];
+    while(gene->in_pool == false) {
+        Gene * gene = gene_manager.objects()[draw_uniform_index(gene_manager.size())];
+    }
     RETURN(gene);
 }
 
@@ -1292,6 +1290,7 @@ enum class EventType {
     TRANSITION,
     MUTATION,
     RECOMBINATION,
+    GLOBAL_MUTATE
 };
 
 void run(bool override_seed, uint64_t random_seed) {
@@ -1362,6 +1361,10 @@ bool do_next_event() {
         next_event_time = recombination_queue.next_time();
         next_event_type = EventType::RECOMBINATION;
     }
+    if(next_global_mutation_time < next_event_time) {
+        next_event_time = next_global_mutation_time;
+        next_event_type = EventType::BITING;
+    }
     
     PRINT_DEBUG(1, "next_event_time: %f", next_event_time);
     PRINT_DEBUG(1, "next_event_type: %d", next_event_type);
@@ -1413,6 +1416,9 @@ bool do_next_event() {
         case EventType::RECOMBINATION:
             do_recombination_event();
             break;
+        case EventType::GLOBAL_MUTATE:
+            do_global_mutation_event();
+            break;
     }
     RETURN(true);
 }
@@ -1462,7 +1468,9 @@ void do_IRS_event() {
     PRINT_DEBUG(1, "schedule next IRS event timing for pop %llu", pop->id);
     update_biting_rate_change(pop);
     update_biting_time(pop,false);
-    update_immigration_time(pop,false);
+    if(IMMIGRATION_ON) {
+        update_immigration_time(pop, true);
+    }
     RETURN();
 }
 
@@ -1472,17 +1480,16 @@ void do_MDA_event() {
     Population * pop = MDA_queue.head();
     PRINT_DEBUG(1, "schedule next MDA event timing for pop %llu", pop->id);
     update_MDA_time(pop);
-    update_immigration_time(pop,false);
+     if(IMMIGRATION_ON) {
+        update_immigration_time(pop, true);
+    }
     RETURN();
 }
     
 void update_MDA_time(Population * pop) {
     BEGIN();
     if(pop->MDA_effective_period == false){
-        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->MDA_id == 0)&&(pool_size_before_intervention == 0)){
-            pool_size_before_intervention = current_distinct_genes();
-        }
-        //if the host is not failed, clear all the infections in the host
+         //if the host is not failed, clear all the infections in the host
          for(Host * host : pop->hosts.as_vector()) {
             if(draw_bernoulli(1-HOST_FAIL_RATE[pop->MDA_id])) {
                 std::vector<Infection *> InfectionsToRemove;
@@ -1517,10 +1524,7 @@ void update_MDA_time(Population * pop) {
             pop->next_MDA_time = MDA_START_TIMES[pop->MDA_id];
             MDA_queue.update(pop);
         }
-        if(!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION){
-            pool_size_decrease_ratio = double(current_distinct_genes())/double(pool_size_before_intervention);
-        }
-
+ 
     }
     RETURN();
 }
@@ -1560,14 +1564,7 @@ void update_biting_rate_change(Population * pop){
         }
         pop->IRS_biting_rate = -1;
         pop->IRS_immigration_rate_factor = 1;
-        if(!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION){
-            pool_size_decrease_ratio = double(current_distinct_genes())/double(pool_size_before_intervention);
-
-        }
     }else{
-        if((!POOLSIZE_BOUNCE_BACK_AFTER_INTERVENTION)&&(pop->current_IRS_id == 0)&&(pool_size_before_intervention == 0)){
-            pool_size_before_intervention = current_distinct_genes();
-        }
         pop->IRS_biting_rate = BITING_RATE_FACTORS[pop->current_IRS_id][pop->within_IRS_id];
         pop->IRS_immigration_rate_factor = IRS_IMMIGRATION_RATE_FACTORS[pop->current_IRS_id];
         pop->next_IRS_rate_change_time += 1;//update the rate daily
@@ -1681,31 +1678,59 @@ void do_immigration_event() {
     
     PRINT_DEBUG(1, "immigration event pop: %llu", pop->id);
     
-    uint64_t n_new_genes;
-    if(draw_bernoulli(P_IMMIGRATION_INCLUDES_NEW_GENES)) {
-        n_new_genes = N_IMMIGRATION_NEW_GENES;
+    Strain * strain = generate_random_strain();
+    uint64_t index = draw_uniform_index(pop->hosts.size());
+    Host * host = pop->hosts.object_at_index(index);
+    
+    if (get_active_infection_count(host)<10) {
+        infect_host(host, strain);
     }
-    else {
-        n_new_genes = 0;
-    }
-    if (pool_size_decrease_ratio == 0){
-        // Update immigration event time
-        pop->next_immigration_time = INF;
-        immigration_queue.update(pop);
-        RETURN();
-    }else{
-        Strain * strain = generate_random_strain(n_new_genes, SOURCE_IMMIGRATION, pool_size_decrease_ratio);
-        uint64_t index = draw_uniform_index(pop->hosts.size());
-        Host * host = pop->hosts.object_at_index(index);
-        
-        if (get_active_infection_count(host)<10) {
-            infect_host(host, strain);
-        }
-        // Update immigration event time
-        update_immigration_time(pop, false);
-        RETURN();
-    }
+    // Update immigration event time
+    update_immigration_time(pop, false);
+    RETURN();
 }
+
+void do_global_mutation_event() {
+    BEGIN();
+    if(now == T_BURNIN){
+        pool_size_before_intervention = current_distinct_genes();
+    }else{
+    mutate_gene(draw_random_gene(),SOURCE_POOL_MUTATION, true);
+    // check if the current pool size is larger than expected
+    do_global_pool_adjust();
+    }
+    update_global_mutation_time();
+    
+    RETURN();
+
+}
+
+void do_global_pool_adjust() {
+    BEGIN();
+    u_int64_t excess_size = floor(check_global_pool_size()-double(current_distinct_genes())/double(pool_size_before_intervention)*
+                        double(N_GENES_INITIAL));
+    
+    while(excess_size>0){
+        Gene * gene = draw_random_gene();
+        gene->in_pool = false;
+        excess_size -=1;
+    }
+
+    RETURN();
+}
+
+uint64_t check_global_pool_size() {
+    BEGIN();
+    uint64_t global_pool_size = 0;
+    for(Gene * gene : gene_manager.objects()){
+        
+        if (gene->in_pool) {
+            global_pool_size +=1;
+        }
+    }
+    RETURN(global_pool_size);
+}
+
 
 void do_immunity_loss_event() {
     BEGIN();
@@ -1921,7 +1946,9 @@ void write_summary() {
         
         pop->n_infected_bites = 0;
         pop->n_bites_cumulative = 0;
-    }
+        pop->current_pop_size = n_infections;
+        
+}
     
     RETURN();
 }
@@ -2308,18 +2335,33 @@ void update_biting_time(Population * pop, bool initial) {
     else {
         biting_queue.update(pop);
     }
+    pop->current_biting_rate = biting_rate;
     RETURN();
 }
 
+
 void update_immigration_time(Population * pop, bool initial) {
     BEGIN();
-    pop->next_immigration_time = draw_exponential_after_now(IMMIGRATION_RATE[pop->ind]*pop->IRS_immigration_rate_factor*pop->MDA_immigration_rate_factor);
+    pop->next_immigration_time = draw_exponential_after_now(IMMIGRATION_RATE[pop->ind]*
+                                 pop->current_biting_rate*N_HOSTS[pop->ind]*
+                                 pop->IRS_immigration_rate_factor*pop->MDA_immigration_rate_factor);
     if(initial) {
         immigration_queue.add(pop);
     }
     else {
         immigration_queue.update(pop);
     }
+    RETURN();
+}
+
+void update_global_mutation_time() {
+    BEGIN();
+    double mean_Pop_Size = 0;
+    for (Population * pop : population_manager.objects()){
+        mean_Pop_Size += pop->current_pop_size;
+    }
+    mean_Pop_Size = mean_Pop_Size/N_POPULATIONS;
+    next_global_mutation_time = draw_exponential_after_now(MUTATION_RATE*N_GENES_PER_STRAIN * N_LOCI * mean_Pop_Size * REGION_TO_LOCAL_POP_SIZE_RATIO);
     RETURN();
 }
 

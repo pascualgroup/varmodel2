@@ -7,10 +7,10 @@
 namespace varmodel {
 
 enum GeneSource {
-    SOURCE_POOL = 0,
+    SOURCE_POOL_ORIGINAL = 0,
     SOURCE_RECOMBINATION = 1,
     SOURCE_MUTATION = 2,
-    SOURCE_IMMIGRATION = 3
+    SOURCE_POOL_MUTATION = 3,
 };
 
 struct Gene {
@@ -20,6 +20,7 @@ struct Gene {
     
     uint64_t source;
     bool is_functional;
+    bool in_pool;
     std::array<uint64_t, N_LOCI> alleles;
 };
 

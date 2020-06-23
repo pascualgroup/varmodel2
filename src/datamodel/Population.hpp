@@ -23,12 +23,14 @@ struct Population {
     double next_IRS_rate_change_time;
     uint64_t current_IRS_id;
     uint64_t within_IRS_id;
+    double current_biting_rate;
     double IRS_biting_rate;
     double IRS_immigration_rate_factor;
     uint64_t MDA_id;
     double next_MDA_time;
     bool MDA_effective_period;
     double MDA_immigration_rate_factor;
+    uint64_t current_pop_size;
 
     // Collections of objects
     IndexedSet<Host> hosts;

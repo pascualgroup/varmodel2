@@ -17,7 +17,8 @@ import json
 import argparse
 import subprocess
 
-script_dir = os.path.dirname(__file__)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+#print(script_dir)
 
 try:
     basestring = basestring
@@ -57,8 +58,8 @@ def parse_arguments():
     )
     parser.add_argument('-c', '--c-compiler', metavar = '<c-compiler>', default = 'cc', help = 'C compiler.')
     parser.add_argument('-C', '--cpp-compiler', metavar = '<compiler>', default = 'c++', help = 'C++ compiler.')
-    parser.add_argument('-f', '--cflags', metavar = '<c-flags>', default = '-O2 -g', help = 'C compiler flags.')
-    parser.add_argument('-F', '--cppflags', metavar = '<cpp-flags>', default = '-O2 -g', help = 'C++ compiler flags.')
+    parser.add_argument('-f', '--cflags', metavar = '<c-flags>', default = '-O2 -g ', help = 'C compiler flags.')
+    parser.add_argument('-F', '--cppflags', metavar = '<cpp-flags>', default = '-O2 -g ', help = 'C++ compiler flags.')
     
     return parser.parse_args()
 
@@ -81,6 +82,27 @@ def copy_sources(dst_dirname):
         pass
     
     shutil.copytree(os.path.join(script_dir, 'src'), os.path.join(dst_dirname, 'src'))
+    
+    git_dirname = os.path.join(dst_dirname, 'git')
+    try:
+        os.makedirs(git_dirname)
+    except:
+        pass
+    with open(os.path.join(git_dirname, 'commit.txt'), 'w') as f:
+        subprocess.Popen(
+            ['git', 'rev-parse', 'HEAD'],
+            stdout=f
+        )
+    with open(os.path.join(git_dirname, 'log.txt'), 'w') as f:
+        subprocess.Popen(
+            ['git', 'log'],
+            stdout=f
+        )
+    with open(os.path.join(git_dirname, 'diff.txt'), 'w') as f:
+        subprocess.Popen(
+            ['git', 'diff'],
+            stdout=f
+        )
 
 def generate_managers(dst_dirname):
     subprocess.Popen([
@@ -100,10 +122,13 @@ def build(dst_dirname, compiler_cmd, compiler_flags):
     os.makedirs(os.path.join(dst_dirname, 'bin'))
     
     sqlite3_dir = os.path.abspath(os.path.join(script_dir, 'sqlite3'))
+    boost_dir = "/usr/local/include/"
     compile_cmd =  compiler_cmd + \
          ' ' + compiler_flags + \
          ' -std=c++11' + \
-         ' -o bin/varmodel2' + \
+         ' -o bin/varRdiv' + \
+         ' ' + '-ldl' + \
+         ' ' + '-lpthread' + \
          ' ' + '-I ' + sqlite3_dir + \
          ' ' + os.path.join(sqlite3_dir, 'sqlite3.o') + \
          ' generated/managers/*.cpp' + \
@@ -115,8 +140,7 @@ def build(dst_dirname, compiler_cmd, compiler_flags):
          ' -I src/util' + \
          ' -I generated' + \
          ' -I generated/managers' + \
-         ' ' + '-ldl' + \
-         ' ' + '-lpthread'
+         ' -I ' + boost_dir
     print(compile_cmd)
     subprocess.Popen(compile_cmd, cwd = dst_dirname, shell = True).wait()
 
