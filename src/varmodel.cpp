@@ -31,7 +31,6 @@ double now = 0.0;
 double next_sampling_time = T_BURNIN;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
-double next_info_time = 0.0;
 //add a new type of event that introduce global mutations to the population
 double next_global_mutation_time = T_BURNIN;
 
@@ -2099,7 +2098,7 @@ void save_global_state_to_checkpoint(sqlite3 * db) {
             "now REAL, "
             "next_verification_time REAL, "
             "next_checkpoint_time REAL, "
-            "next_info_time REAL, "
+            "next_global_mutation_time REAL, "
             "n_infections_cumulative INTEGER"
         ");",
         NULL, NULL, NULL
@@ -2112,7 +2111,7 @@ void save_global_state_to_checkpoint(sqlite3 * db) {
     sqlite3_bind_double(stmt, 2, now);
     sqlite3_bind_double(stmt, 3, next_verification_time);
     sqlite3_bind_double(stmt, 4, next_checkpoint_time);
-    sqlite3_bind_double(stmt, 5, next_info_time);
+    sqlite3_bind_double(stmt, 5, next_global_mutation_time);
     sqlite3_bind_int64(stmt, 6, n_infections_cumulative);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -2134,7 +2133,7 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     now = sqlite3_column_double(stmt, 1);
     next_verification_time = sqlite3_column_double(stmt, 2);
     next_checkpoint_time = sqlite3_column_double(stmt, 3);
-    next_info_time = sqlite3_column_double(stmt, 4);
+    next_global_mutation_time = sqlite3_column_double(stmt, 4);
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
     next_sampling_time = now + T_BURNIN;
     sqlite3_finalize(stmt);
