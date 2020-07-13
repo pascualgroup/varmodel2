@@ -170,8 +170,6 @@ double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint);
 void destroy_infection(Infection * infection);
 
 Gene * get_current_gene(Infection * infection);
-Gene * draw_random_pool_gene(double ratio);
-
     
 uint64_t get_immune_allele_count(Host * host);
 
@@ -948,15 +946,8 @@ Gene * draw_random_gene() {
     BEGIN();
     Gene * gene = gene_manager.objects()[draw_uniform_index(gene_manager.size())];
     while(gene->in_pool == false) {
-        Gene * gene = gene_manager.objects()[draw_uniform_index(gene_manager.size())];
+        gene = gene_manager.objects()[draw_uniform_index(gene_manager.size())];
     }
-    RETURN(gene);
-}
-
-Gene * draw_random_pool_gene(double ratio) {
-    BEGIN();
-    assert(ratio>0);
-    Gene * gene = gene_manager.objects()[draw_uniform_index(int(N_GENES_INITIAL*ratio))];
     RETURN(gene);
 }
 
@@ -1363,7 +1354,7 @@ bool do_next_event() {
     }
     if(next_global_mutation_time < next_event_time) {
         next_event_time = next_global_mutation_time;
-        next_event_type = EventType::BITING;
+        next_event_type = EventType::GLOBAL_MUTATE;
     }
     
     PRINT_DEBUG(1, "next_event_time: %f", next_event_time);
@@ -1692,12 +1683,14 @@ void do_immigration_event() {
 
 void do_global_mutation_event() {
     BEGIN();
+    
     if(now == T_BURNIN){
         pool_size_before_intervention = current_distinct_genes();
     }else{
-    mutate_gene(draw_random_gene(),SOURCE_POOL_MUTATION, true);
-    // check if the current pool size is larger than expected
-    do_global_pool_adjust();
+        mutate_gene(draw_random_gene(),SOURCE_POOL_MUTATION, true);
+        // check if the current pool size is larger than expected
+        printf("global mutation of new genes");
+        do_global_pool_adjust();
     }
     update_global_mutation_time();
     
@@ -1714,6 +1707,7 @@ void do_global_pool_adjust() {
         Gene * gene = draw_random_gene();
         gene->in_pool = false;
         excess_size -=1;
+        PRINT_DEBUG(5, "one excess gene removed");
     }
 
     RETURN();
@@ -2329,6 +2323,7 @@ void update_biting_time(Population * pop, bool initial) {
                           ));
     }
     pop->next_biting_time = draw_exponential_after_now(biting_rate);
+    //printf("%f",pop->next_biting_time);
     if(initial) {
         biting_queue.add(pop);
     }
@@ -2361,7 +2356,8 @@ void update_global_mutation_time() {
         mean_Pop_Size += pop->current_pop_size;
     }
     mean_Pop_Size = mean_Pop_Size/N_POPULATIONS;
-    next_global_mutation_time = draw_exponential_after_now(MUTATION_RATE*N_GENES_PER_STRAIN * N_LOCI * mean_Pop_Size * REGION_TO_LOCAL_POP_SIZE_RATIO);
+    double mutRate = MUTATION_RATE*N_GENES_PER_STRAIN * N_LOCI * mean_Pop_Size * REGION_TO_LOCAL_POP_SIZE_RATIO;
+    next_global_mutation_time = draw_exponential_after_now(mutRate);
     RETURN();
 }
 
