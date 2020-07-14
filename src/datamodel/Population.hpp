@@ -31,6 +31,7 @@ struct Population {
     bool MDA_effective_period;
     double MDA_immigration_rate_factor;
     uint64_t current_pop_size;
+    double temp_cps;
 
     // Collections of objects
     IndexedSet<Host> hosts;

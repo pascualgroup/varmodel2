@@ -32,14 +32,15 @@ double next_sampling_time = T_BURNIN;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 //add a new type of event that introduce global mutations to the population
-double next_global_mutation_time = T_BURNIN;
+double next_global_mutation_time = EXPECTED_EQUILIBRIUM;
 
 
 uint64_t n_infections_cumulative = 0;
 
 std::array<uint64_t, N_LOCI> n_alleles = N_ALLELES_INITIAL;
 
-uint64_t pool_size_before_intervention = 0;
+std::array<double, 360> pop_size_before_IRS;
+double current_pop_size = 0;
 
 StrainManager strain_manager;
 
@@ -126,6 +127,7 @@ void load_checkpoint(bool should_load_rng_state);
 void save_checkpoint();
 
 void save_global_state_to_checkpoint(sqlite3 * db);
+void save_global_pop_size_to_checkpoint(sqlite3 * db);
 void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state);
 void load_allele_refs();
 void initialize_event_queues_from_state();
@@ -222,7 +224,7 @@ void do_recombination_event();
 void do_global_mutation_event();
 void do_global_pool_adjust();
 
-uint64_t check_global_pool_size();
+double check_global_pool_size();
 void update_biting_time(Population * pop, bool initial);
 void update_immigration_time(Population * pop, bool initial);
 void update_global_mutation_time();
@@ -285,10 +287,12 @@ void validate_and_load_parameters() {
     assert(T_END >= 0.0);
     assert(T_BURNIN >= 0.0);
     assert(T_BURNIN <= T_END);
+    assert(T_BURNIN + 360 <= EXPECTED_EQUILIBRIUM);
     
     assert(SAMPLE_DB_FILENAME == "" || !file_exists(SAMPLE_DB_FILENAME));
     assert(HOST_SAMPLING_PERIOD > 0.0);
-    
+    assert((int)T_YEAR % (int)HOST_SAMPLING_PERIOD == 0);
+     
     assert(!SAVE_TO_CHECKPOINT || !file_exists(CHECKPOINT_SAVE_FILENAME));
     assert(!SAVE_TO_CHECKPOINT || CHECKPOINT_SAVE_PERIOD > 0.0);
     
@@ -437,6 +441,7 @@ void initialize_population(uint64_t index) {
     pop->n_bites_cumulative = 0;
     pop->n_infected_bites = 0;
     pop->current_pop_size = 0;
+    pop->temp_cps = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -1683,12 +1688,10 @@ void do_immigration_event() {
 void do_global_mutation_event() {
     BEGIN();
     
-    if(now == T_BURNIN){
-        pool_size_before_intervention = current_distinct_genes();
-    }else{
-        mutate_gene(draw_random_gene(),SOURCE_POOL_MUTATION, true);
+    if(now>EXPECTED_EQUILIBRIUM) {
+         mutate_gene(draw_random_gene(),SOURCE_POOL_MUTATION, true);
         // check if the current pool size is larger than expected
-        printf("global mutation of new genes");
+        printf("global mutation of new genes\n");
         do_global_pool_adjust();
     }
     update_global_mutation_time();
@@ -1699,8 +1702,8 @@ void do_global_mutation_event() {
 
 void do_global_pool_adjust() {
     BEGIN();
-    u_int64_t excess_size = floor(check_global_pool_size()-double(current_distinct_genes())/double(pool_size_before_intervention)*
-                        double(N_GENES_INITIAL));
+    double expGene = current_pop_size/pop_size_before_IRS[(int)now%(int)T_YEAR]*double(N_GENES_INITIAL);
+    double excess_size = floor(check_global_pool_size()-expGene);
     
     while(excess_size>0){
         Gene * gene = draw_random_gene();
@@ -1712,9 +1715,9 @@ void do_global_pool_adjust() {
     RETURN();
 }
 
-uint64_t check_global_pool_size() {
+double check_global_pool_size() {
     BEGIN();
-    uint64_t global_pool_size = 0;
+    double global_pool_size = 0;
     for(Gene * gene : gene_manager.objects()){
         
         if (gene->in_pool) {
@@ -1883,8 +1886,8 @@ void write_summary() {
     
     printf("\nSummary at t = %f:\n", now);
     printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
-   
 
+    double temp_cps = 0;
     for(Population * pop : population_manager.objects()) {
         uint64_t n_infected = 0;
         uint64_t n_infections = 0;
@@ -1930,7 +1933,7 @@ void write_summary() {
         
         for(uint64_t i = 0; i < N_LOCI; i++) {
             sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
-            sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
+            sqlite3_bind_int64(summary_alleles_stmt, 2, pop->id); //id of the population
             sqlite3_bind_int64(summary_alleles_stmt, 3, i); // locus
             sqlite3_bind_int64(summary_alleles_stmt, 4, distinct_alleles[i].size()); // n_circulating_alleles
             sqlite3_step(summary_alleles_stmt);
@@ -1939,11 +1942,23 @@ void write_summary() {
         
         pop->n_infected_bites = 0;
         pop->n_bites_cumulative = 0;
+        //record year average pop size
         pop->current_pop_size = n_infections;
-        
-}
-    
-    RETURN();
+        temp_cps += n_infections;
+    }
+    temp_cps /= population_manager.size();
+    current_pop_size = temp_cps;
+    if (now>=EXPECTED_EQUILIBRIUM){
+        update_global_mutation_time();
+    }else{
+        //when time is less than equilibirum, record all the popsize per sampling period
+        int lowerb = (int)now%(int)T_YEAR;
+        int highb = lowerb + HOST_SAMPLING_PERIOD;
+        for (int i = lowerb; i < highb; i++) {
+            pop_size_before_IRS[i] = temp_cps;
+        }
+    }
+     RETURN();
 }
 
 void write_host(Host * host) {
@@ -2035,7 +2050,7 @@ void save_checkpoint() {
     sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
     
     save_global_state_to_checkpoint(db);
-    
+    save_global_pop_size_to_checkpoint(db);
     strain_manager.save_to_checkpoint(db);
     gene_manager.save_to_checkpoint(db);
     population_manager.save_to_checkpoint(db);
@@ -2099,13 +2114,14 @@ void save_global_state_to_checkpoint(sqlite3 * db) {
             "next_verification_time REAL, "
             "next_checkpoint_time REAL, "
             "next_global_mutation_time REAL, "
-            "n_infections_cumulative INTEGER"
+            "n_infections_cumulative INTEGER,"
+            "current_pop_size REAL"
         ");",
         NULL, NULL, NULL
     );
     
     sqlite3_stmt * stmt;
-    sqlite3_prepare_v2(db, "INSERT INTO global_state VALUES (?,?,?,?,?,?);", -1, &stmt, NULL);
+    sqlite3_prepare_v2(db, "INSERT INTO global_state VALUES (?,?,?,?,?,?,?);", -1, &stmt, NULL);
     std::string rng_str = get_rng_as_string();
     sqlite3_bind_text(stmt, 1, rng_str.c_str(), (int)(rng_str.size() + 1), SQLITE_STATIC);
     sqlite3_bind_double(stmt, 2, now);
@@ -2113,7 +2129,29 @@ void save_global_state_to_checkpoint(sqlite3 * db) {
     sqlite3_bind_double(stmt, 4, next_checkpoint_time);
     sqlite3_bind_double(stmt, 5, next_global_mutation_time);
     sqlite3_bind_int64(stmt, 6, n_infections_cumulative);
+    sqlite3_bind_double(stmt, 7, current_pop_size);
     sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
+
+void save_global_pop_size_to_checkpoint(sqlite3 * db) {
+    sqlite3_exec(db,
+        "CREATE TABLE pop_size_before_IRS ("
+            "day INTEGER, "
+            "pop_size_before_IRS REAL"
+        ");",
+        NULL, NULL, NULL
+    );
+    
+    sqlite3_stmt * stmt;
+    sqlite3_prepare_v2(db, "INSERT INTO pop_size_before_IRS VALUES (?,?);", -1, &stmt, NULL);
+    for(uint64_t i = 0; i < (int)T_YEAR; i++) {
+
+        sqlite3_bind_int64(stmt, 1, i);
+        sqlite3_bind_double(stmt, 2, pop_size_before_IRS[i]);
+        sqlite3_step(stmt);
+        sqlite3_reset(stmt);
+    }
     sqlite3_finalize(stmt);
 }
 
@@ -2135,8 +2173,23 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     next_checkpoint_time = sqlite3_column_double(stmt, 3);
     next_global_mutation_time = sqlite3_column_double(stmt, 4);
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
+    current_pop_size = sqlite3_column_double(stmt, 6);
     next_sampling_time = now + T_BURNIN;
     sqlite3_finalize(stmt);
+    
+    sqlite3_stmt * ps_stmt = NULL;
+    sqlite3_prepare_v2(db, "SELECT * FROM pop_size_before_IRS;", -1, &ps_stmt, NULL);
+    while(true) {
+        if(sqlite3_step(ps_stmt) != SQLITE_ROW) {
+            break;
+        }
+        size_t index = sqlite3_column_int64(ps_stmt, 0);
+        printf("%lu;\n",index);
+        pop_size_before_IRS[index] = sqlite3_column_double(ps_stmt, 1);
+    }
+    sqlite3_finalize(ps_stmt);
+
+    
 }
 
 void load_allele_refs() {
@@ -2314,8 +2367,8 @@ void update_biting_time(Population * pop, bool initial) {
     double biting_rate = BITING_RATE_MEAN[pop->ind]*N_HOSTS[pop->ind];
     if (pop->IRS_biting_rate>=0){
         biting_rate *= pop->IRS_biting_rate;
-    }else if(DAILY_BITING_RATE_DISTRIBUTION.size()==360){
-        biting_rate *= DAILY_BITING_RATE_DISTRIBUTION[(int)(now)%360];
+    }else if(DAILY_BITING_RATE_DISTRIBUTION.size()==(int)T_YEAR){
+        biting_rate *= DAILY_BITING_RATE_DISTRIBUTION[(int)(now)%(int)T_YEAR];
     }else{
         biting_rate *= (1.0 + BITING_RATE_RELATIVE_AMPLITUDE[pop->ind] *cos(
                           2 * M_PI * ((now / T_YEAR) - BITING_RATE_PEAK_PHASE[pop->ind])
@@ -2350,12 +2403,7 @@ void update_immigration_time(Population * pop, bool initial) {
 
 void update_global_mutation_time() {
     BEGIN();
-    double mean_Pop_Size = 0;
-    for (Population * pop : population_manager.objects()){
-        mean_Pop_Size += pop->current_pop_size;
-    }
-    mean_Pop_Size = mean_Pop_Size/N_POPULATIONS;
-    double mutRate = MUTATION_RATE*N_GENES_PER_STRAIN * N_LOCI * mean_Pop_Size * REGION_TO_LOCAL_POP_SIZE_RATIO;
+    double mutRate = MUTATION_RATE*N_GENES_PER_STRAIN * N_LOCI * current_pop_size * REGION_TO_LOCAL_POP_SIZE_RATIO;
     next_global_mutation_time = draw_exponential_after_now(mutRate);
     RETURN();
 }

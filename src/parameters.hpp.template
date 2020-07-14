@@ -35,6 +35,8 @@ const double {HOST_SAMPLE_SIZE};
 // Burn-in period for simulation before which output will not be written.
 const double {T_BURNIN};
 
+// EXPECTED time to reach equilibrium.
+const double {EXPECTED_EQUILIBRIUM};
 
 /*** VERIFICATION SETTINGS ***/
 
