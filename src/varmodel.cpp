@@ -64,6 +64,7 @@ sqlite3 * sample_db;
 
 sqlite3_stmt * summary_stmt;
 sqlite3_stmt * summary_alleles_stmt;
+sqlite3_stmt * pool_size_stmt;
 
 sqlite3_stmt * host_stmt;
 sqlite3_stmt * strain_stmt;
@@ -117,6 +118,7 @@ void clean_up();
 void validate_and_load_parameters();
 
 void write_summary();
+void write_pool_size();
 void sample_hosts();
 void write_host(Host * host);
 void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt);
@@ -526,7 +528,14 @@ void initialize_sample_db() {
         ");",
         NULL, NULL, NULL
     );
-    
+
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS pool_size ("
+            "time REAL, pool_size INTEGER"
+        ");",
+        NULL, NULL, NULL
+    );
+
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS sampled_infections (time REAL, host_id INTEGER, pop_id INTEGER, infection_id INTEGER, strain_id INTEGER, gene_id INTEGER, infected_length REAL, PRIMARY KEY (time, host_id, infection_id));",
         NULL, NULL, NULL
@@ -554,7 +563,7 @@ void initialize_sample_db() {
 
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?,?);", -1, &summary_alleles_stmt, NULL);
-    
+    sqlite3_prepare_v2(sample_db, "INSERT INTO pool_size VALUES (?,?);",-1,&pool_size_stmt,NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO genes VALUES (?,?,?);", -1, &gene_stmt, NULL);
@@ -573,6 +582,7 @@ void finalize_sample_db() {
     
     sqlite3_finalize(summary_stmt);
     sqlite3_finalize(summary_alleles_stmt);
+    sqlite3_finalize(pool_size_stmt);
     
     sqlite3_finalize(host_stmt);
     sqlite3_finalize(strain_stmt);
@@ -1429,6 +1439,7 @@ void do_sampling_event() {
     BEGIN();
     write_summary();
     sample_hosts();
+    write_pool_size();
     next_sampling_time += HOST_SAMPLING_PERIOD;
     RETURN();
 }
@@ -1961,6 +1972,15 @@ void write_summary() {
      RETURN();
 }
 
+void write_pool_size(){
+    double gbs = check_global_pool_size();
+    sqlite3_bind_double(pool_size_stmt, 1, now); // time
+    sqlite3_bind_int64(pool_size_stmt, 2, (int)gbs); // pool_size
+    sqlite3_step(pool_size_stmt);
+    sqlite3_reset(pool_size_stmt);
+
+}
+
 void write_host(Host * host) {
     sqlite3_bind_int64(host_stmt, 1, host->id);
     sqlite3_bind_int64(host_stmt, 2, host->population->id);
@@ -2184,7 +2204,7 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
             break;
         }
         size_t index = sqlite3_column_int64(ps_stmt, 0);
-        printf("%lu;\n",index);
+        // printf("%lu;\n",index);
         pop_size_before_IRS[index] = sqlite3_column_double(ps_stmt, 1);
     }
     sqlite3_finalize(ps_stmt);
