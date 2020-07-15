@@ -28,7 +28,7 @@ double INF = std::numeric_limits<double>::infinity();
 std::mt19937_64 rng(RANDOM_SEED);
 
 double now = 0.0;
-double next_sampling_time = T_BURNIN;
+double next_sampling_time = HOST_SAMPLING_PERIOD;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 //add a new type of event that introduce global mutations to the population
@@ -442,6 +442,7 @@ void initialize_population(uint64_t index) {
     pop->within_IRS_id = 0;
     pop->n_bites_cumulative = 0;
     pop->n_infected_bites = 0;
+    pop->infected_ratio = 1.0;
     pop->current_pop_size = 0;
     pop->temp_cps = 0;
     if(IRS_ON){
@@ -1438,8 +1439,10 @@ void do_verification_event() {
 void do_sampling_event() {
     BEGIN();
     write_summary();
-    sample_hosts();
-    write_pool_size();
+    if(now>T_BURNIN){
+        sample_hosts();
+        write_pool_size();
+    }
     next_sampling_time += HOST_SAMPLING_PERIOD;
     RETURN();
 }
@@ -1951,6 +1954,9 @@ void write_summary() {
             sqlite3_reset(summary_alleles_stmt);
         }
         
+        pop->infected_ratio = pop->n_infected_bites/pop->n_bites_cumulative;
+        //update immigration rate to incorporate infected
+        update_immigration_time(pop, false);
         pop->n_infected_bites = 0;
         pop->n_bites_cumulative = 0;
         //record year average pop size
@@ -2194,7 +2200,7 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     next_global_mutation_time = sqlite3_column_double(stmt, 4);
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
     current_pop_size = sqlite3_column_double(stmt, 6);
-    next_sampling_time = now + T_BURNIN;
+    next_sampling_time = now + HOST_SAMPLING_PERIOD;
     sqlite3_finalize(stmt);
     
     sqlite3_stmt * ps_stmt = NULL;
@@ -2410,7 +2416,7 @@ void update_biting_time(Population * pop, bool initial) {
 void update_immigration_time(Population * pop, bool initial) {
     BEGIN();
     pop->next_immigration_time = draw_exponential_after_now(IMMIGRATION_RATE[pop->ind]*
-                                 pop->current_biting_rate*
+                                 pop->current_biting_rate*pop->infected_ratio*
                                  pop->IRS_immigration_rate_factor*pop->MDA_immigration_rate_factor);
     if(initial) {
         immigration_queue.add(pop);
