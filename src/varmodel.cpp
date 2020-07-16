@@ -1716,7 +1716,8 @@ void do_global_mutation_event() {
 
 void do_global_pool_adjust() {
     BEGIN();
-    double expGene = current_pop_size/pop_size_before_IRS[(int)now%(int)T_YEAR]*double(N_GENES_INITIAL);
+    //since current_pop_size corresponds to the previous month, pop_size_before_IRS should be checked as the previous month
+    double expGene = current_pop_size/pop_size_before_IRS[(int)(now-HOST_SAMPLING_PERIOD)%(int)T_YEAR]*double(N_GENES_INITIAL);
     double excess_size = floor(check_global_pool_size()-expGene);
     
     while(excess_size>0){
