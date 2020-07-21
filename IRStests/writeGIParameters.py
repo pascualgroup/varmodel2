@@ -114,7 +114,7 @@ if __name__ == "__main__":
 					row['SAMPLE_DB_FILENAME'] = options.prefix + "_" + row['NO'] + "_s" + str(sc) + "_sd.sqlite"
 					row['SAVE_TO_CHECKPOINT'] = 'True'
 					row['CHECKPOINT_SAVE_FILENAME'] = options.prefix + "_" + row['NO'] + "_s" + str(sc) + "_cp.sqlite"
-					row['CHECKPOINT_LOAD_FILENAME'] = ''
+					#row['CHECKPOINT_LOAD_FILENAME'] = ''
 					row['T_END']=row['IRS_START']
 					row['BITING_RATE_FACTORS']=''
 					out = open(options.prefix + "_" + row['NO'] + "_s" + str(sc) +  "_input.py", "w")
