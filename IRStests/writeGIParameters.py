@@ -49,6 +49,10 @@ def GIParam(fname):
 	flt = np.where(bc>1)  #take only bins that have more than 1 incidents
 	x = flt[0]
 	y = xys[0][flt[0]]-14 
+	if len(x)>500:
+		x = x[1:500]
+		y = y[1:500]
+	
 	infectionTimesToImmune = max(x)
 	if len(yd[xd>max(x)])>0:
 		clearanceRateConstantImmune = 1/(np.mean(yd[xd>max(x)]) - 14)
