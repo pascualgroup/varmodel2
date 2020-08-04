@@ -35,7 +35,7 @@ def GIParam(fname):
 	con = lite.connect(fname)
 	with con:
 		cur = con.cursor()
-		cur.execute("SELECT duration, infection_id FROM sampled_duration WHERE (time-duration) > 10800")
+		cur.execute("SELECT duration, infection_id FROM sampled_duration WHERE (time-duration) > 5000")
 		rows = cur.fetchall()
 			
 	xd = np.array([x[1] for x in rows])-1  #number of infections
