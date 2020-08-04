@@ -119,7 +119,7 @@ if __name__ == "__main__":
 					row['SAVE_TO_CHECKPOINT'] = 'True'
 					row['CHECKPOINT_SAVE_FILENAME'] = options.prefix + "_" + row['NO'] + "_s" + str(sc) + "_cp.sqlite"
 					#row['CHECKPOINT_LOAD_FILENAME'] = ''
-					row['T_END']=row['EXPECTED_EQUILIBRIUM']+720
+					row['T_END']=int(row['EXPECTED_EQUILIBRIUM'])+720
 					row['BITING_RATE_FACTORS']=''
 					out = open(options.prefix + "_" + row['NO'] + "_s" + str(sc) +  "_input.py", "w")
 					out.write(prototype.format(**row))
