@@ -1706,13 +1706,13 @@ void do_global_mutation_event() {
          mutate_gene(draw_random_gene(),SOURCE_POOL_MUTATION, true);
         // check if the current pool size is larger than expected
         printf("global mutation of new genes\n");
-        do_global_pool_adjust();
     }
-    update_global_mutation_time();
+    //update_global_mutation_time();
     
     RETURN();
 
 }
+
 
 void do_global_pool_adjust() {
     BEGIN();
@@ -1720,7 +1720,12 @@ void do_global_pool_adjust() {
     double expGene = current_pop_size/pop_size_before_IRS[(int)(now-HOST_SAMPLING_PERIOD)%(int)T_YEAR]*double(N_GENES_INITIAL);
     double excess_size = floor(check_global_pool_size()-expGene);
     
-    while(excess_size>0){
+    while(excess_size< -5){
+        do_global_mutation_event();
+        excess_size +=1;
+        PRINT_DEBUG(5, "added one gene");
+    }
+    while(excess_size>5){
         Gene * gene = draw_random_gene();
         gene->in_pool = false;
         excess_size -=1;
@@ -1967,10 +1972,11 @@ void write_summary() {
     temp_cps /= population_manager.size();
     current_pop_size = temp_cps;
     if (now>=EXPECTED_EQUILIBRIUM){
-        update_global_mutation_time();
+        //update_global_mutation_time();
+        do_global_pool_adjust();
     }else{
         //when time is less than equilibirum, record all the popsize per sampling period
-        int lowerb = (int)now%(int)T_YEAR;
+        int lowerb = (int)(now-HOST_SAMPLING_PERIOD)%(int)T_YEAR;
         int highb = lowerb + HOST_SAMPLING_PERIOD;
         for (int i = lowerb; i < highb; i++) {
             pop_size_before_IRS[i] = temp_cps;
