@@ -1723,13 +1723,13 @@ void do_global_pool_adjust() {
     while(excess_size< -5){
         do_global_mutation_event();
         excess_size +=1;
-        PRINT_DEBUG(5, "added one gene");
+        printf("added one gene");
     }
     while(excess_size>5){
         Gene * gene = draw_random_gene();
         gene->in_pool = false;
         excess_size -=1;
-        PRINT_DEBUG(5, "one excess gene removed");
+        printf("one excess gene removed");
     }
 
     RETURN();
