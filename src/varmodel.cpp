@@ -370,7 +370,8 @@ void initialize(bool override_seed, uint64_t random_seed) {
     }
     
     if(LOAD_FROM_CHECKPOINT) {
-        load_checkpoint(!override_seed);
+        //do not use the seed from the previous run!!
+        load_checkpoint(override_seed);
     }
     else {
         initialize_gene_pool();

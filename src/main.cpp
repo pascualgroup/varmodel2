@@ -11,6 +11,7 @@ int main(int argc, char const * argv[]) {
     
     // Load seed from parameter if provided
     // If not provided, parameter will be used
+    // actually if seeds are provided from command line, it will replace the RANDOM_SEE parameter setting.
     bool override_seed;
     uint64_t random_seed;
     if(argc > 1) {
@@ -21,11 +22,13 @@ int main(int argc, char const * argv[]) {
         long seed_long = strtol(seed_str, NULL, 0);
         assert(!errno);
         assert(seed_long > 0);
-        random_seed = seed_long; 
+        random_seed = seed_long;
+        //printf("%llu;\n",random_seed);
     }
     else {
         override_seed = false;
         random_seed = 0;
+        //printf("do not overide seed;\n");
     }
     
     sqlite3_config(SQLITE_CONFIG_LOG, handle_sqlite_error, NULL);
