@@ -40,7 +40,7 @@ buildNetFromAdj<-function(mat, cutoff = NULL) {
 }
 
 calStat<-function(prefix = "varMigTest", r, num , s,
-                  samplingPeriod = 30, n_host = 10000, cutoffTime = 3600){
+                  samplingPeriod = 30, n_host = 10000, cutoffTime = 28080,maxTime = 36000){
 	if (s == 0 || s == 4){
 	sampleSqlFile <- paste(wd, prefix,"_",num, "_s", s, "_sd.sqlite",sep="")	
 	}else{
@@ -82,7 +82,7 @@ calStat<-function(prefix = "varMigTest", r, num , s,
   
   
   #get all summary info
-  sc<-paste("select * from summary  WHERE time >",cutoffTime, sep="")                                                    
+  sc<-paste("select * from summary  WHERE time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")                                                    
   summaryInfo<-fetchdb(db, sc)
   summaryInfo<-summaryInfo %>% mutate(num = num, selMode = selMode, IRS = IRS, r = r)
 
@@ -90,19 +90,19 @@ calStat<-function(prefix = "varMigTest", r, num , s,
                                      Prevalence = n_infected/n_host, 
                                      MOI = n_infections/n_infected)
 
-  sc<-paste("select * from pool_size WHERE time >",cutoffTime, sep="")   
+  sc<-paste("select * from pool_size WHERE time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")   
   summaryPoolSize<-fetchdb(db, sc)
 
   summaryTable<-summaryTable%>%left_join(summaryPoolSize, by = "time")
 
-  sc<-paste("select time, locus, n_circulating_alleles from summary_alleles WHERE time >",cutoffTime, sep="")                                                    
+  sc<-paste("select time, locus, n_circulating_alleles from summary_alleles WHERE time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")                                                    
   summaryAlleles<-fetchdb(db, sc)
   
   summaryTable<-summaryTable%>%left_join(summaryAlleles%>%filter(locus==0)%>%select(time, n_circulating_alleles), by = "time")
   summaryTable<-summaryTable%>%left_join(summaryAlleles%>%filter(locus==1)%>%select(time, n_circulating_alleles), by = "time")
 	
   #get strain info
-  sc<-paste("select time, strain_id from sampled_infections where gene_id > -1 and time >"  ,cutoffTime,sep="")
+  sc<-paste("select time, strain_id from sampled_infections where gene_id > -1 and time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")
   sampledInf<-fetchdb(db,sc)
   infStrain<-sampledInf %>% mutate(uniqStrain = 1:nrow(sampledInf)) 
   infStrain<-left_join(infStrain, strainInfo, by="strain_id")

@@ -77,6 +77,7 @@ void {manager_type}::load_from_checkpoint(sqlite3 * db) {{
             {object_type} * obj = object_for_id(sqlite3_column_int64(stmt, 0));
             {load_reference_column_statements}
         }}
+        sqlite3_finalize(stmt);
     }}
     
     // Load reference lists (std::array)

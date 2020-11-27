@@ -123,6 +123,9 @@ const double {TRANSITION_RATE_NOT_IMMUNE};
 // Gene deactivation rate when fully immune
 const double {TRANSITION_RATE_IMMUNE};
 
+// probability[0,1] of direct clearance instead of transition due to immunity to genes
+const double {CLEARANCE_PROB};
+
 // Number of infections to gain immunity under general immunity
 const uint64_t {N_INFECTIONS_FOR_GENERAL_IMMUNITY};
 

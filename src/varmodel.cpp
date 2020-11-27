@@ -17,6 +17,8 @@
 #include <sstream>
 #include <algorithm>
 #include <bitset>
+#include <chrono>
+using namespace std::chrono;
 
 namespace varmodel {
 
@@ -29,10 +31,15 @@ std::mt19937_64 rng(RANDOM_SEED);
 
 double now = 0.0;
 double next_sampling_time = HOST_SAMPLING_PERIOD;
+//always output summary every 30 days;
+double next_summary_time = 0;
 double next_verification_time = VERIFICATION_ON ? 0.0 : INF;
 double next_checkpoint_time = SAVE_TO_CHECKPOINT ? 0.0 : INF;
 //add a new type of event that introduce global mutations to the population
 double next_global_mutation_time = EXPECTED_EQUILIBRIUM;
+// Get starting timepoint
+auto start = high_resolution_clock::now();
+auto stop = high_resolution_clock::now();
 
 
 uint64_t n_infections_cumulative = 0;
@@ -64,7 +71,6 @@ sqlite3 * sample_db;
 
 sqlite3_stmt * summary_stmt;
 sqlite3_stmt * summary_alleles_stmt;
-sqlite3_stmt * pool_size_stmt;
 
 sqlite3_stmt * host_stmt;
 sqlite3_stmt * strain_stmt;
@@ -101,6 +107,9 @@ EventQueue<Infection, get_mutation_time> mutation_queue;
 double get_recombination_time(Infection * infection) { return infection->recombination_time; }
 EventQueue<Infection, get_recombination_time> recombination_queue;
 
+double get_clearance_time(Infection * infection) { return infection->clearance_time; }
+EventQueue<Infection, get_clearance_time> clearance_queue;
+
 double get_IRS_time(Population * p) {return p->next_IRS_rate_change_time;}
 EventQueue<Population, get_IRS_time> IRS_queue;
 
@@ -118,7 +127,6 @@ void clean_up();
 void validate_and_load_parameters();
 
 void write_summary();
-void write_pool_size();
 void sample_hosts();
 void write_host(Host * host);
 void write_strain(Strain * strain, sqlite3_stmt * s_stmt, sqlite3_stmt * g_stmt, sqlite3_stmt * a_stmt);
@@ -204,6 +212,7 @@ bool do_next_event();
 
 void do_verification_event();
 void do_sampling_event();
+void do_summary_event();
 void do_checkpoint_event();
 void do_IRS_event();
 void do_MDA_event();
@@ -223,10 +232,9 @@ void do_death_event();
 void do_transition_event();
 void do_mutation_event();
 void do_recombination_event();
+void do_clearance_event();
 void do_global_mutation_event();
-void do_global_pool_adjust();
 
-double check_global_pool_size();
 void update_biting_time(Population * pop, bool initial);
 void update_immigration_time(Population * pop, bool initial);
 void update_global_mutation_time();
@@ -445,7 +453,6 @@ void initialize_population(uint64_t index) {
     pop->n_infected_bites = 0;
     pop->infected_ratio = 1.0;
     pop->current_pop_size = 0;
-    pop->temp_cps = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -519,7 +526,7 @@ void initialize_sample_db() {
     
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS summary ("
-            "time REAL, pop_id INTEGER, n_infections INTEGER, n_infected INTEGER, n_infected_bites INTEGER, n_total_bites INTEGER, n_circulating_strains INTEGER, n_circulating_genes INTEGER"
+            "time REAL, pop_id INTEGER, n_infections INTEGER, n_infected INTEGER, n_infected_bites INTEGER, n_total_bites INTEGER, n_circulating_strains INTEGER, n_circulating_genes INTEGER, exec_time REAL"
         ");",
         NULL, NULL, NULL
     );
@@ -527,13 +534,6 @@ void initialize_sample_db() {
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS summary_alleles ("
             "time REAL, pop_id INTEGER, locus INTEGER, n_circulating_alleles INTEGER"
-        ");",
-        NULL, NULL, NULL
-    );
-
-    sqlite3_exec(sample_db,
-        "CREATE TABLE IF NOT EXISTS pool_size ("
-            "time REAL, pool_size INTEGER"
         ");",
         NULL, NULL, NULL
     );
@@ -559,13 +559,12 @@ void initialize_sample_db() {
     );
 
     sqlite3_exec(sample_db,
-                 "CREATE TABLE IF NOT EXISTS sampled_duration (time REAL, duration REAL, host_id INTEGER, pop_id INTEGER, infection_id INTEGER);",
+                 "CREATE TABLE IF NOT EXISTS sampled_duration (time REAL, duration REAL, host_id INTEGER, pop_id INTEGER, infection_id INTEGER, host_current_MOI INTEGER);",
                  NULL, NULL, NULL
                  );
 
-    sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?,?);", -1, &summary_alleles_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT INTO pool_size VALUES (?,?);",-1,&pool_size_stmt,NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO genes VALUES (?,?,?);", -1, &gene_stmt, NULL);
@@ -574,7 +573,7 @@ void initialize_sample_db() {
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_strains VALUES (?,?,?);", -1, &sampled_strain_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_genes VALUES (?,?,?);", -1, &sampled_gene_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_alleles VALUES (?,?,?);", -1, &sampled_allele_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_duration VALUES (?,?,?,?,?);",-1, &sampled_duration_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT OR IGNORE INTO sampled_duration VALUES (?,?,?,?,?,?);",-1, &sampled_duration_stmt, NULL);
     sqlite3_exec(sample_db, "COMMIT", NULL, NULL, NULL);
     sqlite3_exec(sample_db, "BEGIN TRANSACTION", NULL, NULL, NULL);
 }
@@ -584,7 +583,6 @@ void finalize_sample_db() {
     
     sqlite3_finalize(summary_stmt);
     sqlite3_finalize(summary_alleles_stmt);
-    sqlite3_finalize(pool_size_stmt);
     
     sqlite3_finalize(host_stmt);
     sqlite3_finalize(strain_stmt);
@@ -675,6 +673,7 @@ void destroy_infection(Infection * infection) {
     transition_queue.remove(infection);
     mutation_queue.remove(infection);
     recombination_queue.remove(infection);
+    clearance_queue.remove(infection);
     infection_manager.destroy(infection);
     RETURN();
 }
@@ -1103,6 +1102,10 @@ void infect_host(Host * host, Strain * strain) {
     
     update_mutation_time(infection, true);
     update_recombination_time(infection, true);
+
+    infection->clearance_time = INF;
+    clearance_queue.add(infection);
+    
     
     host->infections.insert(infection);
     host->infection_count++;
@@ -1150,7 +1153,7 @@ void clear_infection(Infection * infection) {
     BEGIN();
     
     Host * host = infection->host;
-    //record infection duration, for every 1000 infections.
+    //record infection duration, for every 100 infections.
     //if (n_infections_cumulative%1000 == 0) {
         write_duration(host, infection);
     //}
@@ -1193,6 +1196,15 @@ void update_transition_time(Infection * infection, bool initial) {
             TRANSITION_RATE_IMMUNE * (1.0 - immunity_level) +
             TRANSITION_RATE_NOT_IMMUNE * immunity_level
         );
+        //a small chance that the infection got cleared, proportional to the gene's immunity
+        //the clearance rate is higher for genes that higher higher specific immunity
+        bool clProb = draw_bernoulli((immunity_level)*CLEARANCE_PROB);
+        if (clProb) {
+            infection->clearance_time = draw_exponential_after_now(rate);
+        }else{
+            infection->clearance_time = INF;
+        }
+
     }
     else if(SELECTION_MODE == GENERAL_IMMUNITY){
         rate = update_general_transition_time(infection);
@@ -1203,10 +1215,12 @@ void update_transition_time(Infection * infection, bool initial) {
     
     if(initial) {
         transition_queue.add(infection);
+        clearance_queue.add(infection);
     }
     else {
         transition_queue.update(infection);
-    }
+        clearance_queue.update(infection);
+   }
     RETURN();
 }
 
@@ -1291,6 +1305,7 @@ enum class EventType {
     NONE,
     VERIFICATION,
     HOST_SAMPLING,
+    WRITE_SUMMARY,
     CHECKPOINT,
     BITING,
     IRS,
@@ -1301,6 +1316,7 @@ enum class EventType {
     TRANSITION,
     MUTATION,
     RECOMBINATION,
+    CLEARANCE,
     GLOBAL_MUTATE
 };
 
@@ -1327,6 +1343,10 @@ bool do_next_event() {
     if(next_sampling_time < next_event_time) {
         next_event_time = next_sampling_time;
         next_event_type = EventType::HOST_SAMPLING;
+    }
+    if(next_summary_time < next_event_time) {
+        next_event_time = next_summary_time;
+        next_event_type = EventType::WRITE_SUMMARY;
     }
     if(VERIFICATION_ON && next_verification_time < next_event_time) {
         next_event_time = next_verification_time;
@@ -1372,6 +1392,11 @@ bool do_next_event() {
         next_event_time = recombination_queue.next_time();
         next_event_type = EventType::RECOMBINATION;
     }
+    if(clearance_queue.next_time() < next_event_time
+    ) {
+        next_event_time = clearance_queue.next_time();
+        next_event_type = EventType::CLEARANCE;
+    }
     if(next_global_mutation_time < next_event_time) {
         next_event_time = next_global_mutation_time;
         next_event_type = EventType::GLOBAL_MUTATE;
@@ -1397,6 +1422,8 @@ bool do_next_event() {
         case EventType::HOST_SAMPLING:
             do_sampling_event();
             break;
+        case EventType::WRITE_SUMMARY:
+            do_summary_event();
         case EventType::CHECKPOINT:
             do_checkpoint_event();
             break;
@@ -1427,6 +1454,9 @@ bool do_next_event() {
         case EventType::RECOMBINATION:
             do_recombination_event();
             break;
+        case EventType::CLEARANCE:
+            do_clearance_event();
+            break;
         case EventType::GLOBAL_MUTATE:
             do_global_mutation_event();
             break;
@@ -1443,12 +1473,16 @@ void do_verification_event() {
 
 void do_sampling_event() {
     BEGIN();
-    write_summary();
-    if(now>T_BURNIN){
-        sample_hosts();
-        write_pool_size();
-    }
+    sample_hosts();
+
     next_sampling_time += HOST_SAMPLING_PERIOD;
+    RETURN();
+}
+
+void do_summary_event() {
+    BEGIN();
+    write_summary();
+    next_summary_time += 30;
     RETURN();
 }
 
@@ -1719,40 +1753,6 @@ void do_global_mutation_event() {
 }
 
 
-void do_global_pool_adjust() {
-    BEGIN();
-    //since current_pop_size corresponds to the previous month, pop_size_before_IRS should be checked as the previous month
-    double expGene = current_pop_size/pop_size_before_IRS[(int)(now-HOST_SAMPLING_PERIOD)%(int)T_YEAR]*double(N_GENES_INITIAL);
-    double excess_size = floor(check_global_pool_size()-expGene);
-    
-    while(excess_size/double(N_GENES_INITIAL)< -0.1){
-        do_global_mutation_event();
-        excess_size +=1;
-        printf("added one gene\n");
-    }
-    while(excess_size/double(N_GENES_INITIAL)>0.1){
-        Gene * gene = draw_random_gene();
-        gene->in_pool = false;
-        excess_size -=1;
-        printf("one excess gene removed\n");
-    }
-
-    RETURN();
-}
-
-double check_global_pool_size() {
-    BEGIN();
-    double global_pool_size = 0;
-    for(Gene * gene : gene_manager.objects()){
-        
-        if (gene->in_pool) {
-            global_pool_size +=1;
-        }
-    }
-    RETURN(global_pool_size);
-}
-
-
 void do_immunity_loss_event() {
     BEGIN();
     assert(immunity_loss_queue.size() > 0);
@@ -1823,6 +1823,14 @@ void do_recombination_event() {
     RETURN();
 }
 
+void do_clearance_event() {
+    BEGIN();
+    //assert(SELECTION_MODE == GENERAL_IMMUNITY);
+    Infection * infection = clearance_queue.head();
+    clear_infection(infection);
+    RETURN();
+}
+
 
 #pragma mark \
 *** Verification function implementations ***
@@ -1837,6 +1845,7 @@ void verify_simulation_state() {
     assert(transition_queue.verify_heap());
     assert(mutation_queue.verify_heap());
     assert(recombination_queue.verify_heap());
+    assert(clearance_queue.verify_heap());
     assert(IRS_queue.verify_heap());
     assert(MDA_queue.verify_heap());
     
@@ -1912,6 +1921,13 @@ void write_summary() {
     printf("\nSummary at t = %f:\n", now);
     printf("    n_infections_cumulative: %llu\n", n_infections_cumulative);
 
+    // Get duration. Substart timepoints to
+    // get durarion. To cast it to proper unit
+    // use duration cast method
+    stop = high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> dur_milli = stop - start;
+    start = stop;
+
     double temp_cps = 0;
     for(Population * pop : population_manager.objects()) {
         uint64_t n_infected = 0;
@@ -1944,7 +1960,8 @@ void write_summary() {
         printf("         n_infectious_bites: %llu\n", pop->n_infected_bites);
         printf("      n_circulating_strains: %lu\n", distinct_strains.size());
         printf("        n_circulating_genes: %lu\n", distinct_genes.size());
-        
+        printf("             execution time: %f\n", dur_milli.count());
+
         sqlite3_bind_double(summary_stmt, 1, now); // time
         sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
         sqlite3_bind_int64(summary_stmt, 3, n_infections); // n_infections
@@ -1953,6 +1970,7 @@ void write_summary() {
         sqlite3_bind_int64(summary_stmt, 6, pop->n_bites_cumulative); //number of total bites in the sampling period
         sqlite3_bind_int64(summary_stmt, 7, distinct_strains.size()); // n_circulating_strains
         sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
+        sqlite3_bind_double(summary_stmt, 9, dur_milli.count()); //execution time in milliseconds for this sampling period
         sqlite3_step(summary_stmt);
         sqlite3_reset(summary_stmt);
         
@@ -1965,9 +1983,11 @@ void write_summary() {
             sqlite3_reset(summary_alleles_stmt);
         }
         
-        pop->infected_ratio = pop->n_infected_bites/pop->n_bites_cumulative;
-        //update immigration rate to incorporate infected
-        update_immigration_time(pop, false);
+        if (pop->n_bites_cumulative>0) {
+            pop->infected_ratio = pop->n_infected_bites/pop->n_bites_cumulative;
+            //update immigration rate to incorporate infected
+            update_immigration_time(pop, false);
+        }
         pop->n_infected_bites = 0;
         pop->n_bites_cumulative = 0;
         //record year average pop size
@@ -1978,26 +1998,10 @@ void write_summary() {
     current_pop_size = temp_cps;
     if (now>=EXPECTED_EQUILIBRIUM){
         update_global_mutation_time();
-        //do_global_pool_adjust();
-    }else{
-        //when time is less than equilibirum, record all the popsize per sampling period
-        int lowerb = (int)(now-HOST_SAMPLING_PERIOD)%(int)T_YEAR;
-        int highb = lowerb + HOST_SAMPLING_PERIOD;
-        for (int i = lowerb; i < highb; i++) {
-            pop_size_before_IRS[i] = temp_cps;
-        }
     }
      RETURN();
 }
 
-void write_pool_size(){
-    double gbs = check_global_pool_size();
-    sqlite3_bind_double(pool_size_stmt, 1, now); // time
-    sqlite3_bind_int64(pool_size_stmt, 2, (int)gbs); // pool_size
-    sqlite3_step(pool_size_stmt);
-    sqlite3_reset(pool_size_stmt);
-
-}
 
 void write_host(Host * host) {
     sqlite3_bind_int64(host_stmt, 1, host->id);
@@ -2067,9 +2071,9 @@ void write_duration(Host * host, Infection * infection) {
     sqlite3_bind_int64(sampled_duration_stmt, 3, host->id);
     sqlite3_bind_int64(sampled_duration_stmt, 4, host->population->id);
     sqlite3_bind_int64(sampled_duration_stmt, 5, infection->hostInfection_id);
+    sqlite3_bind_int64(sampled_duration_stmt, 6, host->infections.size());
     sqlite3_step(sampled_duration_stmt);
     sqlite3_reset(sampled_duration_stmt);
-
 }
     
 #pragma mark \
@@ -2213,21 +2217,8 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
     current_pop_size = sqlite3_column_double(stmt, 6);
     next_sampling_time = now + HOST_SAMPLING_PERIOD;
+    next_summary_time = now + 30;
     sqlite3_finalize(stmt);
-    
-    sqlite3_stmt * ps_stmt = NULL;
-    sqlite3_prepare_v2(db, "SELECT * FROM pop_size_before_IRS;", -1, &ps_stmt, NULL);
-    while(true) {
-        if(sqlite3_step(ps_stmt) != SQLITE_ROW) {
-            break;
-        }
-        size_t index = sqlite3_column_int64(ps_stmt, 0);
-        // printf("%lu;\n",index);
-        pop_size_before_IRS[index] = sqlite3_column_double(ps_stmt, 1);
-    }
-    sqlite3_finalize(ps_stmt);
-
-    
 }
 
 void load_allele_refs() {
@@ -2286,6 +2277,7 @@ void initialize_event_queues_from_state() {
         transition_queue.add(infection);
         mutation_queue.add(infection);
         recombination_queue.add(infection);
+        clearance_queue.add(infection);
     }
 }
 

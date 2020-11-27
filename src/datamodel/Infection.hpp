@@ -27,6 +27,7 @@ struct Infection {
     double mutation_time;
     double recombination_time;
     double infected_time;
+    double clearance_time;
     
     std::array<Gene *, N_GENES_PER_STRAIN> expression_order;
 };
