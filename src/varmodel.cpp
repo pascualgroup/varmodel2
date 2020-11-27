@@ -2071,7 +2071,7 @@ void write_duration(Host * host, Infection * infection) {
     sqlite3_bind_int64(sampled_duration_stmt, 3, host->id);
     sqlite3_bind_int64(sampled_duration_stmt, 4, host->population->id);
     sqlite3_bind_int64(sampled_duration_stmt, 5, infection->hostInfection_id);
-    sqlite3_bind_int64(sampled_duration_stmt, 6, host->infections.size());
+    sqlite3_bind_int64(sampled_duration_stmt, 6, get_active_infection_count(host));
     sqlite3_step(sampled_duration_stmt);
     sqlite3_reset(sampled_duration_stmt);
 }
