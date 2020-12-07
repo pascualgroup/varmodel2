@@ -1424,6 +1424,7 @@ bool do_next_event() {
             break;
         case EventType::WRITE_SUMMARY:
             do_summary_event();
+            break;
         case EventType::CHECKPOINT:
             do_checkpoint_event();
             break;
@@ -1982,6 +1983,7 @@ void write_summary() {
             sqlite3_step(summary_alleles_stmt);
             sqlite3_reset(summary_alleles_stmt);
         }
+                
         
         if (pop->n_bites_cumulative>0) {
             pop->infected_ratio = pop->n_infected_bites/pop->n_bites_cumulative;
