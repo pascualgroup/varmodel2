@@ -100,7 +100,8 @@ calStat<-function(prefix = "varMigTest", r, num , s,
   
   summaryTable<-summaryTable%>%left_join(summaryAlleles%>%filter(locus==0)%>%select(time, n_circulating_alleles), by = "time")
   summaryTable<-summaryTable%>%left_join(summaryAlleles%>%filter(locus==1)%>%select(time, n_circulating_alleles), by = "time")
-	
+  
+  	
   #get strain info
   sc<-paste("select time, strain_id from sampled_infections where gene_id > -1 and time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")
   sampledInf<-fetchdb(db,sc)
@@ -108,10 +109,9 @@ calStat<-function(prefix = "varMigTest", r, num , s,
   infStrain<-left_join(infStrain, strainInfo, by="strain_id")
   infStrain<-left_join(infStrain, geneInfo, by="gene_id")
   infStrain<-left_join(infStrain, geneAllele, by="gene_id")
-  infStrain<-infStrain %>% mutate(num = num, selMode = selMode, IRS = IRS, r = r)
   
   
-  #calculate Niche Divergence                              
+  #calculate network properties                              
   nicheDiv <- data.frame(time = seq(min(infStrain$time),max(infStrain$time),samplingPeriod), nicheDiv = 0,
   alleleShannon=0, alleleSimpson = 0, geneShannon=0, geneSimpson= 0,
   f_01_averageLocalClusteringCoeff=0,f_02_averageLocalClusteringCoeffWeighted=0,
@@ -125,10 +125,50 @@ f_20_averageClosenessCentrality=0,f_21_mot1=0,f_22_mot2=0,f_23_mot3=0,f_24_mot4=
 f_25_mot5=0,f_26_mot6=0,f_27_mot7=0,f_28_mot8=0,f_29_mot9=0,f_30_mot10=0,f_31_mot11=0,
 f_32_mot12=0,f_33_reciprocity=0,f_34_inoutCorrelation=0,f_35_communitySizeEvenness=0,
 f_36_numberCommonCommunities=0,f_37_CommunityRatio=0,f_38_modularity=0,f_39_meanFST=0,
-f_40_maxFST=0,f_41_minFST=0,f_42_giniFST=0
-  )
+f_40_maxFST=0,f_41_minFST=0,f_42_giniFST=0)
 
-  #head(nicheDiv)
+  ptsOut<-data.frame(time = seq(min(infStrain$time),max(infStrain$time),samplingPeriod), 
+  q25=0,
+q50=0,
+q75=0,
+q100=0,
+q125=0,
+q150=0,
+q175=0,
+q200=0,
+q225=0,
+q250=0,
+q275=0,
+q300=0,
+q325=0,
+q350=0,
+q375=0,
+q400=0,
+q425=0,
+q450=0,
+q475=0,
+q500=0,
+q525=0,
+q550=0,
+q575=0,
+q600=0,
+q625=0,
+q650=0,
+q675=0,
+q700=0,
+q725=0,
+q750=0,
+q775=0,
+q800=0,
+q825=0,
+q850=0,
+q875=0,
+q900=0,
+q925=0,
+q950=0,
+q975=0,
+q1000=0)
+
   for (i in 1:length(unique(infStrain$time))) {
     ## first get all the strain info per layer
     tempInf <- infStrain %>% filter(time == unique(infStrain$time)[i])
@@ -150,14 +190,45 @@ f_40_maxFST=0,f_41_minFST=0,f_42_giniFST=0
     ng<-buildNetFromAdj((1-outMat))
     ntp<-calculateFeatures(ng, cutoff=0.95)
     nicheDiv[i,7:(length(ntp)+6)]<-ntp
+    
+    #calculate PTS dist
+    geneStrain<-acast(tempInf, uniqStrain~gene_id, length, value.var = "uniqStrain")	
+    outMat2<-PTS(as.matrix(geneStrain))
+    ptsDist <- outMat2[lower.tri(outMat2)]
+    ptsHist<-hist(ptsDist, breaks = seq(0,1,0.025), plot=F)
+	ptsOut[i,2:41]<-ptsHist$density
+
    }
+  
+  nicheDiv<-nicheDiv%>%mutate(num = num, selMode = selMode, IRS = IRS, r = r)
+  ptsOut<-ptsOut%>%mutate(num = num, selMode = selMode, IRS = IRS, r = r)
 
-  summaryTable<-summaryTable%>%left_join(nicheDiv, by = "time")
+  #get duration
+  sc<-"SELECT time, duration, infection_id FROM sampled_duration WHERE (time-duration) > 5000"
+  durInfo<-fetchdb(db, sc)
+  durInfo<-durInfo%>%mutate(infectYear = ceiling(time/360))
+  print(head(durInfo))
+  meanDur<-durInfo%>%filter(infectYear>75)%>%group_by(infectYear)%>%
+  			summarise(q50 = quantile(duration,0.5),
+  			q75 = quantile(duration, 0.75),
+  					q8 = quantile(duration, 0.8),
+  					q85 = quantile(duration, 0.85),
+					q9 = quantile(duration, 0.9),
+					q95 = quantile(duration, 0.95),
+					mdur = mean(duration),
+					sdDur = sd(duration))%>%
+			mutate(num = num, selMode = selMode, IRS = IRS, r = r)
 
-  #write.table(infStrain, file = paste(resultsFolder,prefix, "_", num,"_sampleInfectionTable.txt",sep=""),
-  #quote=F,sep="\t",row.names=F,col.names=T,append = T)
-
+  
+  print(head(meanDur))
+  
   write.table(summaryTable, file = paste(resultsFolder,prefix, "_", num,"_summaryTable.txt",sep=""),
+  quote=F,sep="\t",row.names=F,col.names=F,append = T)
+  write.table(ptsOut, file = paste(resultsFolder,prefix, "_", num,"_ptsTabletxt",sep=""),
+  quote=F,sep="\t",row.names=F,col.names=F,append = T)
+  write.table(nicheDiv, file = paste(resultsFolder,prefix, "_", num,"_netTable.txt",sep=""),
+  quote=F,sep="\t",row.names=F,col.names=F,append = T)
+  write.table(meanDur, file = paste(resultsFolder,prefix, "_", num,"_durTable.txt",sep=""),
   quote=F,sep="\t",row.names=F,col.names=F,append = T)
 
   dbDisconnect(db) 
