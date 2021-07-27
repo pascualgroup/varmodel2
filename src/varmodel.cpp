@@ -1003,8 +1003,8 @@ void update_next_immunity_loss_time(Host * host) {
     if(SELECTION_MODE != SPECIFIC_IMMUNITY) {
         RETURN();
     }
-    //uint64_t immune_allele_count = get_immune_allele_count(host);
-    host->next_immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * host->total_immunity);
+    uint64_t immune_allele_count = get_immune_allele_count(host);
+    host->next_immunity_loss_time = draw_exponential_after_now(IMMUNITY_LOSS_RATE * immune_allele_count);
     immunity_loss_queue.update(host);
     RETURN();
 }
