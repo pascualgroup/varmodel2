@@ -141,6 +141,10 @@ const std::array<double,4> {GENERAL_IMMUNITY_PARAMS};
 // Clearance rate when immune (only used for general immunity)
 const double {CLEARANCE_RATE_IMMUNE};
 
+// whether a host gain immunity towards a gene only if the host has seen all the alleles.
+// True: yes, False: gradule increase in immunity as the host seen more number of alleles in a gene.
+const bool {WHOLE_GENE_IMMUNE};
+
 // Use this as the mean of the (truncated) exponential distribution used to draw host lifetimes
 const double {MEAN_HOST_LIFETIME};
 

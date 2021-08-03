@@ -1212,6 +1212,9 @@ void update_transition_time(Infection * infection, bool initial) {
     if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
         Gene * active_gene = get_current_gene(infection);
         double immunity_level =  get_specific_immunity_level(host, active_gene);
+        if (WHOLE_GENE_IMMUNE){
+            immunity_level = floor(immunity_level);
+        }
         assert(immunity_level >= 0.0 && immunity_level <= 1.0);
         rate = TRANSITION_RATE_IMMUNE * TRANSITION_RATE_NOT_IMMUNE / (
             TRANSITION_RATE_IMMUNE * (1.0 - immunity_level) +
