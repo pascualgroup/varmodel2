@@ -195,6 +195,7 @@ void update_infection_times(Infection * infection);
 
 double get_specific_immunity_level(Host * host, Gene * gene);
 uint64_t get_active_infection_count(Host * host);
+uint64_t get_liver_infection_count(Host * host);
 void infect_host(Host * host, Strain * strain);
 
 void perform_infection_transition(Infection * infection);
@@ -1075,6 +1076,19 @@ uint64_t get_active_infection_count(Host * host) {
     RETURN(count);
 }
 
+uint64_t get_liver_infection_count(Host * host){
+    BEGIN();
+    uint64_t count = 0;
+    for(Infection * infection : host->infections) {
+        if(infection->expression_index < 0) {
+            count += 1;
+        }
+    }
+    
+    RETURN(count);
+
+}
+
 void infect_host(Host * host, Strain * strain) {
     BEGIN();
     
@@ -1121,9 +1135,16 @@ void perform_infection_transition(Infection * infection) {
     
     Host * host = infection->host;
     if(infection->expression_index == -1) {
-        infection->expression_index = 0;
-        update_mutation_time(infection, false);
-        update_recombination_time(infection, false);
+        //if the active infections are more than the max_active_moi number,
+        //then clear the infection. Otherwise, it transition to be an active infection.
+        if ((MAX_ACTIVE_MOI-get_active_infection_count(host))>0) {
+            infection->expression_index = 0;
+            update_mutation_time(infection, false);
+            update_recombination_time(infection, false);
+
+        }else{
+            clear_infection(infection);
+        }
     }
     else {
         assert(
@@ -1666,12 +1687,14 @@ Host * draw_random_destination_host(Population * src_pop) {
 void transmit(Host * src_host, Host * dst_host) {
     BEGIN();
     //count the total number of infections per host
-    uint64_t srcInf = get_active_infection_count(dst_host);
-    if (srcInf>0) {
+    uint64_t dstInf = get_liver_infection_count(dst_host);
+    uint64_t remainSpace = MAX_LIVER_MOI-dstInf;
+    if ((dst_host->infections.size()-dstInf)>0) {
         src_host->population->n_infected_bites ++;
-        //transmit only happens if MOI <10;
+        //transmit only happens if MOI <MAX_LIVER_MOI;
         //if the host is in MDA effective state, do not transmit
-        if ((srcInf >=10)||(dst_host->MDA_effective_period)) {
+       
+        if ((remainSpace <=0)||(dst_host->MDA_effective_period)) {
             RETURN();
         }
     }
@@ -1688,8 +1711,9 @@ void transmit(Host * src_host, Host * dst_host) {
     // Form set of strains to transmit: some recombinants; some unmodified
     std::vector<Strain *> strains_to_transmit(src_strains.size());
     
+    uint64_t transmitNumber = std::min(remainSpace,src_strains.size() );
     // Produce a set of strains of the same size as src_strains
-    for(uint64_t i = 0; i < src_strains.size(); i++) {
+    for(uint64_t i = 0; i < transmitNumber; i++) {
         Strain * strain1 = src_strains[draw_uniform_index(src_strains.size())];
         Strain * strain2 = src_strains[draw_uniform_index(src_strains.size())];
         
@@ -1731,7 +1755,7 @@ void do_immigration_event() {
     uint64_t index = draw_uniform_index(pop->hosts.size());
     Host * host = pop->hosts.object_at_index(index);
     
-    if (get_active_infection_count(host)<10) {
+    if (get_liver_infection_count(host)<MAX_LIVER_MOI) {
         infect_host(host, strain);
     }
     // Update immigration event time

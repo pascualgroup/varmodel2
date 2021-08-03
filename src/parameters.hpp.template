@@ -117,6 +117,12 @@ const double {P_ECTOPIC_RECOMBINATION_IS_CONVERSION};
 // Duration of liver stage (pre-expression)
 const double {T_LIVER_STAGE};
 
+// maximum number of liver infections
+const uint64_t {MAX_LIVER_MOI};
+
+// maximum number of ACTIVE infections
+const uint64_t {MAX_ACTIVE_MOI};
+
 // Gene deactivation rate when not immune or under neutrality
 const double {TRANSITION_RATE_NOT_IMMUNE};
 
