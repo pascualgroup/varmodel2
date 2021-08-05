@@ -1144,6 +1144,7 @@ void perform_infection_transition(Infection * infection) {
 
         }else{
             clear_infection(infection);
+            RETURN();
         }
     }
     else {
@@ -1714,7 +1715,7 @@ void transmit(Host * src_host, Host * dst_host) {
     // Form set of strains to transmit: some recombinants; some unmodified
     std::vector<Strain *> strains_to_transmit(src_strains.size());
     
-    uint64_t transmitNumber = std::min(remainSpace,src_strains.size() );
+    uint64_t transmitNumber = remainSpace < src_strains.size() ? remainSpace : src_strains.size();
     // Produce a set of strains of the same size as src_strains
     for(uint64_t i = 0; i < transmitNumber; i++) {
         Strain * strain1 = src_strains[draw_uniform_index(src_strains.size())];
