@@ -766,7 +766,7 @@ Strain * generate_random_strain() {
 Strain * recombine_strains(Strain * s1, Strain * s2) {
     BEGIN();
     
-    Strain * strain =  strain_manager.create();
+    Strain * strain =  create_strain();
     auto & daughter_genes = strain->genes;
     
     // Choose random subset of all genes from strains s1 and s2
@@ -819,7 +819,7 @@ double get_gene_similarity(Gene * gene1, Gene * gene2, uint64_t breakpoint) {
 Strain * mutate_strain(Strain * strain) {
     BEGIN();
     uint64_t index = draw_uniform_index(N_GENES_PER_STRAIN);
-    Strain * mutated_strain = strain_manager.create();
+    Strain * mutated_strain = create_strain();
     mutated_strain->genes = strain->genes;
     mutated_strain->genes[index] = mutate_gene(strain->genes[index], SOURCE_MUTATION, false);
     
@@ -914,7 +914,7 @@ void recombine_infection(Infection * infection) {
     }
     
     // Update expression order and strain
-    Strain * strain = strain_manager.create();
+    Strain * strain = create_strain();
     auto & new_genes = strain->genes;
     new_genes = infection->strain->genes;
     if(new_gene_1 != src_gene_1) {
@@ -1176,9 +1176,9 @@ void clear_infection(Infection * infection) {
     
     Host * host = infection->host;
     //record infection duration, for every 100 infections.
-    //if (n_infections_cumulative%1000 == 0) {
+    if (n_infections_cumulative%100 == 0) {
         write_duration(host, infection);
-    //}
+    }
     host->infections.erase(infection);
     
     destroy_infection(infection);
@@ -1693,14 +1693,17 @@ void transmit(Host * src_host, Host * dst_host) {
     //count the total number of infections per host
     uint64_t dstInf = get_liver_infection_count(dst_host);
     uint64_t remainSpace = MAX_LIVER_MOI-dstInf;
-    if ((dst_host->infections.size()-dstInf)>0) {
+    //transmit happens only when source host has infections.
+    if (get_active_infection_count(src_host)>0) {
         src_host->population->n_infected_bites ++;
         //transmit only happens if MOI <MAX_LIVER_MOI;
         //if the host is in MDA effective state, do not transmit
        
-        if ((remainSpace <=0)||(dst_host->MDA_effective_period)) {
+        if ((remainSpace <= 0)||(dst_host->MDA_effective_period)) {
             RETURN();
         }
+    }else{
+        RETURN();
     }
     
     std::vector<Strain *> src_strains;
@@ -1713,9 +1716,9 @@ void transmit(Host * src_host, Host * dst_host) {
     }
     
     // Form set of strains to transmit: some recombinants; some unmodified
-    std::vector<Strain *> strains_to_transmit(src_strains.size());
-    
     uint64_t transmitNumber = remainSpace < src_strains.size() ? remainSpace : src_strains.size();
+    std::vector<Strain *> strains_to_transmit(transmitNumber);
+    
     // Produce a set of strains of the same size as src_strains
     for(uint64_t i = 0; i < transmitNumber; i++) {
         Strain * strain1 = src_strains[draw_uniform_index(src_strains.size())];
@@ -1727,6 +1730,7 @@ void transmit(Host * src_host, Host * dst_host) {
         }
         else {
             strains_to_transmit[i] = recombine_strains(strain1, strain2);
+            
         }
     }
     
