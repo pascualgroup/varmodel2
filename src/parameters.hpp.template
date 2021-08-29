@@ -198,7 +198,7 @@ const bool {IMMIGRATION_ON};
 // in infectious diseases, reproductive rate = biting rate, generation time = 1/biting rate
 // actual migration rate is updated when biting rates are updated. 
 const std::vector<double> {IMMIGRATION_RATE};
-
+const bool {MIGRANTS_MATCH_LOCAL_PREVALENCE};
 // ratio of effective population size of the regional pool compared to local pool, e.g., 10
 // this number determines the regional pool gene mutation and turnover rates.
 const double {REGION_TO_LOCAL_POP_SIZE_RATIO};

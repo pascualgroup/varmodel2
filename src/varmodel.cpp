@@ -14,6 +14,7 @@
 #include "EventQueue.hpp"
 
 #include <unistd.h>
+#include <math.h>
 #include <sstream>
 #include <algorithm>
 #include <bitset>
@@ -199,7 +200,7 @@ uint64_t get_liver_infection_count(Host * host);
 void infect_host(Host * host, Strain * strain);
 
 void perform_infection_transition(Infection * infection);
-void clear_infection(Infection * infection);
+void clear_infection(Infection * infection, bool record);
 
 void update_transition_time(Infection * infection, bool initial);
 double draw_activation_time(Infection * infection);
@@ -454,6 +455,7 @@ void initialize_population(uint64_t index) {
     pop->n_infected_bites = 0;
     pop->infected_ratio = 1.0;
     pop->current_pop_size = 0;
+    pop->total_cleared_infections = 0;
     if(IRS_ON){
         pop->next_IRS_rate_change_time = IRS_START_TIMES[pop->current_IRS_id];
         IRS_queue.add(pop);
@@ -1122,11 +1124,10 @@ void infect_host(Host * host, Strain * strain) {
     
     
     host->infections.insert(infection);
-    host->infection_count++;
     infection->hostInfection_id = host->infection_count;
     infection->infected_time = now;
     n_infections_cumulative++;
-    
+    host->population->transmission_count++;
     RETURN();
 }
 
@@ -1143,7 +1144,7 @@ void perform_infection_transition(Infection * infection) {
             update_recombination_time(infection, false);
 
         }else{
-            clear_infection(infection);
+            clear_infection(infection, false);
             RETURN();
         }
     }
@@ -1162,7 +1163,7 @@ void perform_infection_transition(Infection * infection) {
     }
     
     if(infection->expression_index == N_GENES_PER_STRAIN) {
-        clear_infection(infection);
+        clear_infection(infection, true);
     }
     else {
         update_host_infection_times(infection->host);
@@ -1171,13 +1172,17 @@ void perform_infection_transition(Infection * infection) {
     RETURN();
 }
 
-void clear_infection(Infection * infection) {
+void clear_infection(Infection * infection, bool record) {
     BEGIN();
     
     Host * host = infection->host;
     //record infection duration, for every 100 infections.
-    if (n_infections_cumulative%100 == 0) {
-        write_duration(host, infection);
+    if(record){
+        if (host->population->total_cleared_infections%100 == 0) {
+            write_duration(host, infection);
+        }
+        host->infection_count +=1;
+        host->population->total_cleared_infections += 1;
     }
     host->infections.erase(infection);
     
@@ -1225,7 +1230,7 @@ void update_transition_time(Infection * infection, bool initial) {
         //the clearance rate is higher for genes that higher higher specific immunity
         bool clProb = draw_bernoulli((immunity_level)*CLEARANCE_PROB);
         if (clProb) {
-            infection->clearance_time = draw_exponential_after_now(rate);
+             infection->clearance_time = draw_exponential_after_now(rate);
         }else{
             infection->clearance_time = INF;
         }
@@ -1301,9 +1306,9 @@ double update_general_transition_time(Infection * infection) {
     double c = GENERAL_IMMUNITY_PARAMS[2];
     double d = GENERAL_IMMUNITY_PARAMS[3];
     
-    double n = double(infection->hostInfection_id-1);
+    double n = double(infection->hostInfection_id);
     
-    if(host->infection_count < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
+    if(n < N_INFECTIONS_FOR_GENERAL_IMMUNITY) {
         rate = 1.0 / (a +
             b * exp(
                 -c * n) /
@@ -1574,7 +1579,7 @@ void update_MDA_time(Population * pop) {
                     }
                 }
                 for (uint64_t i = 0; i<InfectionsToRemove.size();i++){
-                    clear_infection(InfectionsToRemove[i]);
+                    clear_infection(InfectionsToRemove[i], true);
                 }
                 //make sure that in the effective duration of MDA, host do not get infections.
                 host->MDA_effective_period = true;
@@ -1860,7 +1865,7 @@ void do_clearance_event() {
     BEGIN();
     //assert(SELECTION_MODE == GENERAL_IMMUNITY);
     Infection * infection = clearance_queue.head();
-    clear_infection(infection);
+    clear_infection(infection, true);
     RETURN();
 }
 
@@ -1971,22 +1976,26 @@ void write_summary() {
         std::array<std::unordered_set<uint64_t>, N_LOCI> distinct_alleles;
         
         for(Host * host : pop->hosts.as_vector()) {
-            if(host->infections.size() > 0) {
+            uint64_t actInfCount = get_active_infection_count(host);
+            if(actInfCount > 0) {
                 n_infected++;
             }
-            n_infections += host->infections.size();
+            n_infections += actInfCount;
             
             for(Infection * infection : host->infections) {
-                Strain * strain = infection->strain;
-                distinct_strains.insert(strain);
-                for(Gene * gene : strain->genes) {
-                    distinct_genes.insert(gene);
-                    for(uint64_t i = 0; i < N_LOCI; i++) {
-                        distinct_alleles[i].insert(gene->alleles[i]);
+                if(infection->expression_index >= 0){
+                    Strain * strain = infection->strain;
+                    distinct_strains.insert(strain);
+                    for(Gene * gene : strain->genes) {
+                        distinct_genes.insert(gene);
+                        for(uint64_t i = 0; i < N_LOCI; i++) {
+                            distinct_alleles[i].insert(gene->alleles[i]);
+                        }
                     }
                 }
             }
         }
+
         printf("\n            population %llu:\n", pop->id);
         printf("               n_infections: %llu\n", n_infections);
         printf("                 n_infected: %llu\n", n_infected);
@@ -1994,30 +2003,31 @@ void write_summary() {
         printf("      n_circulating_strains: %lu\n", distinct_strains.size());
         printf("        n_circulating_genes: %lu\n", distinct_genes.size());
         printf("             execution time: %f\n", dur_milli.count());
-
-        sqlite3_bind_double(summary_stmt, 1, now); // time
-        sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
-        sqlite3_bind_int64(summary_stmt, 3, n_infections); // n_infections
-        sqlite3_bind_int64(summary_stmt, 4, n_infected); // n_infected
-        sqlite3_bind_int64(summary_stmt, 5, pop->n_infected_bites); //number of infected bites
-        sqlite3_bind_int64(summary_stmt, 6, pop->n_bites_cumulative); //number of total bites in the sampling period
-        sqlite3_bind_int64(summary_stmt, 7, distinct_strains.size()); // n_circulating_strains
-        sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
-        sqlite3_bind_double(summary_stmt, 9, dur_milli.count()); //execution time in milliseconds for this sampling period
-        sqlite3_step(summary_stmt);
-        sqlite3_reset(summary_stmt);
         
-        for(uint64_t i = 0; i < N_LOCI; i++) {
-            sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
-            sqlite3_bind_int64(summary_alleles_stmt, 2, pop->id); //id of the population
-            sqlite3_bind_int64(summary_alleles_stmt, 3, i); // locus
-            sqlite3_bind_int64(summary_alleles_stmt, 4, distinct_alleles[i].size()); // n_circulating_alleles
-            sqlite3_step(summary_alleles_stmt);
-            sqlite3_reset(summary_alleles_stmt);
+        if (now > T_BURNIN) {
+            sqlite3_bind_double(summary_stmt, 1, now); // time
+            sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
+            sqlite3_bind_int64(summary_stmt, 3, n_infections); // n_infections
+            sqlite3_bind_int64(summary_stmt, 4, n_infected); // n_infected
+            sqlite3_bind_int64(summary_stmt, 5, pop->n_infected_bites); //number of infected bites
+            sqlite3_bind_int64(summary_stmt, 6, pop->n_bites_cumulative); //number of total bites in the sampling period
+            sqlite3_bind_int64(summary_stmt, 7, distinct_strains.size()); // n_circulating_strains
+            sqlite3_bind_int64(summary_stmt, 8, distinct_genes.size()); // n_circulating_genes
+            sqlite3_bind_double(summary_stmt, 9, dur_milli.count()); //execution time in milliseconds for this sampling period
+            sqlite3_step(summary_stmt);
+            sqlite3_reset(summary_stmt);
+            
+            for(uint64_t i = 0; i < N_LOCI; i++) {
+                sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
+                sqlite3_bind_int64(summary_alleles_stmt, 2, pop->id); //id of the population
+                sqlite3_bind_int64(summary_alleles_stmt, 3, i); // locus
+                sqlite3_bind_int64(summary_alleles_stmt, 4, distinct_alleles[i].size()); // n_circulating_alleles
+                sqlite3_step(summary_alleles_stmt);
+                sqlite3_reset(summary_alleles_stmt);
+            }
         }
-                
-        
-        if (pop->n_bites_cumulative>0) {
+       
+        if (pop->n_bites_cumulative>0 && MIGRANTS_MATCH_LOCAL_PREVALENCE) {
             pop->infected_ratio = pop->n_infected_bites/pop->n_bites_cumulative;
             //update immigration rate to incorporate infected
             update_immigration_time(pop, false);
@@ -2104,7 +2114,7 @@ void write_duration(Host * host, Infection * infection) {
     sqlite3_bind_double(sampled_duration_stmt, 2, (now-infection->infected_time));
     sqlite3_bind_int64(sampled_duration_stmt, 3, host->id);
     sqlite3_bind_int64(sampled_duration_stmt, 4, host->population->id);
-    sqlite3_bind_int64(sampled_duration_stmt, 5, infection->hostInfection_id);
+    sqlite3_bind_int64(sampled_duration_stmt, 5, host->infection_count);
     sqlite3_bind_int64(sampled_duration_stmt, 6, get_active_infection_count(host));
     sqlite3_step(sampled_duration_stmt);
     sqlite3_reset(sampled_duration_stmt);
