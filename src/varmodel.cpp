@@ -2028,7 +2028,8 @@ void write_summary() {
         }
        
         if (pop->n_bites_cumulative>0 && MIGRANTS_MATCH_LOCAL_PREVALENCE) {
-            pop->infected_ratio = pop->n_infected_bites/pop->n_bites_cumulative;
+            pop->infected_ratio = (float)pop->n_infected_bites/(float)pop->n_bites_cumulative;
+            printf("         infected_ratio: %f\n", pop->infected_ratio);
             //update immigration rate to incorporate infected
             update_immigration_time(pop, false);
         }
