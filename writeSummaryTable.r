@@ -13,6 +13,16 @@ resultsFolder <-args[4]
 scNum<-as.integer(args[5])
 r<-as.integer(args[6])
 
+PTS<-function(mat){
+  mat<-(mat>0)*1
+  newmat<-tcrossprod(mat)
+  summat<-replicate(nrow(newmat),rowSums(mat))
+  summat<-summat+t(summat)
+  newmat<-2*newmat/summat
+  return(newmat)  
+}
+
+
 pairwiseDiv<-function(mat){
   newmat<-tcrossprod(mat>0)
   newmat<-newmat/rowSums(mat>0)
@@ -40,7 +50,7 @@ buildNetFromAdj<-function(mat, cutoff = NULL) {
 }
 
 calStat<-function(prefix = "varMigTest", r, num , s,
-                  samplingPeriod = 30, n_host = 10000, cutoffTime = 28080,maxTime = 36000){
+                  samplingPeriod = 30, n_host = 10000, cutoffTime = 28080,maxTime = 39960){
 	if (s == 0 || s == 4){
 	sampleSqlFile <- paste(wd, prefix,"_",num, "_s", s, "_sd.sqlite",sep="")	
 	}else{
@@ -58,6 +68,7 @@ calStat<-function(prefix = "varMigTest", r, num , s,
   
   if ((s+1)%%4 == 1) {
   	IRS = 0
+  	cutoffTime = 10000
   }else if ((s+1)%%4 == 2) {
   	IRS = 2
   }else if ((s+1)%%4 == 3) {
@@ -90,10 +101,6 @@ calStat<-function(prefix = "varMigTest", r, num , s,
                                      Prevalence = n_infected/n_host, 
                                      MOI = n_infections/n_infected)
 
-  sc<-paste("select * from pool_size WHERE time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")   
-  summaryPoolSize<-fetchdb(db, sc)
-
-  summaryTable<-summaryTable%>%left_join(summaryPoolSize, by = "time")
 
   sc<-paste("select time, locus, n_circulating_alleles from summary_alleles WHERE time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")                                                    
   summaryAlleles<-fetchdb(db, sc)
@@ -104,8 +111,8 @@ calStat<-function(prefix = "varMigTest", r, num , s,
   	
   #get strain info
   sc<-paste("select time, strain_id from sampled_infections where gene_id > -1 and time BETWEEN ",cutoffTime, " AND ",maxTime, sep="")
-  sampledInf<-fetchdb(db,sc)
-  infStrain<-sampledInf %>% mutate(uniqStrain = 1:nrow(sampledInf)) 
+  sampledInf<-fetchdb(db,sc)  
+  infStrain<-sampledInf %>% mutate(uniqStrain = 1:nrow(sampledInf))
   infStrain<-left_join(infStrain, strainInfo, by="strain_id")
   infStrain<-left_join(infStrain, geneInfo, by="gene_id")
   infStrain<-left_join(infStrain, geneAllele, by="gene_id")

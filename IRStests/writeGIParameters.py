@@ -38,9 +38,11 @@ def GIParam(fname):
 		cur.execute("SELECT duration, infection_id FROM sampled_duration WHERE (time-duration) > 5000")
 		rows = cur.fetchall()
 			
-	xd = np.array([x[1] for x in rows])-1  #number of infections
+	xd = np.array([x[1] for x in rows])  #number of infections
 	yd = np.array([x[0] for x in rows])  #infection duration
 	
+	#print(xd)
+	#print(yd)
 	#get range of infection times
 	newxd=range(xd.min(),xd.max()+2)
 	# mean of infection duration as a function of infection times
@@ -67,6 +69,8 @@ def GIParam(fname):
 			pass
 			
 	generalImmunityParams = list(popt)
+	#ty = func(range(10),generalImmunityParams[0],generalImmunityParams[1],generalImmunityParams[2],generalImmunityParams[3])
+	#print(ty)
 	return (infectionTimesToImmune,clearanceRateConstantImmune,generalImmunityParams)
 
 
@@ -101,7 +105,7 @@ if __name__ == "__main__":
 			if min(scenario) >3:
 				row['SELECTION_MODE'] = 'GENERAL_IMMUNITY'
 				#generalized immunity
-				SIfname = "../" + options.prefix + "_" + row['NO'] + "_s0_sd.sqlite"
+				SIfname = "../"+ options.prefix + "_" + row['NO'] + "_s0_sd.sqlite"
 				row['N_INFECTIONS_FOR_GENERAL_IMMUNITY'],row['CLEARANCE_RATE_IMMUNE'],general_imm_param = GIParam(SIfname)
 				row['GENERAL_IMMUNITY_PARAMS'] = ','.join([str(x) for x in general_imm_param])
 				row['CHECKPOINT_LOAD_FILENAME'] = options.prefix + "_" + row['NO'] + "_s4_cp.sqlite"
