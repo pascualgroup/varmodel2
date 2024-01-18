@@ -1,13 +1,16 @@
-#include "varmodel.hpp"
 #include <sqlite3.h>
 #include <assert.h>
 #include <errno.h>
-#include <stdlib.h>
+#include <cstdlib>
+
+using namespace std;
+
+#include "varmodel.hpp"
 #include "parameters.hpp"
-#include "error_handling.hpp"
+//#include "error_handling.hpp"
 
 int main(int argc, char const * argv[]) {
-    program_name = argv[0];
+    // program_name = argv[0];
     
     // Load seed from parameter if provided
     // If not provided, parameter will be used
@@ -31,8 +34,8 @@ int main(int argc, char const * argv[]) {
         //printf("do not overide seed;\n");
     }
     
-    sqlite3_config(SQLITE_CONFIG_LOG, handle_sqlite_error, NULL);
-    register_signal_handler();
+    // sqlite3_config(SQLITE_CONFIG_LOG, handle_sqlite_error, NULL);
+    //register_signal_handler();
     
     varmodel::run(override_seed, random_seed);
 }

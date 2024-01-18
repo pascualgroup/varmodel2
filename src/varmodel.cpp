@@ -1,5 +1,8 @@
 #include "varmodel.hpp"
 
+#include <limits>
+#include <random>
+
 #include "StrainManager.hpp"
 #include "GeneManager.hpp"
 #include "PopulationManager.hpp"
@@ -8,7 +11,7 @@
 #include "ImmuneHistoryManager.hpp"
 #include "LocusImmunityManager.hpp"
 #include "AlleleRefManager.hpp"
-#include "random.hpp"
+//#include "random.hpp"
 #include "util.hpp"
 #include "parameters.hpp"
 #include "EventQueue.hpp"
@@ -19,6 +22,9 @@
 #include <algorithm>
 #include <bitset>
 #include <chrono>
+
+using namespace std;
+
 using namespace std::chrono;
 
 namespace varmodel {

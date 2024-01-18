@@ -4,6 +4,8 @@
 #include <vector>
 #include <unordered_map>
 #include <cassert>
+#include <cstdlib>
+using namespace std;
 
 namespace varmodel {
 

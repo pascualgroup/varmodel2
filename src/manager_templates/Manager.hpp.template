@@ -1,10 +1,13 @@
 #ifndef {manager_type}_hpp
 #define {manager_type}_hpp
 
-#include "{object_type}.hpp"
-#include "IndexedSet.hpp"
+using namespace std;
 #include <stdint.h>
 #include <sqlite3.h>
+#include <stddef.h>
+
+#include "{object_type}.hpp"
+#include "IndexedSet.hpp"
 
 namespace varmodel {{
 
