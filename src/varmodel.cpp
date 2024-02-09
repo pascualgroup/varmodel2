@@ -544,7 +544,7 @@ void initialize_sample_db() {
     // Additional debugging stats added 2/8/24
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS debug_stats ("
-            "time REAL, pop_id INTEGER, n_switch INTEGER, t_switch_sum REAL, n_activations INTEGER, t_activation_sum REAL"
+            "time REAL, pop_id INTEGER, n_switch_immune INTEGER, n_switch_not_immune INTEGER, t_switch_sum REAL, n_activations INTEGER, t_activation_sum REAL"
         ");",
         NULL, NULL, NULL
     );
@@ -582,7 +582,7 @@ void initialize_sample_db() {
                  );
 
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT INTO debug_stats VALUES (?,?,?,?,?,?);", -1, &debug_stats_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO debug_stats VALUES (?,?,?,?,?,?,?);", -1, &debug_stats_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?,?);", -1, &summary_alleles_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
@@ -1122,6 +1122,7 @@ void infect_host(Host * host, Strain * strain) {
         infection->expression_order.begin(), infection->expression_order.end(), rng
     );
     
+    infection->was_immune = false;
     infection->last_transition_time = now;
     if(T_LIVER_STAGE == 0.0) {
         infection->expression_index = 0;
@@ -1182,7 +1183,12 @@ void perform_infection_transition(Infection * infection) {
     
     // Update expression delay time
     if(infection->expression_index >= 0) {
-        pop->n_switch += 1;
+        if(infection->was_immune) {
+            pop->n_switch_immune += 1;
+        }
+        else {
+            pop->n_switch_not_immune += 1;
+        }
         pop->t_switch_sum += infection->transition_time - infection->last_transition_time;
         infection->last_transition_time = infection->transition_time;
     }
@@ -1247,6 +1253,12 @@ void update_transition_time(Infection * infection, bool initial) {
             immunity_level = floor(immunity_level);
         }
         assert(immunity_level >= 0.0 && immunity_level <= 1.0);
+        if(immunity_level == 1.0) {
+            infection->was_immune = true;
+        }
+        else {
+            infection->was_immune = false;
+        }
         rate = TRANSITION_RATE_IMMUNE * TRANSITION_RATE_NOT_IMMUNE / (
             TRANSITION_RATE_IMMUNE * (1.0 - immunity_level) +
             TRANSITION_RATE_NOT_IMMUNE * immunity_level
@@ -2044,10 +2056,11 @@ void write_summary() {
             
             sqlite3_bind_double(debug_stats_stmt, 1, now); // time
             sqlite3_bind_int64(debug_stats_stmt, 2, pop->id); //id of the population
-            sqlite3_bind_int64(debug_stats_stmt, 3, pop->n_switch); // number of switches
-            sqlite3_bind_double(debug_stats_stmt, 4, pop->t_switch_sum); // total time between switches
-            sqlite3_bind_int64(debug_stats_stmt, 5, pop->n_activations); // total number of activations
-            sqlite3_bind_double(debug_stats_stmt, 6, pop->t_activation_sum); // total time to activation
+            sqlite3_bind_int64(debug_stats_stmt, 3, pop->n_switch_immune); // number of switches (immune)
+            sqlite3_bind_int64(debug_stats_stmt, 4, pop->n_switch_not_immune); // number of switches (not immune)
+            sqlite3_bind_double(debug_stats_stmt, 5, pop->t_switch_sum); // total time between switches
+            sqlite3_bind_int64(debug_stats_stmt, 6, pop->n_activations); // total number of activations
+            sqlite3_bind_double(debug_stats_stmt, 7, pop->t_activation_sum); // total time to activation
             sqlite3_step(debug_stats_stmt);
             sqlite3_reset(debug_stats_stmt);
             
@@ -2074,7 +2087,8 @@ void write_summary() {
         temp_cps += n_infections;
         
         // Reset additional debugging stats added 2/8/24
-        pop->n_switch = 0;
+        pop->n_switch_immune = 0;
+        pop->n_switch_not_immune = 0;
         pop->t_switch_sum = 0.0;
         pop->n_activations = 0;
         pop->t_activation_sum = 0.0;

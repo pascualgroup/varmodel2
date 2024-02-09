@@ -35,7 +35,8 @@ struct Population {
     uint64_t total_cleared_infections;
     
     // Debugging stats added 2/8/24
-    uint64_t n_switch;
+    uint64_t n_switch_immune;
+    uint64_t n_switch_not_immune;
     double t_switch_sum;
     uint64_t n_activations;
     double t_activation_sum;

@@ -23,6 +23,7 @@ struct Infection {
     uint64_t hostInfection_id;
     int64_t expression_index;
     
+    bool was_immune;
     double transition_time;
     double last_transition_time;
     double mutation_time;
