@@ -24,6 +24,7 @@ struct Infection {
     int64_t expression_index;
     
     double transition_time;
+    double last_transition_time;
     double mutation_time;
     double recombination_time;
     double infected_time;

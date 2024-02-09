@@ -33,6 +33,12 @@ struct Population {
     double MDA_immigration_rate_factor;
     uint64_t current_pop_size;
     uint64_t total_cleared_infections;
+    
+    // Debugging stats added 2/8/24
+    uint64_t n_switch;
+    double t_switch_sum;
+    uint64_t n_activations;
+    double t_activation_sum;
 
     // Collections of objects
     IndexedSet<Host> hosts;

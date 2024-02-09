@@ -77,6 +77,7 @@ std::array<std::vector<AlleleRef *>, N_LOCI> allele_refs;
 sqlite3 * sample_db;
 
 sqlite3_stmt * summary_stmt;
+sqlite3_stmt * debug_stats_stmt;
 sqlite3_stmt * summary_alleles_stmt;
 
 sqlite3_stmt * host_stmt;
@@ -539,6 +540,14 @@ void initialize_sample_db() {
         ");",
         NULL, NULL, NULL
     );
+    
+    // Additional debugging stats added 2/8/24
+    sqlite3_exec(sample_db,
+        "CREATE TABLE IF NOT EXISTS debug_stats ("
+            "time REAL, pop_id INTEGER, n_switch INTEGER, t_switch_sum REAL, n_activations INTEGER, t_activation_sum REAL"
+        ");",
+        NULL, NULL, NULL
+    );
 
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS summary_alleles ("
@@ -573,6 +582,7 @@ void initialize_sample_db() {
                  );
 
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO debug_stats VALUES (?,?,?,?,?,?);", -1, &debug_stats_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?,?);", -1, &summary_alleles_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
@@ -1112,6 +1122,7 @@ void infect_host(Host * host, Strain * strain) {
         infection->expression_order.begin(), infection->expression_order.end(), rng
     );
     
+    infection->last_transition_time = now;
     if(T_LIVER_STAGE == 0.0) {
         infection->expression_index = 0;
         update_transition_time(infection, true);
@@ -1141,6 +1152,7 @@ void perform_infection_transition(Infection * infection) {
     BEGIN();
     
     Host * host = infection->host;
+    Population * pop = host->population;
     if(infection->expression_index == -1) {
         //if the active infections are more than the max_active_moi number,
         //then clear the infection. Otherwise, it transition to be an active infection.
@@ -1166,6 +1178,13 @@ void perform_infection_transition(Infection * infection) {
         }
         
         infection->expression_index++;
+    }
+    
+    // Update expression delay time
+    if(infection->expression_index >= 0) {
+        pop->n_switch += 1;
+        pop->t_switch_sum += infection->transition_time - infection->last_transition_time;
+        infection->last_transition_time = infection->transition_time;
     }
     
     if(infection->expression_index == N_GENES_PER_STRAIN) {
@@ -2023,6 +2042,15 @@ void write_summary() {
             sqlite3_step(summary_stmt);
             sqlite3_reset(summary_stmt);
             
+            sqlite3_bind_double(debug_stats_stmt, 1, now); // time
+            sqlite3_bind_int64(debug_stats_stmt, 2, pop->id); //id of the population
+            sqlite3_bind_int64(debug_stats_stmt, 3, pop->n_switch); // number of switches
+            sqlite3_bind_double(debug_stats_stmt, 4, pop->t_switch_sum); // total time between switches
+            sqlite3_bind_int64(debug_stats_stmt, 5, pop->n_activations); // total number of activations
+            sqlite3_bind_double(debug_stats_stmt, 6, pop->t_activation_sum); // total time to activation
+            sqlite3_step(debug_stats_stmt);
+            sqlite3_reset(debug_stats_stmt);
+            
             for(uint64_t i = 0; i < N_LOCI; i++) {
                 sqlite3_bind_double(summary_alleles_stmt, 1, now); // time
                 sqlite3_bind_int64(summary_alleles_stmt, 2, pop->id); //id of the population
@@ -2044,6 +2072,12 @@ void write_summary() {
         //record year average pop size
         pop->current_pop_size = n_infections;
         temp_cps += n_infections;
+        
+        // Reset additional debugging stats added 2/8/24
+        pop->n_switch = 0;
+        pop->t_switch_sum = 0.0;
+        pop->n_activations = 0;
+        pop->t_activation_sum = 0.0;
     }
     temp_cps /= population_manager.size();
     current_pop_size = temp_cps;
