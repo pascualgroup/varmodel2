@@ -1196,9 +1196,8 @@ void perform_infection_transition(Infection * infection) {
     if(infection->expression_index == N_GENES_PER_STRAIN) {
         clear_infection(infection, true);
     }
-    else {
-        update_host_infection_times(infection->host);
-    }
+
+    update_host_infection_times(host);
     
     RETURN();
 }
