@@ -198,8 +198,8 @@ void update_next_immunity_loss_time(Host * host);
 void lose_random_immunity(Host * host);
 void lose_immunity(Host * host, AlleleRef * allele_ref);
 
-void update_host_infection_times(Host * host);
-void update_infection_times(Infection * infection);
+void update_host_infection_times(Host * host, bool because_of_other_infection);
+void update_infection_times(Infection * infection, bool because_of_other_infection);
 
 double get_specific_immunity_level(Host * host, Gene * gene);
 uint64_t get_active_infection_count(Host * host);
@@ -209,7 +209,7 @@ void infect_host(Host * host, Strain * strain);
 void perform_infection_transition(Infection * infection);
 void clear_infection(Infection * infection, bool record);
 
-void update_transition_time(Infection * infection, bool initial);
+void update_transition_time(Infection * infection, bool initial, bool because_of_other_infection);
 double draw_activation_time(Infection * infection);
 double draw_deactivation_time(Infection * infection);
 
@@ -544,7 +544,7 @@ void initialize_sample_db() {
     // Additional debugging stats added 2/8/24
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS debug_stats ("
-            "time REAL, pop_id INTEGER, n_switch_immune INTEGER, n_switch_not_immune INTEGER, t_switch_sum REAL, n_activations INTEGER, t_activation_sum REAL"
+            "time REAL, pop_id INTEGER, n_switch_immune INTEGER, n_switch_immune_because_of_other_infection INTEGER, n_switch_not_immune INTEGER, t_switch_sum REAL, n_activations INTEGER, t_activation_sum REAL"
         ");",
         NULL, NULL, NULL
     );
@@ -582,7 +582,7 @@ void initialize_sample_db() {
                  );
 
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT INTO debug_stats VALUES (?,?,?,?,?,?,?);", -1, &debug_stats_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO debug_stats VALUES (?,?,?,?,?,?,?,?);", -1, &debug_stats_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?,?);", -1, &summary_alleles_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
@@ -1123,11 +1123,12 @@ void infect_host(Host * host, Strain * strain) {
     );
     
     infection->was_immune = false;
+    infection->was_immune_because_of_other_infection = false;
     infection->last_transition_time = NAN;
     if(T_LIVER_STAGE == 0.0) {
         infection->last_transition_time = now;
         infection->expression_index = 0;
-        update_transition_time(infection, true);
+        update_transition_time(infection, true, false);
     }
     else {
         infection->expression_index = -1;
@@ -1183,6 +1184,9 @@ void perform_infection_transition(Infection * infection) {
         // Update expression delay time
         if(infection->was_immune) {
             pop->n_switch_immune += 1;
+            if(infection->was_immune_because_of_other_infection) {
+                pop->n_switch_immune_because_of_other_infection += 1;
+            }
         }
         else {
             pop->n_switch_not_immune += 1;
@@ -1198,7 +1202,7 @@ void perform_infection_transition(Infection * infection) {
         clear_infection(infection, true);
     }
 
-    update_host_infection_times(host);
+    update_host_infection_times(host, false);
     
     RETURN();
 }
@@ -1222,21 +1226,21 @@ void clear_infection(Infection * infection, bool record) {
     RETURN();
 }
 
-void update_host_infection_times(Host * host) {
+void update_host_infection_times(Host * host, bool because_of_other_infection) {
     BEGIN();
     for(Infection * infection : host->infections) {
-        update_infection_times(infection);
+        update_infection_times(infection, because_of_other_infection);
     }
     RETURN();
 }
 
-void update_infection_times(Infection * infection) {
+void update_infection_times(Infection * infection, bool because_of_other_infection) {
     BEGIN();
-    update_transition_time(infection, false);
+    update_transition_time(infection, false, because_of_other_infection);
     RETURN();
 }
 
-void update_transition_time(Infection * infection, bool initial) {
+void update_transition_time(Infection * infection, bool initial, bool because_of_other_infection) {
     BEGIN();
     if(infection->expression_index == -1) {
         RETURN();
@@ -1254,10 +1258,17 @@ void update_transition_time(Infection * infection, bool initial) {
         }
         assert(immunity_level >= 0.0 && immunity_level <= 1.0);
         if(immunity_level == 1.0) {
+            if(because_of_other_infection && !infection->was_immune) {
+                infection->was_immune_because_of_other_infection = true;
+            }
+            else {
+                infection->was_immune_because_of_other_infection = false;
+            }
             infection->was_immune = true;
         }
         else {
             infection->was_immune = false;
+            infection->was_immune_because_of_other_infection = false;
         }
         rate = TRANSITION_RATE_IMMUNE * TRANSITION_RATE_NOT_IMMUNE / (
             TRANSITION_RATE_IMMUNE * (1.0 - immunity_level) +
@@ -1878,7 +1889,7 @@ void do_mutation_event() {
     release_strain(old_strain);
     
     update_mutation_time(infection, false);
-    update_transition_time(infection, false);
+    update_transition_time(infection, false, true);
     update_next_immunity_loss_time(infection->host);
     
     RETURN();
@@ -1892,7 +1903,7 @@ void do_recombination_event() {
     recombine_infection(infection);
     
     update_recombination_time(infection, false);
-    update_transition_time(infection, false);
+    update_transition_time(infection, false, true);
     update_next_immunity_loss_time(infection->host);
     
     RETURN();
@@ -2057,10 +2068,11 @@ void write_summary() {
             sqlite3_bind_double(debug_stats_stmt, 1, now); // time
             sqlite3_bind_int64(debug_stats_stmt, 2, pop->id); //id of the population
             sqlite3_bind_int64(debug_stats_stmt, 3, pop->n_switch_immune); // number of switches (immune)
-            sqlite3_bind_int64(debug_stats_stmt, 4, pop->n_switch_not_immune); // number of switches (not immune)
-            sqlite3_bind_double(debug_stats_stmt, 5, pop->t_switch_sum); // total time between switches
-            sqlite3_bind_int64(debug_stats_stmt, 6, pop->n_activations); // total number of activations
-            sqlite3_bind_double(debug_stats_stmt, 7, pop->t_activation_sum); // total time to activation
+            sqlite3_bind_int64(debug_stats_stmt, 4, pop->n_switch_immune_because_of_other_infection); // number of switches (immune because of a different infection)
+            sqlite3_bind_int64(debug_stats_stmt, 5, pop->n_switch_not_immune); // number of switches (not immune)
+            sqlite3_bind_double(debug_stats_stmt, 6, pop->t_switch_sum); // total time between switches
+            sqlite3_bind_int64(debug_stats_stmt, 7, pop->n_activations); // total number of activations
+            sqlite3_bind_double(debug_stats_stmt, 8, pop->t_activation_sum); // total time to activation
             sqlite3_step(debug_stats_stmt);
             sqlite3_reset(debug_stats_stmt);
             
@@ -2088,6 +2100,7 @@ void write_summary() {
         
         // Reset additional debugging stats added 2/8/24
         pop->n_switch_immune = 0;
+        pop->n_switch_immune_because_of_other_infection = 0;
         pop->n_switch_not_immune = 0;
         pop->t_switch_sum = 0.0;
         pop->n_activations = 0;

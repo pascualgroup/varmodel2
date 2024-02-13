@@ -24,6 +24,7 @@ struct Infection {
     int64_t expression_index;
     
     bool was_immune;
+    bool was_immune_because_of_other_infection;
     double transition_time;
     double last_transition_time;
     double mutation_time;
