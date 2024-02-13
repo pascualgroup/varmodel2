@@ -1123,8 +1123,9 @@ void infect_host(Host * host, Strain * strain) {
     );
     
     infection->was_immune = false;
-    infection->last_transition_time = now;
+    infection->last_transition_time = NAN;
     if(T_LIVER_STAGE == 0.0) {
+        infection->last_transition_time = now;
         infection->expression_index = 0;
         update_transition_time(infection, true);
     }
@@ -1159,6 +1160,7 @@ void perform_infection_transition(Infection * infection) {
         //then clear the infection. Otherwise, it transition to be an active infection.
         if ((MAX_ACTIVE_MOI-get_active_infection_count(host))>0) {
             infection->expression_index = 0;
+            infection->last_transition_time = now;
             update_mutation_time(infection, false);
             update_recombination_time(infection, false);
 
@@ -1177,20 +1179,19 @@ void perform_infection_transition(Infection * infection) {
         if(SELECTION_MODE == SPECIFIC_IMMUNITY) {
             gain_immunity(host, gene);
         }
-        
-        infection->expression_index++;
-    }
-    
-    // Update expression delay time
-    if(infection->expression_index >= 0) {
+
+        // Update expression delay time
         if(infection->was_immune) {
             pop->n_switch_immune += 1;
         }
         else {
             pop->n_switch_not_immune += 1;
         }
-        pop->t_switch_sum += infection->transition_time - infection->last_transition_time;
-        infection->last_transition_time = infection->transition_time;
+        assert(!isnan(infection->last_transition_time));
+        pop->t_switch_sum += now - infection->last_transition_time;
+        infection->last_transition_time = now;
+        
+        infection->expression_index++;
     }
     
     if(infection->expression_index == N_GENES_PER_STRAIN) {
