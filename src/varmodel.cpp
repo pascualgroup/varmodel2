@@ -1202,7 +1202,7 @@ void perform_infection_transition(Infection * infection) {
         clear_infection(infection, true);
     }
 
-    update_host_infection_times(host, false);
+    update_host_infection_times(host, true);
     
     RETURN();
 }
@@ -1257,6 +1257,9 @@ void update_transition_time(Infection * infection, bool initial, bool because_of
             immunity_level = floor(immunity_level);
         }
         assert(immunity_level >= 0.0 && immunity_level <= 1.0);
+        if(N_LOCI == 1) {
+            assert(immunity_level == 0.0 || immunity_level == 1.0);
+        }
         if(immunity_level == 1.0) {
             if(because_of_other_infection && !infection->was_immune) {
                 infection->was_immune_because_of_other_infection = true;
@@ -1270,10 +1273,20 @@ void update_transition_time(Infection * infection, bool initial, bool because_of
             infection->was_immune = false;
             infection->was_immune_because_of_other_infection = false;
         }
-        rate = TRANSITION_RATE_IMMUNE * TRANSITION_RATE_NOT_IMMUNE / (
-            TRANSITION_RATE_IMMUNE * (1.0 - immunity_level) +
-            TRANSITION_RATE_NOT_IMMUNE * immunity_level
-        );
+        if(N_LOCI == 1) {
+            if(immunity_level == 0.0) {
+                rate = TRANSITION_RATE_NOT_IMMUNE;
+            }
+            else {
+                rate = TRANSITION_RATE_IMMUNE;
+            }
+        }
+        else {
+            rate = TRANSITION_RATE_IMMUNE * TRANSITION_RATE_NOT_IMMUNE / (
+                TRANSITION_RATE_IMMUNE * (1.0 - immunity_level) +
+                TRANSITION_RATE_NOT_IMMUNE * immunity_level
+            );
+        }
         //a small chance that the infection got cleared, proportional to the gene's immunity
         //the clearance rate is higher for genes that higher higher specific immunity
         bool clProb = draw_bernoulli((immunity_level)*CLEARANCE_PROB);
