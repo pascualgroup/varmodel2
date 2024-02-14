@@ -870,6 +870,8 @@ Gene * mutate_gene(Gene * gene, GeneSource source, bool in_pool) {
 
 void recombine_infection(Infection * infection) {
     BEGIN();
+
+    assert(false);
     
     if(N_GENES_PER_STRAIN == 1) {
         RETURN();
@@ -1031,6 +1033,8 @@ void update_next_immunity_loss_time(Host * host) {
 void lose_random_immunity(Host * host) {
     BEGIN();
     
+    assert(false);
+
     ImmuneHistory * immune_history = host->immune_history;
     auto & alleles_with_immunity = immune_history->alleles_with_immunity; 
     assert(alleles_with_immunity.size() > 0);
@@ -1045,6 +1049,9 @@ void lose_random_immunity(Host * host) {
 }
 
 void lose_immunity(Host * host, AlleleRef * allele_ref) {
+
+    assert(false);
+
     uint64_t locus = allele_ref->locus;
     uint64_t allele = allele_ref->allele; 
     
@@ -1894,6 +1901,7 @@ void do_transition_event() {
 void do_mutation_event() {
     BEGIN();
     assert(mutation_queue.size() > 0);
+    assert(false);
     
     Infection * infection = mutation_queue.head();
     Strain * old_strain  = infection->strain;
@@ -1911,6 +1919,7 @@ void do_mutation_event() {
 void do_recombination_event() {
     BEGIN();
     assert(recombination_queue.size() > 0);
+    assert(false);
     
     Infection * infection = recombination_queue.head();
     recombine_infection(infection);
@@ -1924,6 +1933,7 @@ void do_recombination_event() {
 
 void do_clearance_event() {
     BEGIN();
+    assert(false);
     //assert(SELECTION_MODE == GENERAL_IMMUNITY);
     Infection * infection = clearance_queue.head();
     clear_infection(infection, true);
