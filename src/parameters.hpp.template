@@ -26,6 +26,9 @@ const bool {OUTPUT_STRAINS};
 // Whether or not to write out all genes to database
 const bool {OUTPUT_GENES};
 
+// How often to write summary
+const double {PRINT_INFO_PERIOD};
+
 // How often to sample infected hosts, in simulation time units
 const double {HOST_SAMPLING_PERIOD};
 

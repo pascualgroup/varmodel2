@@ -1116,6 +1116,12 @@ uint64_t get_liver_infection_count(Host * host){
 
 void infect_host(Host * host, Strain * strain) {
     BEGIN();
+
+    if(T_LIVER_STAGE == 0.0 && MAX_ACTIVE_MOI == get_active_infection_count(host)) {
+        retain_strain(strain);
+        release_strain(strain);
+        RETURN();
+    }
     
     Infection * infection = infection_manager.create();
     infection->host = host;
@@ -1131,13 +1137,13 @@ void infect_host(Host * host, Strain * strain) {
     
     infection->was_immune = false;
     infection->was_immune_because_of_other_infection = false;
-    infection->last_transition_time = NAN;
     if(T_LIVER_STAGE == 0.0) {
         infection->last_transition_time = now;
         infection->expression_index = 0;
         update_transition_time(infection, true, false);
     }
     else {
+        infection->last_transition_time = NAN;
         infection->expression_index = -1;
         infection->transition_time = now + T_LIVER_STAGE;
         transition_queue.add(infection);
@@ -1581,7 +1587,7 @@ void do_sampling_event() {
 void do_summary_event() {
     BEGIN();
     write_summary();
-    next_summary_time += 30;
+    next_summary_time += PRINT_INFO_PERIOD;
     RETURN();
 }
 
@@ -2054,7 +2060,7 @@ void write_summary() {
             n_infections += actInfCount;
             
             for(Infection * infection : host->infections) {
-                if(infection->expression_index >= 0){
+                /*if(infection->expression_index >= 0)*/{
                     Strain * strain = infection->strain;
                     distinct_strains.insert(strain);
                     for(Gene * gene : strain->genes) {
@@ -2075,7 +2081,7 @@ void write_summary() {
         printf("        n_circulating_genes: %lu\n", distinct_genes.size());
         printf("             execution time: %f\n", dur_milli.count());
         
-        if (now > T_BURNIN) {
+        if (now >= T_BURNIN) {
             sqlite3_bind_double(summary_stmt, 1, now); // time
             sqlite3_bind_int64(summary_stmt, 2, pop->id); //id of the population
             sqlite3_bind_int64(summary_stmt, 3, n_infections); // n_infections
@@ -2352,7 +2358,7 @@ void load_global_state_from_checkpoint(sqlite3 * db, bool should_load_rng_state)
     n_infections_cumulative = sqlite3_column_int(stmt, 5);
     current_pop_size = sqlite3_column_double(stmt, 6);
     next_sampling_time = now + HOST_SAMPLING_PERIOD;
-    next_summary_time = now + 30;
+    next_summary_time = now + PRINT_INFO_PERIOD;
     sqlite3_finalize(stmt);
 }
 
@@ -2538,6 +2544,10 @@ void update_biting_time(Population * pop, bool initial) {
     }else if(DAILY_BITING_RATE_DISTRIBUTION.size()==(int)T_YEAR){
         biting_rate *= DAILY_BITING_RATE_DISTRIBUTION[(int)(now)%(int)T_YEAR];
     }
+
+    // printf("biting rate = %lf\n", biting_rate);
+    // fflush(stdout);
+    assert(biting_rate == BITING_RATE_MEAN[0] * N_HOSTS[0]);
     
     pop->next_biting_time = draw_exponential_after_now(biting_rate);
     //printf("%f",pop->next_biting_time);
