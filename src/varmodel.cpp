@@ -544,7 +544,7 @@ void initialize_sample_db() {
     // Additional debugging stats added 2/8/24
     sqlite3_exec(sample_db,
         "CREATE TABLE IF NOT EXISTS debug_stats ("
-            "time REAL, pop_id INTEGER, n_switch_immune INTEGER, n_switch_immune_because_of_other_infection INTEGER, n_switch_not_immune INTEGER, t_switch_sum REAL, n_activations INTEGER, t_activation_sum REAL"
+            "time REAL, pop_id INTEGER, n_switch_immune INTEGER, n_switch_immune_because_of_other_infection INTEGER, n_switch_not_immune INTEGER, t_switch_sum REAL, n_activations INTEGER, t_activation_sum REAL, mean_age REAL, sd_age REAL"
         ");",
         NULL, NULL, NULL
     );
@@ -582,7 +582,7 @@ void initialize_sample_db() {
                  );
 
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary VALUES (?,?,?,?,?,?,?,?,?);", -1, &summary_stmt, NULL);
-    sqlite3_prepare_v2(sample_db, "INSERT INTO debug_stats VALUES (?,?,?,?,?,?,?,?);", -1, &debug_stats_stmt, NULL);
+    sqlite3_prepare_v2(sample_db, "INSERT INTO debug_stats VALUES (?,?,?,?,?,?,?,?,?,?);", -1, &debug_stats_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO summary_alleles VALUES (?,?,?,?);", -1, &summary_alleles_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO hosts VALUES (?,?,?,?);", -1, &host_stmt, NULL);
     sqlite3_prepare_v2(sample_db, "INSERT INTO strains VALUES (?,?,?);", -1, &strain_stmt, NULL);
@@ -2051,6 +2051,8 @@ void write_summary() {
         std::unordered_set<Strain *> distinct_strains;
         std::unordered_set<Gene *> distinct_genes;
         std::array<std::unordered_set<uint64_t>, N_LOCI> distinct_alleles;
+        double age_sum = 0.0;
+        double age_sumsq = 0.0;
         
         for(Host * host : pop->hosts.as_vector()) {
             uint64_t actInfCount = get_active_infection_count(host);
@@ -2071,7 +2073,13 @@ void write_summary() {
                     }
                 }
             }
+            double age = host->death_time - now;
+            age_sum += age;
+            age_sumsq += age*age;
         }
+
+        double mean_age = age_sum / N_HOSTS[0];
+        double sd_age = sqrt(age_sumsq / N_HOSTS[0] - mean_age*mean_age);
 
         printf("\n            population %llu:\n", pop->id);
         printf("               n_infections: %llu\n", n_infections);
@@ -2102,6 +2110,8 @@ void write_summary() {
             sqlite3_bind_double(debug_stats_stmt, 6, pop->t_switch_sum); // total time between switches
             sqlite3_bind_int64(debug_stats_stmt, 7, pop->n_activations); // total number of activations
             sqlite3_bind_double(debug_stats_stmt, 8, pop->t_activation_sum); // total time to activation
+            sqlite3_bind_double(debug_stats_stmt, 9, mean_age); // total time to activation
+            sqlite3_bind_double(debug_stats_stmt, 10, sd_age); // total time to activation
             sqlite3_step(debug_stats_stmt);
             sqlite3_reset(debug_stats_stmt);
             
